@@ -1,0 +1,187 @@
+@import "tailwindcss";
+@config "../../tailwind.config.js";
+@source "../../index.html";
+@source "../**/*.{js,ts,jsx,tsx}";
+
+@layer base {
+  :root {
+    /* =========================================
+       60-30-10 Color Rule
+       60% → --color-surface (dominant neutral canvas)
+       30% → --color-surface-tint (secondary neutral)
+       10% → --color-accent (CTA only, full saturation)
+    ========================================= */
+    --color-surface: 250 20% 98%;
+    --color-surface-tint: 250 20% 94%;
+    --color-surface-raised: 250 20% 100%;   /* Cards, panels (pure white) */
+    --color-accent: 220 85% 54%;
+    --color-accent-hover: 220 85% 46%;
+    --color-accent-subtle: 220 85% 95%;     /* Accent tint for tag/highlight bg */
+
+    /* Typography */
+    --color-text: 250 20% 12%;
+    --color-text-muted: 250 10% 48%;
+    --color-text-inverse: 0 0% 100%;
+
+    /* Borders — minimum 10% darker than bg lightness */
+    --color-border: 250 15% 86%;
+    --color-border-dark: 250 15% 76%;
+
+    /* =========================================
+       Status Colors — Mirror the State Machine
+       Draft, Pending, Under Review, Verified,
+       For Assessment, Assessed, For Payment,
+       Paid, Completed, Returned
+    ========================================= */
+    --color-status-draft: 220 15% 60%;
+    --color-status-draft-bg: 220 15% 95%;
+    --color-status-pending: 38 90% 50%;
+    --color-status-pending-bg: 38 100% 95%;
+    --color-status-under-review: 200 80% 45%;
+    --color-status-under-review-bg: 200 80% 94%;
+    --color-status-returned: 350 80% 50%;
+    --color-status-returned-bg: 350 80% 95%;
+    --color-status-verified: 160 60% 38%;
+    --color-status-verified-bg: 160 60% 93%;
+    --color-status-for-assessment: 270 60% 55%;
+    --color-status-for-assessment-bg: 270 60% 95%;
+    --color-status-assessed: 270 60% 40%;
+    --color-status-assessed-bg: 270 60% 94%;
+    --color-status-for-payment: 30 90% 48%;
+    --color-status-for-payment-bg: 30 90% 95%;
+    --color-status-paid: 145 65% 38%;
+    --color-status-paid-bg: 145 65% 93%;
+    --color-status-completed: 145 70% 30%;
+    --color-status-completed-bg: 145 70% 92%;
+
+    /* Semantic Feedback Colors */
+    --color-success: 145 65% 38%;
+    --color-success-bg: 145 65% 93%;
+    --color-warning: 38 90% 50%;
+    --color-warning-bg: 38 100% 95%;
+    --color-error: 350 80% 50%;
+    --color-error-bg: 350 80% 95%;
+    --color-info: 200 80% 45%;
+    --color-info-bg: 200 80% 94%;
+
+    /* =========================================
+       Role Surface Overrides
+       Subtle tinting to orient users within
+       their own portal
+    ========================================= */
+    --color-surface-applicant: 220 50% 98%;   /* Slight blue bias */
+    --color-surface-bplo: 250 20% 97%;        /* Neutral */
+    --color-surface-treasury: 220 15% 12%;    /* Dark POS canvas */
+    --color-surface-treasury-panel: 220 15% 18%;
+    --color-surface-barangay: 150 20% 97%;    /* Slight green bias */
+    --color-surface-admin: 250 20% 97%;       /* Neutral */
+
+    /* =========================================
+       Spacing Scale (use via CSS vars or Tailwind)
+    ========================================= */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+
+    /* =========================================
+       Border Radius — Nesting Rule
+       Outer radius = Inner radius + padding gap
+       Example: Card (--radius-lg) padding=p-4(1rem)
+       Inner element = --radius-md (1rem - 0.5rem = 0.5rem gap)
+    ========================================= */
+    --radius-sm: 0.25rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --radius-full: 9999px;
+
+    /* =========================================
+       Shadows — Subtle only (max rgba 0.08)
+    ========================================= */
+    --shadow-base: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+    --shadow-hover: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+    --shadow-raised: 0 8px 16px rgba(0,0,0,0.07), 0 3px 6px rgba(0,0,0,0.04);
+
+    /* =========================================
+       Transitions
+    ========================================= */
+    --transition-fast: 150ms ease-in-out;
+    --transition-base: 200ms ease-in-out;
+    --transition-slow: 350ms ease-in-out;
+
+    /* =========================================
+       Z-Index Scale
+    ========================================= */
+    --z-base: 0;
+    --z-raised: 10;
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-overlay: 300;
+    --z-modal: 400;
+    --z-toast: 500;
+
+    /* =========================================
+       Layout Constants
+    ========================================= */
+    --sidebar-width: 15rem;
+    --navbar-height: 3.5rem;
+    --bottom-nav-height: 4rem;
+  }
+
+  body {
+    background-color: hsl(var(--color-surface));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: hsl(var(--color-text));
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* Focus ring — accessibility, uses accent token */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--color-accent));
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+@layer utilities {
+  /* =========================================
+     Interactive Utilities
+     Apply to clickable elements for minimum
+     animation compliance
+  ========================================= */
+  .interactive-base {
+    transition: color var(--transition-base),
+                background-color var(--transition-base),
+                border-color var(--transition-base),
+                box-shadow var(--transition-base),
+                transform var(--transition-base);
+  }
+
+  .interactive-hover {
+    box-shadow: var(--shadow-base);
+  }
+
+  .interactive-hover:hover {
+    transform: translateY(-0.125rem);
+    box-shadow: var(--shadow-hover);
+  }
+
+  /* =========================================
+     Treasury-specific high contrast overrides
+     Applied at the layout level for POS panels
+  ========================================= */
+  .treasury-canvas {
+    background-color: hsl(var(--color-surface-treasury));
+    color: hsl(var(--color-text-inverse));
+  }
+
+  .treasury-panel {
+    background-color: hsl(var(--color-surface-treasury-panel));
+  }
+}
