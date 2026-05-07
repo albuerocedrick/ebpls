@@ -35,7 +35,9 @@ import {
   AdminLayout,
 } from './layouts';
 
-import { ROUTES } from './utils/constants';
+import ProtectedRoute  from './components/shared/ProtectedRoute';
+import ToastContainer  from './components/shared/ToastContainer';
+import { ROUTES, ROLES } from './utils/constants';
 
 // =========================================
 // Route-Level Code Splitting (React.lazy)
@@ -130,41 +132,51 @@ function App() {
           </Route>
 
           {/* ── Applicant Portal ─────────────────────── */}
-          <Route path="/applicant" element={<ApplicantLayout />}>
-            <Route index element={<Navigate to={ROUTES.APPLICANT_DASHBOARD} replace />} />
-            <Route path="dashboard" element={<ApplicantDashboard />} />
-            <Route path="apply"     element={<UAFWizardScreen />} />
-            <Route path="status"    element={<StatusTracker />} />
+          <Route element={<ProtectedRoute allowedRoles={[ROLES.APPLICANT, ROLES.ADMIN]} />}>
+            <Route path="/applicant" element={<ApplicantLayout />}>
+              <Route index element={<Navigate to={ROUTES.APPLICANT_DASHBOARD} replace />} />
+              <Route path="dashboard" element={<ApplicantDashboard />} />
+              <Route path="apply"     element={<UAFWizardScreen />} />
+              <Route path="status"    element={<StatusTracker />} />
+            </Route>
           </Route>
 
           {/* ── BPLO Portal ──────────────────────────── */}
-          <Route path="/bplo" element={<BPLOLayout />}>
-            <Route index element={<Navigate to={ROUTES.BPLO_DASHBOARD} replace />} />
-            <Route path="dashboard"   element={<BPLODashboard />} />
-            <Route path="verify/:appNo" element={<SplitScreenVerifier />} />
-            {/* List view for verifier (without a specific appNo) */}
-            <Route path="verify"      element={<SplitScreenVerifier />} />
+          <Route element={<ProtectedRoute allowedRoles={[ROLES.BPLO_OFFICER, ROLES.ADMIN]} />}>
+            <Route path="/bplo" element={<BPLOLayout />}>
+              <Route index element={<Navigate to={ROUTES.BPLO_DASHBOARD} replace />} />
+              <Route path="dashboard"     element={<BPLODashboard />} />
+              <Route path="verify/:appNo" element={<SplitScreenVerifier />} />
+              {/* List view for verifier (without a specific appNo) */}
+              <Route path="verify"        element={<SplitScreenVerifier />} />
+            </Route>
           </Route>
 
           {/* ── Treasury Portal ──────────────────────── */}
-          <Route path="/treasury" element={<TreasuryLayout />}>
-            <Route index element={<Navigate to={ROUTES.TREASURY_ASSESSMENT} replace />} />
-            <Route path="assess"  element={<AssessmentGrid />} />
-            <Route path="cashier" element={<CashierPOS />} />
+          <Route element={<ProtectedRoute allowedRoles={[ROLES.TREASURY, ROLES.ADMIN]} />}>
+            <Route path="/treasury" element={<TreasuryLayout />}>
+              <Route index element={<Navigate to={ROUTES.TREASURY_ASSESSMENT} replace />} />
+              <Route path="assess"  element={<AssessmentGrid />} />
+              <Route path="cashier" element={<CashierPOS />} />
+            </Route>
           </Route>
 
           {/* ── Barangay Portal ──────────────────────── */}
-          <Route path="/barangay" element={<BarangayLayout />}>
-            <Route index element={<Navigate to={ROUTES.BARANGAY_QUEUE} replace />} />
-            <Route path="queue" element={<ClearanceQueue />} />
+          <Route element={<ProtectedRoute allowedRoles={[ROLES.BARANGAY_OFFICER, ROLES.ADMIN]} />}>
+            <Route path="/barangay" element={<BarangayLayout />}>
+              <Route index element={<Navigate to={ROUTES.BARANGAY_QUEUE} replace />} />
+              <Route path="queue" element={<ClearanceQueue />} />
+            </Route>
           </Route>
 
           {/* ── Admin Console ────────────────────────── */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Navigate to={ROUTES.ADMIN_MASTER_DATA} replace />} />
-            <Route path="master-data"       element={<MasterData />} />
-            <Route path="document-builder"  element={<DocumentBuilder />} />
-            <Route path="audit-logs"        element={<AuditLogs />} />
+          <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to={ROUTES.ADMIN_MASTER_DATA} replace />} />
+              <Route path="master-data"       element={<MasterData />} />
+              <Route path="document-builder"  element={<DocumentBuilder />} />
+              <Route path="audit-logs"        element={<AuditLogs />} />
+            </Route>
           </Route>
 
           {/* ── Catch-all 404 ─────────────────────────── */}
@@ -172,6 +184,11 @@ function App() {
 
         </Routes>
       </Suspense>
+
+      {/* Global toast renderer — outside Suspense so toasts fire
+          even while a lazy screen is still loading. */}
+      <ToastContainer />
+
     </BrowserRouter>
   );
 }

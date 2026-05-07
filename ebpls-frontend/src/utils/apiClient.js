@@ -2,14 +2,19 @@
  * apiClient.js
  * Base fetch/axios wrapper for all HTTP requests.
  *
- * Phase 0 scope: Sets up base URL configuration only.
- * JWT interceptors will be added in Phase 2B.
+ * Phase 2A: JWT injected from authStore on every request.
+ *           401 responses trigger automatic session clearance + redirect.
  *
- * @policy Never import this file with a dynamic require.
- *         Always use named imports.
+ * @policy  Never import this file with a dynamic require.
+ *          Always use named imports.
+ * @policy  Uses Zustand's non-hook getState() pattern — this is a plain JS
+ *          module, not a React component, so hooks are not available.
+ * @policy  On 401, redirect via window.location (not React Router) because
+ *          this module lives outside the React tree.
  */
 
-import { API_BASE_URL } from './constants';
+import { API_BASE_URL, ROUTES } from './constants';
+import useAuthStore from '../store/authStore';
 
 // =========================================
 // Core Request Function
@@ -29,9 +34,11 @@ async function request(endpoint, options = {}) {
     'Content-Type': 'application/json',
   };
 
-  // Phase 2B: JWT will be injected here via authStore token
-  // const token = useAuthStore.getState().token;
-  // if (token) defaultHeaders['Authorization'] = `Bearer ${token}`;
+  // Inject JWT from authStore (non-hook access — safe for plain JS modules).
+  const token = useAuthStore.getState().token;
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
 
   const config = {
     ...options,
@@ -48,6 +55,17 @@ async function request(endpoint, options = {}) {
   const response = await fetch(url, config);
 
   if (!response.ok) {
+    // 401 Unauthorized — token expired or invalid.
+    // Clear the session and hard-redirect to login so the user
+    // re-authenticates. window.location is intentional here:
+    // React Router's navigate() is not available in this module.
+    if (response.status === 401) {
+      useAuthStore.getState().clearSession();
+      window.location.href = ROUTES.LOGIN;
+      // Return a rejected promise so the calling hook still enters catch.
+      return Promise.reject(new Error('Session expired. Please sign in again.'));
+    }
+
     const errorData = await response.json().catch(() => ({
       message: `HTTP error ${response.status}`,
     }));
