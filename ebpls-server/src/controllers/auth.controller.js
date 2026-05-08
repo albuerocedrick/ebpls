@@ -33,8 +33,10 @@
 //   - Audit logging is non-blocking (fire-and-forget after response).
 // =================================================================
 
-const { z }            = require('zod');
-const { supabaseAdmin }   = require('../config/supabase');
+const { z } = require('zod');
+const { createClient } = require('@supabase/supabase-js');
+const env = require('../config/env');
+const { supabaseAdmin } = require('../config/supabase');
 const { logAction, AUDIT_ACTIONS } = require('../services/audit.service');
 const { successResponse, errorResponse, getClientIp } = require('../utils/helpers');
 const { ERROR_CODES }  = require('../utils/constants');
@@ -84,6 +86,17 @@ const loginSchema = z.object({
 const forgotPasswordSchema = z.object({
   email: z.string()
     .email('A valid email address is required.'),
+});
+
+// Dedicated auth client for signInWithPassword.
+// Important: keep this separate from supabaseAdmin so user-session auth state
+// never contaminates service-role DB operations (which must bypass RLS).
+const supabaseAuthClient = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false,
+  },
 });
 
 // =================================================================
@@ -214,7 +227,7 @@ const login = async (req, res, next) => {
     // containing the access_token (JWT) and refresh_token.
     // The access_token is what auth.middleware.js will verify.
     // -----------------------------------------------------------
-    const { data: sessionData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
+    const { data: sessionData, error: authError } = await supabaseAuthClient.auth.signInWithPassword({
       email:    input.email,
       password: input.password,
     });

@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 
 const authRoutes = require('./routes/auth.routes');
+const bploRoutes = require('./routes/bplo.routes');
 const { errorHandler } = require('./middlewares/error.middleware');
 
 const app = express();
@@ -32,6 +33,7 @@ app.get('/health', (req, res) => {
 // API ROUTES
 // -----------------------------------------------------------------
 app.use('/api/auth', authRoutes);
+app.use('/api/bplo', bploRoutes);
 
 // TODO: Mount future routes here
 // app.use('/api/applications', require('./routes/application.routes'));

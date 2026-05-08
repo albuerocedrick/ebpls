@@ -61,23 +61,33 @@ const authenticate = async (req, res, next) => {
     }
 
     // ---------------------------------------------------------------
-    // STEP 2: Verify the JWT signature and expiry.
-    // Using jsonwebtoken with the Supabase project's JWT secret.
-    // ASSUMPTION: env.JWT_SECRET is the SUPABASE_JWT_SECRET from the
-    // Supabase project settings — the same key used to sign auth tokens.
+    // STEP 2: Resolve user identity from the access token.
+    //
+    // Primary path:
+    //   - verify JWT locally using env.JWT_SECRET for low latency
+    //
+    // Fallback path:
+    //   - if local verification fails (e.g. JWT secret mismatch), call
+    //     Supabase Auth getUser(token) and trust the returned user id.
+    //
+    // This keeps local dev resilient when env.JWT_SECRET drifts from the
+    // Supabase project JWT secret.
     // ---------------------------------------------------------------
-    let decoded;
-    try {
-      decoded = jwt.verify(token, env.JWT_SECRET);
-    } catch (jwtError) {
-      // Do not reveal whether the token is expired vs. malformed.
-      return res.status(401).json(
-        errorResponse(ERROR_CODES.UNAUTHORIZED, 'Authentication required.')
-      );
-    }
+    let userId = null;
 
-    // Supabase JWTs store the user's UUID in the 'sub' claim.
-    const userId = decoded.sub;
+    try {
+      const decoded = jwt.verify(token, env.JWT_SECRET);
+      userId = decoded.sub || null;
+    } catch (jwtError) {
+      const { data: authUserData, error: authUserError } = await supabaseAdmin.auth.getUser(token);
+      if (authUserError || !authUserData?.user?.id) {
+        // Do not reveal whether the token is expired vs malformed.
+        return res.status(401).json(
+          errorResponse(ERROR_CODES.UNAUTHORIZED, 'Authentication required.')
+        );
+      }
+      userId = authUserData.user.id;
+    }
 
     if (!userId) {
       return res.status(401).json(
