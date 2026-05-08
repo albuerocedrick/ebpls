@@ -13,8 +13,10 @@
  */
 
 import React from 'react';
-import { Bell, ChevronDown, Menu, X } from 'lucide-react';
+import { Bell, ChevronDown, Menu, X, LogOut } from 'lucide-react';
 import useUIStore from '../../store/UIStore';
+import useAuthStore from '../../store/authStore';
+import useAuth from '../../hooks/useAuth';
 import Button from '../ui/Button';
 
 // =========================================
@@ -24,15 +26,15 @@ import Button from '../ui/Button';
 /**
  * @param {object}  props
  * @param {string}  props.portalLabel   - Role label shown next to the logo (e.g. "BPLO Portal")
- * @param {object}  [props.user]        - { name, role } from authStore (Phase 2)
  * @param {boolean} [props.showSidebarToggle=true]
  */
 const Navbar = ({
   portalLabel = 'eBPLS',
-  user = null,
   showSidebarToggle = true,
 }) => {
   const { isSidebarOpen, toggleSidebar } = useUIStore();
+  const user = useAuthStore((s) => s.user);
+  const { logout } = useAuth();
 
   return (
     <header
@@ -106,12 +108,23 @@ const Navbar = ({
             className="w-7 h-7 rounded-full bg-[hsl(var(--color-accent-subtle))] text-accent flex items-center justify-center text-xs font-semibold shrink-0"
             aria-hidden="true"
           >
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            {user?.firstName ? user.firstName.charAt(0).toUpperCase() : 'U'}
           </span>
           <span className="text-sm font-medium text-[hsl(var(--color-text))] hidden md:block max-w-[120px] truncate">
-            {user?.name || 'Guest'}
+            {user?.firstName || 'Guest'}
           </span>
           <ChevronDown size={14} className="text-[hsl(var(--color-text-muted))] hidden md:block shrink-0" />
+        </Button>
+
+        {/* Logout Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={logout}
+          aria-label="Log out"
+          className="!p-2 text-[hsl(var(--color-danger))]"
+        >
+          <LogOut size={18} />
         </Button>
       </div>
     </header>

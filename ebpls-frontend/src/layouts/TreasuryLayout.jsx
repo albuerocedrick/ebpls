@@ -20,11 +20,12 @@
  */
 
 import React from 'react';
-import { Outlet } from 'react-router-dom';
-import { Calculator, Banknote } from 'lucide-react';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { Calculator, Banknote, LogOut } from 'lucide-react';
 import { Sidebar } from '../components/layout';
 import { ROUTES } from '../utils/constants';
 import useUIStore from '../store/UIStore';
+import useAuthStore from '../store/authStore';
 
 // =========================================
 // Treasury Nav Config
@@ -54,6 +55,13 @@ const TREASURY_NAV = [
 
 const TreasuryNavbar = () => {
   const { isSidebarOpen, toggleSidebar } = useUIStore();
+  const clearSession = useAuthStore((s) => s.clearSession);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    clearSession();
+    navigate(ROUTES.LOGIN, { replace: true });
+  };
 
   return (
     <header
@@ -78,9 +86,21 @@ const TreasuryNavbar = () => {
         <span className="font-semibold text-sm text-white leading-none">eBPLS</span>
         <span className="text-xs text-white/50 hidden sm:block">/ Treasury</span>
       </div>
-      <span className="text-xs font-mono text-white/40 hidden md:block">
-        OTC ONLY — CASH &amp; MANAGER CHECK
-      </span>
+      
+      <div className="flex items-center gap-4">
+        <span className="text-xs font-mono text-white/40 hidden md:block">
+          OTC ONLY — CASH & MANAGER CHECK
+        </span>
+        <div className="h-4 w-[1px] bg-white/20 hidden md:block"></div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-[hsl(var(--color-error))] hover:text-red-400 transition-colors"
+          aria-label="Log out"
+        >
+          <LogOut size={16} />
+          <span className="text-sm font-medium hidden sm:block">LogOut</span>
+        </button>
+      </div>
     </header>
   );
 };
@@ -98,15 +118,15 @@ const TreasuryLayout = () => {
     >
       <TreasuryNavbar />
 
-      {/* Sidebar — dark panel variant */}
-      <div className="treasury-panel">
-        <Sidebar navItems={TREASURY_NAV} />
-      </div>
+      <Sidebar
+        navItems={TREASURY_NAV}
+        panelClassName="bg-[hsl(var(--color-surface-treasury-panel))]"
+      />
 
       {/* Main content area */}
       <main
         id="treasury-content"
-        className="transition-[margin-left] duration-300 ease-in-out treasury-canvas"
+        className="transition-[margin-left] duration-300 ease-in-out treasury-canvas min-h-screen"
         style={{
           paddingTop: 'var(--navbar-height)',
           marginLeft: isSidebarOpen ? 'var(--sidebar-width)' : '0',

@@ -26,6 +26,7 @@ import { ROUTES } from '../../utils/constants';
 function ProtectedRoute({ allowedRoles }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user            = useAuthStore((s) => s.user);
+  const role            = user?.roleName;
 
   // Step 1 — Must be authenticated.
   if (!isAuthenticated || !user) {
@@ -33,7 +34,7 @@ function ProtectedRoute({ allowedRoles }) {
   }
 
   // Step 2 — If a role whitelist is provided, enforce it.
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && !allowedRoles.includes(role)) {
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 

@@ -12,9 +12,21 @@
  */
 
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
+import useAuthStore from '../store/authStore';
+import { ROUTES, ROLE_DASHBOARDS } from '../utils/constants';
 
 const AuthLayout = () => {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user            = useAuthStore((s) => s.user);
+  const role            = user?.roleName;
+
+  // Guest Guard: If already logged in, redirect to the correct dashboard
+  if (isAuthenticated) {
+    const destination = ROLE_DASHBOARDS[role] ?? ROUTES.HOME;
+    return <Navigate to={destination} replace />;
+  }
+
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-4 py-12"

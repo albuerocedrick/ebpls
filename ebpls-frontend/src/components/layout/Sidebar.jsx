@@ -85,7 +85,7 @@ const NavSection = ({ sectionLabel, children }) => (
  *   [{ sectionLabel?: string, items: [{ to, icon, label }] }]
  * @param {React.ReactNode} [props.footer]  - Optional content pinned to the sidebar bottom
  */
-const Sidebar = ({ navItems = [], footer }) => {
+const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
   const { isSidebarOpen, closeSidebar } = useUIStore();
 
   return (
@@ -105,7 +105,7 @@ const Sidebar = ({ navItems = [], footer }) => {
         aria-label="Navigation sidebar"
         className={[
           'fixed top-0 left-0 h-full',
-          'bg-[hsl(var(--color-surface-raised))]',
+          panelClassName || 'bg-[hsl(var(--color-surface-raised))]',
           'border-r border-border shadow-sm',
           'flex flex-col',
           'transition-transform duration-300 ease-in-out',

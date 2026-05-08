@@ -17,21 +17,11 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { apiClient } from '../utils/apiClient';
-import { API_ENDPOINTS, ROUTES, ROLES } from '../utils/constants';
+import { API_ENDPOINTS, ROUTES, ROLES, ROLE_DASHBOARDS } from '../utils/constants';
 import useAuthStore from '../store/authStore';
 import useUIStore, { TOAST_TYPE } from '../store/UIStore';
 
-// =========================================
-// Role → Dashboard Route Map
-// Single source of truth for post-login redirects.
-// =========================================
-const ROLE_DASHBOARDS = Object.freeze({
-  [ROLES.APPLICANT]:       ROUTES.APPLICANT_DASHBOARD,
-  [ROLES.BPLO_OFFICER]:    ROUTES.BPLO_DASHBOARD,
-  [ROLES.TREASURY]:        ROUTES.TREASURY_ASSESSMENT,
-  [ROLES.BARANGAY_OFFICER]: ROUTES.BARANGAY_QUEUE,
-  [ROLES.ADMIN]:           ROUTES.ADMIN_MASTER_DATA,
-});
+
 
 // =========================================
 // Mock Responses (VITE_MOCK_AUTH=true)

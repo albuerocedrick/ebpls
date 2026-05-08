@@ -11,12 +11,13 @@
 // RBAC Role Types
 // =========================================
 export const ROLES = Object.freeze({
-  APPLICANT: 'Applicant',
-  BPLO_OFFICER: 'BPLO_Officer',
-  TREASURY: 'Treasury',
+  APPLICANT:        'Applicant',
+  BPLO_OFFICER:     'BPLO_Officer',
+  TREASURY:         'Treasury_Officer',
   BARANGAY_OFFICER: 'Barangay_Officer',
-  ADMIN: 'Admin',
+  ADMIN:            'Admin',
 });
+
 
 // =========================================
 // Application State Machine — Valid Statuses
@@ -68,6 +69,17 @@ export const ROUTES = Object.freeze({
   ADMIN_MASTER_DATA: '/admin/master-data',
   ADMIN_DOCUMENT_BUILDER: '/admin/document-builder',
   ADMIN_AUDIT_LOGS: '/admin/audit-logs',
+});
+
+// =========================================
+// Role → Dashboard Route Map
+// =========================================
+export const ROLE_DASHBOARDS = Object.freeze({
+  [ROLES.APPLICANT]:       ROUTES.APPLICANT_DASHBOARD,
+  [ROLES.BPLO_OFFICER]:    ROUTES.BPLO_DASHBOARD,
+  [ROLES.TREASURY]:        ROUTES.TREASURY_ASSESSMENT,
+  [ROLES.BARANGAY_OFFICER]: ROUTES.BARANGAY_QUEUE,
+  [ROLES.ADMIN]:           ROUTES.ADMIN_MASTER_DATA,
 });
 
 // =========================================

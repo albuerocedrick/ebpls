@@ -228,13 +228,12 @@ const login = async (req, res, next) => {
     }
 
     // -----------------------------------------------------------
-    // STEP 3: Resolve the user's role from public.users for the
-    // initial payload. The frontend stores this to route to the
-    // correct dashboard without an extra API call.
+    // STEP 3: Resolve the user's profile from public.users and
+    // public.taxpayers for the initial payload.
     // -----------------------------------------------------------
     const { data: userProfile } = await supabaseAdmin
       .from('users')
-      .select('user_id, email, is_active, roles(role_name)')
+      .select('user_id, email, is_active, roles(role_name), taxpayers(first_name)')
       .eq('user_id', sessionData.user.id)
       .single();
 
@@ -254,9 +253,10 @@ const login = async (req, res, next) => {
         refreshToken: sessionData.session.refresh_token,
         expiresAt:    sessionData.session.expires_at,
         user: {
-          userId:   userProfile.user_id,
-          email:    userProfile.email,
-          roleName: userProfile.roles.role_name,
+          userId:    userProfile.user_id,
+          email:     userProfile.email,
+          roleName:  userProfile.roles.role_name,
+          firstName: userProfile.taxpayers?.first_name || 'User',
         },
       })
     );

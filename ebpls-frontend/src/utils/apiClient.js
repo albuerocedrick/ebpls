@@ -55,21 +55,24 @@ async function request(endpoint, options = {}) {
   const response = await fetch(url, config);
 
   if (!response.ok) {
-    // 401 Unauthorized — token expired or invalid.
-    // Clear the session and hard-redirect to login so the user
-    // re-authenticates. window.location is intentional here:
-    // React Router's navigate() is not available in this module.
+    // Attempt to parse error details from the JSON body
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.message || `Request failed with status ${response.status}`;
+
+    // 401 Unauthorized Handling
+    // Triggers auto-logout and redirect.
     if (response.status === 401) {
       useAuthStore.getState().clearSession();
-      window.location.href = ROUTES.LOGIN;
-      // Return a rejected promise so the calling hook still enters catch.
-      return Promise.reject(new Error('Session expired. Please sign in again.'));
+
+      // Only hard-redirect if we are NOT already on the login page.
+      if (!window.location.pathname.includes(ROUTES.LOGIN)) {
+        window.location.href = ROUTES.LOGIN;
+      }
+
+      return Promise.reject(new Error(errorMessage));
     }
 
-    const errorData = await response.json().catch(() => ({
-      message: `HTTP error ${response.status}`,
-    }));
-    throw new Error(errorData.message || `HTTP error ${response.status}`);
+    throw new Error(errorMessage);
   }
 
   // Handle 204 No Content
