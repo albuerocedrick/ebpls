@@ -116,6 +116,7 @@ const upsertDraft = async (taxpayerId, step, formData) => {
     .upsert({ taxpayer_id: taxpayerId, current_step: step, form_data: formData }, { onConflict: 'taxpayer_id' });
 
   if (error) {
+    console.error(`[application.service] upsertDraft failed for taxpayerId ${taxpayerId}:`, error.message);
     throw createError('Failed to save application draft.', 500, ERROR_CODES.INTERNAL_ERROR);
   }
 };

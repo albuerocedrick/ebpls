@@ -112,6 +112,9 @@ const authenticate = async (req, res, next) => {
         roles (
           role_id,
           role_name
+        ),
+        taxpayers (
+          taxpayer_id
         )
       `)
       .eq('user_id', userId)
@@ -142,10 +145,12 @@ const authenticate = async (req, res, next) => {
     // Downstream middleware (rbac.middleware.js) and controllers read this.
     // ---------------------------------------------------------------
     req.user = {
-      userId:   userProfile.user_id,
-      email:    userProfile.email,
-      roleId:   userProfile.roles.role_id,
-      roleName: userProfile.roles.role_name,
+      userId:      userProfile.user_id,
+      email:       userProfile.email,
+      roleId:      userProfile.roles.role_id,
+      roleName:    userProfile.roles.role_name,
+      // Handle both object (1:1) and array (1:M) results from PostgREST
+      taxpayerId:  userProfile.taxpayers?.taxpayer_id || userProfile.taxpayers?.[0]?.taxpayer_id || null,
     };
 
     return next();

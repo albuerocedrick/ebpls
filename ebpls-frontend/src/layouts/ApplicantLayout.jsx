@@ -23,20 +23,18 @@ const ApplicantLayout = () => {
         // Fetch draft from Postgres via API
         const response = await apiClient.get(API_ENDPOINTS.APPLICATIONS_DRAFTS);
         
-        // If successful, load into Zustand and trigger prompt
-        if (response?.data) {
+        // Backend now returns data: null if no draft exists.
+        // We only open the prompt if data actually contains a draft payload.
+        if (response && response.data && response.data.form_data) {
           loadDraft(response.data.draft_id, response.data.current_step, response.data.form_data);
           setIsPromptOpen(true);
         }
       } catch (error) {
-        // A 404 means no draft exists, which is normal. Ignore it.
-        if (!error.message.includes('404')) {
-          console.error('[Layout] Failed to check draft status:', error.message);
-        }
+        console.error('[Layout] Failed to check draft status:', error.message);
       }
     };
 
-    // Only run if Zustand doesn't already have a draft loaded
+    // Only run if Zustand doesn't already have a draft loaded locally
     if (!draft_id) {
       fetchExistingDraft();
     } else {
@@ -45,7 +43,7 @@ const ApplicantLayout = () => {
   }, [draft_id, loadDraft]);
 
   const handleLogout = () => {
-    // In Phase 2, this will clear authStore and tokens
+    // In Phase 2, this clears authStore and tokens
     navigate('/login');
   };
 
@@ -68,7 +66,6 @@ const ApplicantLayout = () => {
       </header>
 
       {/* Main Scrollable Content */}
-      {/* The padding-bottom here MUST match your --bottom-nav-height to prevent hidden content */}
       <main className="flex-1 overflow-y-auto pb-[var(--bottom-nav-height,4rem)]">
         <div className="max-w-4xl mx-auto p-4 md:p-8">
           
@@ -84,7 +81,7 @@ const ApplicantLayout = () => {
         </div>
       </main>
 
-      {/* Your Official Template Component */}
+      {/* Official Bottom Navigation */}
       <BottomNav />
 
     </div>

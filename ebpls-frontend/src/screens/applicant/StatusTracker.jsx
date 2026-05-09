@@ -1,11 +1,11 @@
 // src/screens/applicant/StatusTracker.jsx
 
-import React from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Circle, Clock, AlertCircle, ArrowLeft, FileText } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { CheckCircle2, Circle, Clock, AlertCircle, ArrowLeft, FileText, Loader2, Download, Award, Receipt } from 'lucide-react';
 import StatusBadge from '../../components/shared/StatusBadge';
-import { ROUTES } from '../../utils/constants';
+import { ROUTES, API_ENDPOINTS } from '../../utils/constants';
+import apiClient from '../../utils/apiClient';
 
 // The strict linear path of the state machine (Draft is pre-submission)
 const TIMELINE_STEPS = [
@@ -19,31 +19,42 @@ const TIMELINE_STEPS = [
   { status: 'Completed', label: 'Permit Issued', desc: 'Business permit and E-Resibo are ready.' }
 ];
 
-// Mock Data (Phase 3A)
-const MOCK_DATA = {
-  id: 'APP-2025-00001',
-  business_name: 'Juan Dela Cruz Sari-Sari Store',
-  current_status: 'Under Review', 
-  // Change to 'Returned' to test the edge case UI:
-  // current_status: 'Returned', 
-  // return_remarks: 'Missing DTI Registration. Please upload a clear copy.',
-  submitted_at: '2025-01-15T08:30:00Z',
-  history: [
-    { status: 'Pending', timestamp: '2025-01-15T08:30:00Z' },
-    { status: 'Under Review', timestamp: '2025-01-16T10:15:00Z' },
-  ]
-};
-
 const StatusTracker = () => {
   const [searchParams] = useSearchParams();
-  const appId = searchParams.get('id') || MOCK_DATA.id;
+  const appId = searchParams.get('id');
 
-  // Calculate timeline progress
-  const isReturned = MOCK_DATA.current_status === 'Returned';
-  const currentStepIndex = TIMELINE_STEPS.findIndex(s => s.status === MOCK_DATA.current_status);
-  
-  // If Returned, it essentially halts at the 'Under Review' phase visually
-  const activeIndex = isReturned ? 1 : currentStepIndex;
+  const [applicationData, setApplicationData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      if (!appId) {
+        setError('No application reference number provided. Please select an application from your Dashboard.');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Fetch real status from backend
+        const response = await apiClient.get(API_ENDPOINTS.APPLICATIONS_STATUS(appId));
+        
+        if (response && response.success) {
+          setApplicationData(response.data);
+        }
+      } catch (err) {
+        console.error('[StatusTracker] Failed to fetch status:', err);
+        setError(err.message || 'Unable to load application status.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStatus();
+  }, [appId]);
 
   const formatDate = (isoString) => {
     if (!isoString) return '';
@@ -52,6 +63,53 @@ const StatusTracker = () => {
       hour: 'numeric', minute: '2-digit' 
     }).format(new Date(isoString));
   };
+
+  // ---------------------------------------------------------------------------
+  // LOADING & ERROR STATES
+  // ---------------------------------------------------------------------------
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <Loader2 size={40} className="animate-spin text-accent" />
+        <p className="text-sm font-medium text-[hsl(var(--color-text-muted,0,0%,40%))]">Tracking application...</p>
+      </div>
+    );
+  }
+
+  if (error || !applicationData) {
+    return (
+      <div className="flex flex-col gap-6 max-w-3xl mx-auto">
+        <div>
+          <Link 
+            to={ROUTES?.APPLICANT_DASHBOARD || '/applicant/dashboard'}
+            className="inline-flex items-center gap-2 text-sm font-medium text-[hsl(var(--color-text-muted,0,0%,40%))] hover:text-accent transition-colors mb-4"
+          >
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </Link>
+          <h1 className="text-2xl font-bold text-[hsl(var(--color-text,0,0%,10%))]">Track Application</h1>
+        </div>
+        <div className="p-8 bg-red-50 border border-red-200 rounded-xl flex flex-col items-center text-center">
+          <AlertCircle size={32} className="text-red-500 mb-3" />
+          <p className="text-sm font-bold text-red-800">Tracking Failed</p>
+          <p className="text-sm text-red-700 mt-1">{error || 'Application not found.'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // MAIN RENDER (WITH REAL DATA)
+  // ---------------------------------------------------------------------------
+  const { status: currentStatus, last_updated, return_remarks, businesses } = applicationData;
+  const businessName = businesses?.business_name || 'Business Application';
+
+  // Calculate timeline progress
+  const isReturned = currentStatus === 'Returned';
+  const currentStepIndex = TIMELINE_STEPS.findIndex(s => s.status === currentStatus);
+  
+  // If Returned, it visually halts at the 'Under Review' phase
+  const activeIndex = isReturned ? 1 : currentStepIndex;
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto">
@@ -76,12 +134,12 @@ const StatusTracker = () => {
               <FileText size={20} className="text-[hsl(var(--color-text-muted,0,0%,40%))]" />
             </div>
             <div>
-              <p className="font-bold text-[hsl(var(--color-text,0,0%,10%))]">{MOCK_DATA.business_name}</p>
+              <p className="font-bold text-[hsl(var(--color-text,0,0%,10%))]">{businessName}</p>
               <p className="text-xs font-mono text-[hsl(var(--color-text-muted,0,0%,40%))] mt-0.5">Ref: {appId}</p>
             </div>
           </div>
           <div className="shrink-0 self-start sm:self-auto">
-            <StatusBadge status={MOCK_DATA.current_status} size="md" />
+            <StatusBadge status={currentStatus} size="md" />
           </div>
         </div>
 
@@ -94,10 +152,12 @@ const StatusTracker = () => {
               <AlertCircle size={20} className="text-red-600 shrink-0 mt-0.5" />
               <div>
                 <h4 className="text-sm font-bold text-red-800">Application Returned</h4>
-                <p className="text-sm text-red-700 mt-1">{MOCK_DATA.return_remarks}</p>
-                <button className="mt-3 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors shadow-sm">
+                <p className="text-sm text-red-700 mt-1">
+                  {return_remarks || 'Please contact the BPLO office to review the missing or incorrect requirements for your application.'}
+                </p>
+                <Link to={ROUTES?.APPLICANT_UAF || '/applicant/uaf'} className="inline-block mt-3 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors shadow-sm">
                   Update Application
-                </button>
+                </Link>
               </div>
             </div>
           )}
@@ -106,10 +166,9 @@ const StatusTracker = () => {
             {TIMELINE_STEPS.map((step, index) => {
               const isPast = activeIndex > index && !isReturned;
               const isActive = activeIndex === index && !isReturned;
-              const isFuture = activeIndex < index || (isReturned && index > 1);
               
-              // Find history record if completed
-              const historyRecord = MOCK_DATA.history.find(h => h.status === step.status);
+              // Only display the exact timestamp on the currently active step (until full audit logs are built)
+              const showTimestamp = (isActive || (isReturned && step.status === 'Under Review')) && last_updated;
 
               return (
                 <div key={step.status} className="flex gap-4 sm:gap-6 relative pb-8 last:pb-0">
@@ -152,9 +211,9 @@ const StatusTracker = () => {
                       }`}>
                         {step.label}
                       </p>
-                      {historyRecord && (
+                      {showTimestamp && (
                         <p className="text-[10px] sm:text-xs font-medium text-[hsl(var(--color-text-muted,0,0%,40%))] shrink-0">
-                          {formatDate(historyRecord.timestamp)}
+                          {formatDate(last_updated)}
                         </p>
                       )}
                     </div>
@@ -171,6 +230,43 @@ const StatusTracker = () => {
           </div>
         </div>
       </div>
+
+      {/* Download Documents Section — only visible when Completed */}
+      {currentStatus === 'Completed' && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-emerald-200 flex items-center gap-3">
+            <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
+              <Award size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-emerald-900">Your Permit is Ready</h3>
+              <p className="text-xs text-emerald-700 mt-0.5">Download your official documents below.</p>
+            </div>
+          </div>
+          <div className="p-5 flex flex-col sm:flex-row gap-3">
+            <a
+              href={`/api/documents/permit/${appId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 shadow-sm shadow-emerald-600/20 transition-colors"
+            >
+              <Award size={18} />
+              Business Permit
+              <Download size={16} className="ml-auto opacity-70" />
+            </a>
+            <a
+              href={`/api/documents/eresibo/${appId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white text-emerald-800 text-sm font-semibold rounded-lg border border-emerald-300 hover:bg-emerald-50 transition-colors"
+            >
+              <Receipt size={18} />
+              E-Resibo (Official Receipt)
+              <Download size={16} className="ml-auto opacity-70" />
+            </a>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -53,6 +53,12 @@ router.post(
 );
 
 router.get(
+  '/list',
+  authenticate,
+  applicationController.getApplicationsList
+);
+
+router.get(
   '/:app_no/status',
   authenticate,
   applicationController.getStatus

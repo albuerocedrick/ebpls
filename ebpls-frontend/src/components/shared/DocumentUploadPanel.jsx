@@ -5,9 +5,6 @@ import { UploadCloud, FileText, X, CheckCircle2, Image as ImageIcon, Trash2, Loa
 import apiClient from '../../utils/apiClient';
 import { API_ENDPOINTS } from '../../utils/constants';
 
-/**
- * Formats file size to human-readable format.
- */
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -16,21 +13,12 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
-/**
- * Document Upload Panel with drag-and-drop support.
- * @param {string} title - Requirement name (e.g., "DTI Registration")
- * @param {string} description - Instructions for the document
- * @param {Object} value - Uploaded file metadata { file_name, file_size, file_type, url, file_path }
- * @param {Function} onChange - Callback when file is successfully uploaded
- * @param {Function} onRemove - Callback when file is removed
- */
 const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
 
-  // Drag and Drop Handlers
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -45,20 +33,19 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
     if (!file) return;
 
     setIsUploading(true);
-    setUploadProgress(10); // Start progress immediately for UI feedback
+    setUploadProgress(10); 
 
     try {
       // 1. Ask Backend for Pre-Signed URL
       const urlResponse = await apiClient.post(API_ENDPOINTS.APPLICATIONS_UPLOAD, {
         fileName: file.name,
-        mimeType: file.type // Zod enforces: application/pdf, image/jpeg, image/png
+        mimeType: file.type 
       });
 
       const { uploadUrl, filePath } = urlResponse.data;
-      setUploadProgress(40); // URL received
+      setUploadProgress(40); 
 
       // 2. Upload file directly to Supabase Storage using native fetch
-      // We use native fetch here instead of apiClient so we don't accidentally send JSON headers
       const uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
         body: file,
@@ -68,28 +55,28 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
       });
 
       if (!uploadRes.ok) {
-        throw new Error(`Storage upload failed with status: ${uploadRes.status}`);
+        throw new Error(`Storage upload failed: ${uploadRes.status}`);
       }
       
-      setUploadProgress(100); // Upload complete
+      setUploadProgress(100); 
 
-      // 3. Save the internal Supabase path to the form state
+      // 3. Save internal Supabase path to form state
       setTimeout(() => {
         setIsUploading(false);
         onChange({
           file_name: file.name,
           file_size: file.size,
           file_type: file.type,
-          file_path: filePath, // The internal path required by the DB
-          url: URL.createObjectURL(file), // Local preview for the UI
+          file_path: filePath, 
+          url: URL.createObjectURL(file), 
         });
-      }, 500); // Slight delay so user sees the 100% full bar
+      }, 500); 
 
     } catch (error) {
       console.error('[DocumentUpload] Error:', error);
       setIsUploading(false);
       setUploadProgress(0);
-      alert('Failed to upload document. Please ensure it is a PDF, JPG, or PNG under 5MB.');
+      alert('Failed to upload document. Ensure it is a PDF, JPG, or PNG under 5MB.');
     }
   };
 
@@ -110,21 +97,19 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
 
   const handleRemoveClick = () => {
     if (value?.url) {
-      URL.revokeObjectURL(value.url); // Clean up memory
+      URL.revokeObjectURL(value.url); 
     }
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''; // Reset input
+      fileInputRef.current.value = ''; 
     }
     onRemove();
   };
 
-  // Determine if uploaded file is an image for thumbnail preview
   const isImage = value?.file_type?.startsWith('image/');
 
   return (
     <div className="flex flex-col border border-[hsl(var(--color-border,0,0%,90%))] rounded-lg overflow-hidden bg-[hsl(var(--color-surface,0,0%,100%))] shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))] hover:shadow-[var(--shadow-md,0_4px_6px_-1px_rgba(0,0,0,0.1))] transition-shadow duration-200">
       
-      {/* Header */}
       <div className="bg-[hsl(var(--color-surface-raised,0,0%,96%))] p-3.5 border-b border-[hsl(var(--color-border,0,0%,90%))]">
         <h4 className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))] flex items-center justify-between">
           {title}
@@ -137,9 +122,7 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
         )}
       </div>
 
-      {/* Body Area */}
       <div className="p-4">
-        {/* State 1: Uploaded File View */}
         {value ? (
           <div className="flex items-center gap-3 p-3 border border-[hsl(var(--color-border,0,0%,90%))] rounded-md bg-[hsl(var(--color-surface-raised,0,0%,98%))]">
             <div className="w-12 h-12 shrink-0 rounded bg-white border border-[hsl(var(--color-border,0,0%,90%))] flex items-center justify-center overflow-hidden">
@@ -163,20 +146,17 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
               type="button"
               onClick={handleRemoveClick}
               className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors shrink-0"
-              title="Remove file"
             >
               <Trash2 size={18} />
             </button>
           </div>
         ) : 
 
-        /* State 2: Uploading / Progress View */
         isUploading ? (
           <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-[hsl(var(--color-border,0,0%,90%))] rounded-md bg-[hsl(var(--color-surface-raised,0,0%,98%))]">
             <Loader2 size={32} className="text-accent animate-spin mb-3" />
             <p className="text-sm font-medium text-[hsl(var(--color-text,0,0%,10%))]">Uploading document...</p>
             
-            {/* Progress Bar */}
             <div className="w-full max-w-xs mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-accent transition-all duration-300 ease-out"
@@ -186,21 +166,13 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
             <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,40%))] mt-1">{uploadProgress}%</p>
           </div>
         ) : 
-
-        /* State 3: Idle / Dropzone View */
         (
           <div 
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`
-              flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md cursor-pointer transition-colors
-              ${isDragging 
-                ? 'border-accent bg-accent/5' 
-                : 'border-[hsl(var(--color-border,0,0%,80%))] bg-[hsl(var(--color-surface-raised,0,0%,98%))] hover:bg-[hsl(var(--color-surface-raised,0,0%,96%))]'
-              }
-            `}
+            className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md cursor-pointer transition-colors ${isDragging ? 'border-accent bg-accent/5' : 'border-[hsl(var(--color-border,0,0%,80%))] bg-[hsl(var(--color-surface-raised,0,0%,98%))] hover:bg-[hsl(var(--color-surface-raised,0,0%,96%))]'}`}
           >
             <input 
               type="file" 
@@ -221,7 +193,6 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
           </div>
         )}
       </div>
-
     </div>
   );
 };

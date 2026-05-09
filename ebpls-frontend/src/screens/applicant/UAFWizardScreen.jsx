@@ -3,16 +3,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  FileEdit, 
-  MapPin, 
-  Store, 
-  FileText, 
-  CheckSquare, 
-  ChevronRight, 
-  ChevronLeft, 
-  Check, 
-  Save, 
-  Loader2 
+  FileEdit, MapPin, Store, FileText, CheckSquare, 
+  ChevronRight, ChevronLeft, Check, Save, Loader2 
 } from 'lucide-react';
 import useApplicationStore from '../../store/applicationStore';
 import useAutosave from '../../hooks/useAutosave';
@@ -26,7 +18,6 @@ import Step3_Activities from './uaf-steps/Step3_Activities';
 import Step4_Documents from './uaf-steps/Step4_Documents';
 import Step5_Review from './uaf-steps/Step5_Review';
 
-// Step definitions for the progress bar
 const WIZARD_STEPS = [
   { id: 1, label: 'Business Info', icon: FileEdit },
   { id: 2, label: 'Location',      icon: MapPin },
@@ -44,19 +35,15 @@ const Step5 = Step5_Review;
 const UAFWizardScreen = () => {
   const navigate = useNavigate();
   
-  // Zustand State
   const current_step = useApplicationStore((state) => state.current_step);
   const setStep = useApplicationStore((state) => state.setStep);
   const formData = useApplicationStore((state) => state.formData);
   const resetForm = useApplicationStore((state) => state.resetForm);
   const isAttestationAgreed = useApplicationStore((state) => state.formData.step5.attestation_agreed);
   
-  // Autosave Hook
   const { isSaving, lastSavedAt } = useAutosave();
 
-  // Navigation Handlers
   const handleNext = () => {
-    // Note: Local validation will be added here before allowing transition
     if (current_step < 5) setStep(current_step + 1);
   };
 
@@ -66,7 +53,7 @@ const UAFWizardScreen = () => {
 
   const handleSubmit = async () => {
     try {
-      // 1. Flatten the Zustand state to match the backend Zod schema exactly
+      // Flatten Zustand state to match your Zod Schema exactly
       const payload = {
         type_id: formData.step1.type_id,
         payment_mode_id: formData.step1.payment_mode_id || undefined,
@@ -84,10 +71,9 @@ const UAFWizardScreen = () => {
         longitude: formData.step2.longitude,
       };
 
-      // 2. Submit to backend
+      // Send to Backend
       const response = await apiClient.post(API_ENDPOINTS.APPLICATIONS_SUBMIT, payload);
       
-      // 3. Clean up local draft and redirect
       if (response && response.success) {
         resetForm();
         navigate(`${ROUTES.APPLICANT_STATUS}?id=${response.data.application_no}`);
@@ -109,7 +95,6 @@ const UAFWizardScreen = () => {
           </p>
         </div>
         
-        {/* Autosave Indicator */}
         <div className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-[hsl(var(--color-surface-raised,0,0%,96%))] border border-[hsl(var(--color-border,0,0%,90%))]">
           {isSaving ? (
             <>
@@ -149,20 +134,12 @@ const UAFWizardScreen = () => {
                 <div 
                   className={`
                     w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-colors duration-300
-                    ${isCompleted 
-                      ? 'bg-accent border-accent text-white' 
-                      : isActive 
-                        ? 'bg-white border-accent text-accent' 
-                        : 'bg-[hsl(var(--color-surface-raised,0,0%,96%))] border-[hsl(var(--color-border,0,0%,80%))] text-[hsl(var(--color-border,0,0%,80%))]'
-                    }
+                    ${isCompleted ? 'bg-accent border-accent text-white' : isActive ? 'bg-white border-accent text-accent' : 'bg-[hsl(var(--color-surface-raised,0,0%,96%))] border-[hsl(var(--color-border,0,0%,80%))] text-[hsl(var(--color-border,0,0%,80%))]'}
                   `}
                 >
                   {isCompleted ? <Check size={18} strokeWidth={3} /> : <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />}
                 </div>
-                <span className={`
-                  hidden sm:block text-xs font-semibold
-                  ${isActive || isCompleted ? 'text-[hsl(var(--color-text,0,0%,10%))]' : 'text-[hsl(var(--color-text-muted,0,0%,50%))]'}
-                `}>
+                <span className={`hidden sm:block text-xs font-semibold ${isActive || isCompleted ? 'text-[hsl(var(--color-text,0,0%,10%))]' : 'text-[hsl(var(--color-text-muted,0,0%,50%))]'}`}>
                   {step.label}
                 </span>
               </div>

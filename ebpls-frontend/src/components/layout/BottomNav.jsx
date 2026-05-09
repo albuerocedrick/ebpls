@@ -20,7 +20,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { ROUTES } from '../../utils/constants';
-import { LayoutDashboard, FilePlus, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, FilePlus } from 'lucide-react';
 
 // =========================================
 // Tab Configuration — Applicant-specific
@@ -38,12 +38,6 @@ const TABS = [
     icon: <FilePlus size={22} />,
     label: 'Apply',
     id: 'bottom-nav-apply',
-  },
-  {
-    to: ROUTES.APPLICANT_STATUS,
-    icon: <ClipboardList size={22} />,
-    label: 'Status',
-    id: 'bottom-nav-status',
   },
 ];
 
