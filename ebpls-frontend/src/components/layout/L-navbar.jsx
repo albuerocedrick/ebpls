@@ -1,5 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { gsap } from "../../lib/gsap";
+import { Link } from "react-router-dom";
+import { ROUTES } from "../../utils/constants";
+
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -55,12 +58,18 @@ export default function Navbar() {
 
         {/* ACTION BUTTONS */}
         <div className="flex gap-4 items-center">
-          <button className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors hidden sm:block">
+          <Link 
+            to={ROUTES.LOGIN}
+            className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors hidden sm:block"
+          >
             Sign In
-          </button>
-          <button className="bg-slate-900 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-slate-800 transition-all hover:shadow-lg hover:-translate-y-0.5">
+          </Link>
+          <Link 
+            to={ROUTES.REGISTER}
+            className="bg-slate-900 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-slate-800 transition-all hover:shadow-lg hover:-translate-y-0.5"
+          >
             Get Started
-          </button>
+          </Link>
         </div>
       </div>
     </header>
