@@ -109,10 +109,28 @@ const ERROR_CODES = Object.freeze({
   INVALID_TRANSITION:  'INVALID_TRANSITION',
 });
 
+// -----------------------------------------------------------------
+// EMAIL TRIGGERS
+// Source: supabase/migrations/012_email_notifications.sql (email_trigger_event enum)
+// -----------------------------------------------------------------
+const EMAIL_TRIGGERS = Object.freeze({
+  ACCOUNT_CREATED:            'ACCOUNT_CREATED',
+  PASSWORD_RESET:             'PASSWORD_RESET',
+  APPLICATION_SUBMITTED:      'APPLICATION_SUBMITTED',
+  BARANGAY_CLEARANCE_REJECTED: 'BARANGAY_CLEARANCE_REJECTED',
+  APPLICATION_RETURNED:       'APPLICATION_RETURNED',
+  APPLICATION_VERIFIED:       'APPLICATION_VERIFIED',
+  TOP_GENERATED:              'TOP_GENERATED',
+  PAYMENT_RECORDED:           'PAYMENT_RECORDED',
+  PERMIT_READY:               'PERMIT_READY',
+  RETIREMENT_COMPLETE:        'RETIREMENT_COMPLETE',
+});
+
 module.exports = {
   ROLES,
   STATUSES,
   VALID_TRANSITIONS,
   AUDIT_ACTIONS,
   ERROR_CODES,
+  EMAIL_TRIGGERS,
 };
