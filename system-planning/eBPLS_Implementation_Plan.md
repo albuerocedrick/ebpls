@@ -176,7 +176,7 @@ graph TD
 | 1.12 | Create migration: `email_notifications` (patched later by `015_design_gaps_fix.sql` to add `BARANGAY_CLEARANCE_REJECTED`) | `supabase/migrations/012_email_notifications.sql` | Backend | ⚠️ Patched |
 | 1.13 | Enable RLS on all base tables; write initial policies (patched later by `015_design_gaps_fix.sql` for `application_data_reviews` RLS) | `supabase/migrations/013_rls_policies.sql` | Backend | ⚠️ Patched |
 | 1.14 | Seed lookup tables: roles, application_types, payment_modes, clearance_types, fee_types, organization_types | `supabase/seed.sql` | Backend | — |
-| **1.15** | **Create incremental migration: `015_design_gaps_fix.sql` — adds `application_data_reviews` table, appends `Yes`/`No`/`Awaiting Issuance` to `doc_verifications` constraint, adds `BARANGAY_CLEARANCE_REJECTED` to email triggers, and enables RLS** | **`supabase/migrations/015_design_gaps_fix.sql`** | **Backend** | **🆕 New** |
+| **1.15** | **Migrations `015` & `016` — adds `application_data_reviews` table, updates `doc_verifications` status constraint (`Yes`/`No`/`Awaiting Issuance`), and adds `BARANGAY_CLEARANCE_REJECTED` trigger** | **`supabase/migrations/`** | **Backend** | **🆕 New** |
 
 ### Definition of Done
 - [ ] All tables exist in Supabase with correct constraints, FKs, and enums
