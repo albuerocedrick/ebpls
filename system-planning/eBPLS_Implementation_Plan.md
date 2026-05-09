@@ -167,16 +167,16 @@ graph TD
 | 1.3 | Create migration: `taxpayers` table (1:1 with users) | `supabase/migrations/003_taxpayers.sql` | Backend | — |
 | 1.4 | Create migration: `businesses`, `organization_types` | `supabase/migrations/004_businesses.sql` | Backend | — |
 | 1.5 | Create migration: `applications`, `application_drafts`, `application_types`, `payment_modes` | `supabase/migrations/005_applications.sql` | Backend | — |
-| 1.6 | Create migration: `doc_verifications`, `clearance_types` — **status ENUM must include: `'Yes'`, `'No'`, `'Not Needed'`, `'Awaiting Issuance'`** | `supabase/migrations/006_verifications.sql` | Backend | ⚠️ Updated |
+| 1.6 | Create migration: `doc_verifications`, `clearance_types` (patched later by `015_design_gaps_fix.sql` to add `'Yes'`, `'No'`, `'Awaiting Issuance'`) | `supabase/migrations/006_verifications.sql` | Backend | ⚠️ Patched |
 | 1.7 | Create migration: `barangay_clearances` — note: this table is linked to `doc_verifications` via `application_no`; no hard FK needed but the relationship is enforced at the service layer | `supabase/migrations/007_barangay.sql` | Backend | ⚠️ Updated |
-| **1.7a** | **Create migration: `application_data_reviews` table — columns: `review_id` UUID PK, `application_no` VARCHAR FK → applications, `section` VARCHAR (e.g. `business_details`, `location`, `activities`, `financials`), `status` ENUM `'Verified'` / `'Discrepancy'`, `remarks` TEXT (required when status = `'Discrepancy'`), `reviewed_by_user_id` UUID FK → users, `reviewed_at` TIMESTAMP** | **`supabase/migrations/007a_data_reviews.sql`** | **Backend** | **🆕 New** |
 | 1.8 | Create migration: `assessments`, `assessment_line_items`, `fee_types`, `transactions` | `supabase/migrations/008_treasury.sql` | Backend | — |
 | 1.9 | Create migration: `retirement_applications` | `supabase/migrations/009_retirements.sql` | Backend | — |
 | 1.10 | Create migration: `permits`, `permit_line_items`, `business_activities` | `supabase/migrations/010_permits.sql` | Backend | — |
 | 1.11 | Create migration: `audit_logs` | `supabase/migrations/011_audit_logs.sql` | Backend | — |
-| 1.12 | Create migration: `email_notifications` — **seed must include `BARANGAY_CLEARANCE_REJECTED` as a valid trigger event** | `supabase/migrations/012_email_notifications.sql` | Backend | ⚠️ Updated |
-| 1.13 | Enable RLS on all tables including `application_data_reviews`; write initial policies | `supabase/migrations/013_rls_policies.sql` | Backend | ⚠️ Updated |
+| 1.12 | Create migration: `email_notifications` (patched later by `015_design_gaps_fix.sql` to add `BARANGAY_CLEARANCE_REJECTED`) | `supabase/migrations/012_email_notifications.sql` | Backend | ⚠️ Patched |
+| 1.13 | Enable RLS on all base tables; write initial policies (patched later by `015_design_gaps_fix.sql` for `application_data_reviews` RLS) | `supabase/migrations/013_rls_policies.sql` | Backend | ⚠️ Patched |
 | 1.14 | Seed lookup tables: roles, application_types, payment_modes, clearance_types, fee_types, organization_types | `supabase/seed.sql` | Backend | — |
+| **1.15** | **Create incremental migration: `015_design_gaps_fix.sql` — adds `application_data_reviews` table, appends `Yes`/`No`/`Awaiting Issuance` to `doc_verifications` constraint, adds `BARANGAY_CLEARANCE_REJECTED` to email triggers, and enables RLS** | **`supabase/migrations/015_design_gaps_fix.sql`** | **Backend** | **🆕 New** |
 
 ### Definition of Done
 - [ ] All tables exist in Supabase with correct constraints, FKs, and enums
@@ -269,14 +269,14 @@ graph TD
 | 3C.1 | Open `application.service.js` — locate the UAF final submission handler (`POST /api/applications/uaf`) | `src/services/application.service.js` |
 | 3C.2 | Add logic: after `brgy_clearances` record is created with `status = 'Pending'`, immediately insert a corresponding `doc_verifications` record for that `application_no` where `clearance_type` = Barangay and `status = 'Awaiting Issuance'` | `src/services/application.service.js` |
 | 3C.3 | Wrap both inserts (`brgy_clearances` + `doc_verifications`) in a single database transaction so they succeed or fail together — no orphaned records | `src/services/application.service.js` |
-| 3C.4 | Add logic: if the applicant does NOT tick the checkbox, insert the Barangay `doc_verifications` row with `status = 'Not Needed'` instead — this ensures the BPLO checklist always has a Barangay row to evaluate | `src/services/application.service.js` |
+| 3C.4 | Add logic: if the applicant does NOT tick the checkbox, insert the Barangay `doc_verifications` row with `status = 'Pending'` — this requires the applicant to upload their existing clearance for manual BPLO verification | `src/services/application.service.js` |
 | 3C.5 | Update `constants.js` — add `AWAITING_ISSUANCE` to the `DOC_VERIFICATION_STATUS` enum object | `src/utils/constants.js` |
 | 3C.6 | Write a manual test: submit UAF with checkbox ticked → confirm both `brgy_clearances` (Pending) and `doc_verifications` (Awaiting Issuance) rows exist in Supabase | Postman / Thunder Client |
-| 3C.7 | Write a manual test: submit UAF without checkbox → confirm `doc_verifications` row for Barangay exists with `status = 'Not Needed'` | Postman / Thunder Client |
+| 3C.7 | Write a manual test: submit UAF without checkbox → confirm `doc_verifications` row for Barangay exists with `status = 'Pending'` | Postman / Thunder Client |
 
 ### Definition of Done
 - [ ] Ticking the checkbox on UAF creates both a `brgy_clearances` record (`Pending`) and a `doc_verifications` record (`Awaiting Issuance`) atomically
-- [ ] Not ticking the checkbox creates a `doc_verifications` record (`Not Needed`) for Barangay — no `brgy_clearances` record is created
+- [ ] Not ticking the checkbox creates a `doc_verifications` record (`Pending`) for Barangay — no `brgy_clearances` record is created
 - [ ] Both paths are verified in Supabase directly
 - [ ] No orphaned `brgy_clearances` records exist without a corresponding `doc_verifications` row
 

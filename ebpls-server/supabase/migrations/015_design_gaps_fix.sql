@@ -11,9 +11,9 @@ ALTER TYPE public.email_trigger_event ADD VALUE IF NOT EXISTS 'BARANGAY_CLEARANC
 -- Since the original constraint was unnamed, we drop the constraint that references the column.
 ALTER TABLE public.doc_verifications DROP CONSTRAINT IF EXISTS doc_verifications_status_check;
 ALTER TABLE public.doc_verifications ADD CONSTRAINT doc_verifications_status_check 
-    CHECK (status IN ('Pending', 'Verified', 'Returned', 'Not Needed', 'Awaiting Issuance'));
+    CHECK (status IN ('Pending', 'Verified', 'Returned', 'Yes', 'No', 'Not Needed', 'Awaiting Issuance'));
 
-COMMENT ON COLUMN public.doc_verifications.status IS 'Pending=not yet reviewed, Verified=approved, Returned=needs resubmission, Not Needed=not applicable, Awaiting Issuance=waiting for barangay clearance.';
+COMMENT ON COLUMN public.doc_verifications.status IS 'Pending=not yet reviewed, Verified/Yes=approved, Returned/No=needs resubmission, Not Needed=not applicable, Awaiting Issuance=waiting for barangay clearance.';
 
 -- 3. Create application_data_reviews table
 CREATE TABLE IF NOT EXISTS public.application_data_reviews (
