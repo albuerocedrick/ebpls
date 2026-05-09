@@ -8,14 +8,23 @@ const { z } = require('zod');
 const { supabaseAdmin } = require('../config/supabase');
 const { createError } = require('../middlewares/error.middleware');
 const { successResponse, getClientIp } = require('../utils/helpers');
-const { ERROR_CODES, STATUSES } = require('../utils/constants');
+const { ERROR_CODES, STATUSES, DOC_VERIFICATION_STATUS } = require('../utils/constants');
 const { logAction, AUDIT_ACTIONS } = require('../services/audit.service');
 
 const verifySchema = z.object({
   checklist: z.array(
     z.object({
       requirementId: z.number().int().positive(),
-      status: z.enum(['Pending', 'Verified', 'Returned', 'Not Needed']),
+      // Allow all valid doc_verifications status values.
+      // BPLO cannot set 'Awaiting Issuance' directly — that is set by the UAF hook.
+      status: z.enum([
+        DOC_VERIFICATION_STATUS.PENDING,
+        DOC_VERIFICATION_STATUS.VERIFIED,
+        DOC_VERIFICATION_STATUS.YES,
+        DOC_VERIFICATION_STATUS.NO,
+        DOC_VERIFICATION_STATUS.RETURNED,
+        DOC_VERIFICATION_STATUS.NOT_NEEDED,
+      ]),
       remarks: z.string().trim().optional(),
     })
   ).min(1, 'Checklist is required.'),
@@ -116,8 +125,18 @@ const verifyApplication = async (req, res, next) => {
       ));
     }
 
+    // Guard: All doc_verifications rows must be in a terminal-pass state.
+    // Terminal-pass states: 'Verified', 'Yes', 'Not Needed'.
+    // 'Awaiting Issuance' blocks verification — BPLO must wait for Barangay action.
+    // 'Pending', 'Returned', 'No' also block — BPLO must resolve them first.
+    const PASS_STATUSES = [
+      DOC_VERIFICATION_STATUS.VERIFIED,
+      DOC_VERIFICATION_STATUS.YES,
+      DOC_VERIFICATION_STATUS.NOT_NEEDED,
+    ];
+
     const hasUnresolvedItems = checklistRows.some(
-      (row) => row.status !== 'Verified' && row.status !== 'Not Needed'
+      (row) => !PASS_STATUSES.includes(row.status)
     );
 
     if (hasUnresolvedItems) {

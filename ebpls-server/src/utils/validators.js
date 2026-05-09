@@ -39,6 +39,11 @@ const UAFSubmissionPayloadSchema = z.object({
   is_franchise: z.boolean().default(false),
   franchisor_name: z.string().optional(),
 
+  // Barangay Clearance — Phase 3C
+  // TRUE  = applicant wants municipality to request clearance on their behalf.
+  // FALSE = applicant will upload their own existing barangay clearance document.
+  request_barangay_clearance: z.boolean().default(false),
+
   // Address Data
   address_line1: z.string().optional(),
   barangay: z.string().optional(),

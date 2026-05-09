@@ -33,6 +33,10 @@ const initialFormState = {
     lineOfBusinesses: [],      // Expected: { id/name, capital_investment, etc. }
   },
   step4: {
+    // Phase 3C — Barangay Clearance mode selection
+    // true  = applicant requests the municipality to forward clearance to barangay
+    // false = applicant will upload their own existing barangay clearance document
+    request_barangay_clearance: false,
     // Array to hold uploaded document pre-signed URLs or path references
     documents: [],             // Expected: { doc_type, file_path, file_name }
   },

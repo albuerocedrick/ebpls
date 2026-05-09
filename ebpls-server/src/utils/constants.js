@@ -126,6 +126,22 @@ const EMAIL_TRIGGERS = Object.freeze({
   RETIREMENT_COMPLETE:        'RETIREMENT_COMPLETE',
 });
 
+// -----------------------------------------------------------------
+// DOC VERIFICATION STATUS
+// Source: supabase/migrations/006_verifications.sql +
+//         015_design_gaps_fix.sql + 016_align_doc_status.sql
+// These values MUST match the CHECK constraint on doc_verifications.status.
+// -----------------------------------------------------------------
+const DOC_VERIFICATION_STATUS = Object.freeze({
+  PENDING:           'Pending',
+  VERIFIED:          'Verified',    // Legacy value (BPLO explicit approval)
+  YES:               'Yes',          // Shorthand used by BPLO checklist UI
+  NO:                'No',           // Shorthand: document rejected/not submitted
+  RETURNED:          'Returned',     // Document sent back for resubmission
+  NOT_NEEDED:        'Not Needed',   // Requirement waived / not applicable
+  AWAITING_ISSUANCE: 'Awaiting Issuance', // Barangay clearance requested, pending officer action
+});
+
 module.exports = {
   ROLES,
   STATUSES,
@@ -133,4 +149,5 @@ module.exports = {
   AUDIT_ACTIONS,
   ERROR_CODES,
   EMAIL_TRIGGERS,
+  DOC_VERIFICATION_STATUS,
 };

@@ -31,7 +31,7 @@ Municipality of Liliw | **v3.0 — Phases Consolidated & Chronological**
 | Frontend: Global CSS token system (`index.css`) | ✅ Done |
 | Frontend: All folder structure created | ✅ Done |
 | Phase 3: Applicant Module (Frontend — UAF Wizard) | ✅ Done |
-| Phase 3: Application Module API (Backend) | ✅ Done — **Phase 3C patch required** |
+| Phase 3: Application Module API (Backend) | ✅ Done — **Phase 3C patch complete (3C.1–3C.5)** |
 
 ---
 
@@ -229,19 +229,19 @@ graph TD
 
 | # | Task | File / Location |
 |---|---|---|
-| 3C.1 | Open `application.service.js` — locate the UAF final submission handler (`POST /api/applications/uaf`) | `src/services/application.service.js` |
-| 3C.2 | Add logic: after `brgy_clearances` record is created with `status = 'Pending'`, immediately insert a corresponding `doc_verifications` record for that `application_no` where `clearance_type` = Barangay and `status = 'Awaiting Issuance'` | `src/services/application.service.js` |
-| 3C.3 | Wrap both inserts (`brgy_clearances` + `doc_verifications`) in a single database transaction so they succeed or fail together — no orphaned records | `src/services/application.service.js` |
-| 3C.4 | Add logic: if the applicant does NOT tick the checkbox, insert the Barangay `doc_verifications` row with `status = 'Pending'` — applicant must upload their existing clearance for manual BPLO verification | `src/services/application.service.js` |
-| 3C.5 | Update `constants.js` — add `AWAITING_ISSUANCE` to the `DOC_VERIFICATION_STATUS` enum object | `src/utils/constants.js` |
+| ~~3C.1~~ | ~~Open `application.service.js` — locate the UAF final submission handler (`POST /api/applications/uaf`)~~ | ✅ Done |
+| ~~3C.2~~ | ~~Add logic: after `brgy_clearances` record is created with `status = 'Pending'`, immediately insert a corresponding `doc_verifications` record for that `application_no` where `clearance_type` = Barangay and `status = 'Awaiting Issuance'`~~ | ✅ Done — via `uaf_create_barangay_clearance_hook` RPC |
+| ~~3C.3~~ | ~~Wrap both inserts (`brgy_clearances` + `doc_verifications`) in a single database transaction so they succeed or fail together — no orphaned records~~ | ✅ Done — atomic Postgres function in `017_uaf_clearance_hook.sql` |
+| ~~3C.4~~ | ~~Add logic: if the applicant does NOT tick the checkbox, insert the Barangay `doc_verifications` row with `status = 'Pending'`~~ | ✅ Done — PATH B in RPC |
+| ~~3C.5~~ | ~~Update `constants.js` — add `AWAITING_ISSUANCE` to the `DOC_VERIFICATION_STATUS` enum object~~ | ✅ Done |
 | 3C.6 | Manual test: submit UAF with checkbox ticked → confirm both `brgy_clearances` (Pending) and `doc_verifications` (Awaiting Issuance) rows exist in Supabase | Postman / Thunder Client |
 | 3C.7 | Manual test: submit UAF without checkbox → confirm `doc_verifications` row for Barangay exists with `status = 'Pending'` | Postman / Thunder Client |
 
 ### Definition of Done
-- [ ] Ticking the checkbox creates both a `brgy_clearances` record (`Pending`) and a `doc_verifications` record (`Awaiting Issuance`) atomically
-- [ ] Not ticking the checkbox creates a `doc_verifications` record (`Pending`) for Barangay — no `brgy_clearances` record is created
-- [ ] Both paths verified in Supabase directly
-- [ ] No orphaned `brgy_clearances` records exist without a corresponding `doc_verifications` row
+- [x] Ticking the checkbox creates both a `brgy_clearances` record (`Pending`) and a `doc_verifications` record (`Awaiting Issuance`) atomically
+- [x] Not ticking the checkbox creates a `doc_verifications` record (`Pending`) for Barangay — no `brgy_clearances` record is created
+- [ ] Both paths verified in Supabase directly (manual test 3C.6 & 3C.7)
+- [x] No orphaned `brgy_clearances` records exist without a corresponding `doc_verifications` row
 
 ---
 

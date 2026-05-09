@@ -7,7 +7,7 @@
 
 const { supabaseAdmin } = require('../config/supabase');
 const { createError }   = require('../middlewares/error.middleware');
-const { ERROR_CODES, STATUSES, VALID_TRANSITIONS } = require('../utils/constants');
+const { ERROR_CODES, STATUSES, VALID_TRANSITIONS, DOC_VERIFICATION_STATUS } = require('../utils/constants');
 
 // -----------------------------------------------------------------
 // STATE MACHINE HELPERS
@@ -84,6 +84,54 @@ const generateApplicationNo = async () => {
 
   const paddedSequence = String(nextSequence).padStart(5, '0');
   return `${prefix}${paddedSequence}`;
+};
+
+// -----------------------------------------------------------------
+// BARANGAY CLEARANCE LOOKUP IDS
+// -----------------------------------------------------------------
+
+/**
+ * Resolves the canonical IDs needed for the Phase 3C clearance hook.
+ * Looks up by name rather than relying on positional seed IDs so the
+ * logic remains correct even if seed order changes.
+ *
+ * @returns {Promise<{ clearanceTypeId: number, requirementId: number }>}
+ */
+const getBarangayClearanceLookupIds = async () => {
+  // Fetch clearance_type_id for 'Business Clearance'
+  const { data: ctData, error: ctError } = await supabaseAdmin
+    .from('clearance_types')
+    .select('id')
+    .eq('name', 'Business Clearance')
+    .single();
+
+  if (ctError || !ctData) {
+    throw createError(
+      'Clearance type "Business Clearance" not found in database. Ensure seed data is applied.',
+      500,
+      ERROR_CODES.INTERNAL_ERROR
+    );
+  }
+
+  // Fetch requirement_id for 'Barangay Business Clearance'
+  const { data: reqData, error: reqError } = await supabaseAdmin
+    .from('requirement_types')
+    .select('id')
+    .eq('name', 'Barangay Business Clearance')
+    .single();
+
+  if (reqError || !reqData) {
+    throw createError(
+      'Requirement type "Barangay Business Clearance" not found in database. Ensure seed data is applied.',
+      500,
+      ERROR_CODES.INTERNAL_ERROR
+    );
+  }
+
+  return {
+    clearanceTypeId: ctData.id,
+    requirementId: reqData.id,
+  };
 };
 
 // -----------------------------------------------------------------
@@ -189,7 +237,39 @@ const submitApplication = async (taxpayerId, payload) => {
     throw createError('Failed to create application record.', 500, ERROR_CODES.INTERNAL_ERROR);
   }
 
-  // 5. Delete the temporary draft now that submission is fully successful
+  // 5. Phase 3C — Barangay Clearance Hook (atomic via Postgres RPC)
+  //    Must run AFTER the application record is committed so the
+  //    application_no FK in doc_verifications is valid.
+  const { clearanceTypeId, requirementId } = await getBarangayClearanceLookupIds();
+
+  const { error: hookError } = await supabaseAdmin.rpc('uaf_create_barangay_clearance_hook', {
+    p_application_no:    appNo,
+    p_clearance_type_id: clearanceTypeId,
+    p_requirement_id:    requirementId,
+    p_request_clearance: payload.request_barangay_clearance ?? false,
+  });
+
+  if (hookError) {
+    // ROLLBACK manually: remove the application and business to prevent partial state.
+    // The RPC failed before writing anything, so only the main rows need cleanup.
+    console.error(`[submitApp] Barangay clearance hook RPC failed for ${appNo}. Rolling back:`, hookError.message);
+    await supabaseAdmin.from('applications').delete().eq('application_no', appNo);
+    await supabaseAdmin.from('businesses').delete().eq('business_id', businessData.business_id);
+    throw createError(
+      'Failed to initialise barangay clearance tracking. Application rolled back.',
+      500,
+      ERROR_CODES.INTERNAL_ERROR
+    );
+  }
+
+  // Log the clearance path taken for traceability.
+  if (payload.request_barangay_clearance) {
+    console.log(`[submitApp] PATH A: Barangay clearance requested for ${appNo}. brgy_clearances(Pending) + doc_verifications(Awaiting Issuance) created.`);
+  } else {
+    console.log(`[submitApp] PATH B: Applicant will upload own clearance for ${appNo}. doc_verifications(Pending) created.`);
+  }
+
+  // 6. Delete the temporary draft now that submission is fully successful
   const { error: draftError } = await supabaseAdmin
     .from('application_drafts')
     .delete()
@@ -205,7 +285,8 @@ const submitApplication = async (taxpayerId, payload) => {
 
 module.exports = {
   validateStateTransition,
+  getBarangayClearanceLookupIds,
   getDraft,
   upsertDraft,
   submitApplication,
-};
+};

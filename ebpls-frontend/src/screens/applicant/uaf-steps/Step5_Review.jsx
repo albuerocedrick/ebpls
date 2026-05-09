@@ -2,13 +2,15 @@
 
 import React from 'react';
 import useApplicationStore from '../../../store/applicationStore';
-import { CheckSquare, AlertTriangle, FileText, Building2, MapPin, Store } from 'lucide-react';
+import { CheckSquare, AlertTriangle, FileText, Building2, MapPin, Store, CheckCircle2, Upload } from 'lucide-react';
 
 const Step5_Review = () => {
   const formData = useApplicationStore((state) => state.formData);
   const setFormField = useApplicationStore((state) => state.setFormField);
 
   const { step1, step2, step3, step4, step5 } = formData;
+  const requestClearance = step4.request_barangay_clearance ?? false;
+  const barangayClearanceDoc = step4.documents?.find((d) => d.doc_type === 'BARANGAY_CLEARANCE');
 
   const handleAttestation = (e) => {
     setFormField('step5', 'attestation_agreed', e.target.checked);
@@ -126,15 +128,46 @@ const Step5_Review = () => {
             {step4.documents?.length || 0} files
           </span>
         </div>
-        <div className="p-4">
-          {step4.documents?.length > 0 ? (
+        <div className="p-4 space-y-3">
+
+          {/* Barangay Clearance — Phase 3C row */}
+          <div className="flex items-start gap-3 py-2 border-b border-[hsl(var(--color-border,0,0%,93%))]">
+            <div className="p-1.5 bg-accent/10 rounded-md text-accent shrink-0 mt-0.5">
+              <Building2 size={14} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-[hsl(var(--color-text,0,0%,20%))]">
+                Barangay Business Clearance
+              </p>
+              {requestClearance ? (
+                <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 size={10} />
+                  Requested via Municipality
+                </span>
+              ) : barangayClearanceDoc ? (
+                <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                  <Upload size={10} />
+                  {barangayClearanceDoc.file_name}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                  Not uploaded — please go back to Step 4
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Other uploaded documents */}
+          {step4.documents?.filter((d) => d.doc_type !== 'BARANGAY_CLEARANCE').length > 0 ? (
             <ul className="list-disc list-inside text-sm text-[hsl(var(--color-text,0,0%,10%))] space-y-1">
-              {step4.documents.map((doc, i) => (
-                <li key={i}>{doc.file_name}</li>
-              ))}
+              {step4.documents
+                .filter((d) => d.doc_type !== 'BARANGAY_CLEARANCE')
+                .map((doc, i) => (
+                  <li key={i}>{doc.file_name}</li>
+                ))}
             </ul>
           ) : (
-            <p className="text-sm text-red-500 font-medium">No documents uploaded. Please go back to Step 4.</p>
+            <p className="text-sm text-red-500 font-medium">No other documents uploaded. Please go back to Step 4.</p>
           )}
         </div>
       </div>
