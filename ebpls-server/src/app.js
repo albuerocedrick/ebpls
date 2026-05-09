@@ -3,7 +3,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
+// Route Imports
 const authRoutes = require('./routes/auth.routes');
+const applicationRoutes = require('./routes/application.routes'); // <-- Added Import
+
 const { errorHandler } = require('./middlewares/error.middleware');
 
 const app = express();
@@ -32,9 +35,7 @@ app.get('/health', (req, res) => {
 // API ROUTES
 // -----------------------------------------------------------------
 app.use('/api/auth', authRoutes);
-
-// TODO: Mount future routes here
-// app.use('/api/applications', require('./routes/application.routes'));
+app.use('/api/applications', applicationRoutes); // <-- Mounted Application Routes
 
 // -----------------------------------------------------------------
 // GLOBAL ERROR HANDLER
