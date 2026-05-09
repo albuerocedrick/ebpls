@@ -165,7 +165,7 @@ graph TD
 | 1.3 | Create migration: `taxpayers` table (1:1 with users) | `supabase/migrations/003_taxpayers.sql` | Backend |
 | 1.4 | Create migration: `businesses`, `organization_types` | `supabase/migrations/004_businesses.sql` | Backend |
 | 1.5 | Create migration: `applications`, `application_drafts`, `application_types`, `payment_modes` | `supabase/migrations/005_applications.sql` | Backend |
-| 1.6 | Create migration: `doc_verifications`, `clearance_types` | `supabase/migrations/006_verifications.sql` | Backend |
+| 1.6 | Create migration: `doc_verifications`, `application_data_reviews`, `clearance_types` | `supabase/migrations/006_verifications.sql` | Backend |
 | 1.7 | Create migration: `barangay_clearances` | `supabase/migrations/007_barangay.sql` | Backend |
 | 1.8 | Create migration: `assessments`, `assessment_line_items`, `fee_types`, `transactions` | `supabase/migrations/008_treasury.sql` | Backend |
 | 1.9 | Create migration: `retirement_applications` | `supabase/migrations/009_retirements.sql` | Backend |
@@ -311,7 +311,7 @@ graph TD
 |---|---|---|
 | 4A.1 | Create `BPLOLayout.jsx` (desktop sidebar, header with user info) | `src/layouts/` |
 | 4A.2 | Build `Dashboard.jsx` — sortable data table with SLA urgency indicators | `src/screens/bplo/` |
-| 4A.3 | Build `SplitScreenVerifier.jsx` — left: document viewer with zoom; right: checklist | `src/screens/bplo/` |
+| 4A.3 | Build `SplitScreenVerifier.jsx` — left: document viewer with zoom; right: checklist and data review panel | `src/screens/bplo/` |
 
 ### Definition of Done
 - [ ] Dashboard shows pending applications sorted by submission date
@@ -331,13 +331,14 @@ graph TD
 
 | # | Task | File / Location |
 |---|---|---|
-| 4B.1 | Build `bplo.controller.js` — pending queue, detail view, verify, return | `src/controllers/` |
+| 4B.1 | Build `bplo.controller.js` — pending queue, detail view, verify, review, return | `src/controllers/` |
 | 4B.2 | Build `bplo.routes.js` — all Module B endpoints, RBAC protected | `src/routes/` |
 | 4B.3 | Mount BPLO routes in `app.js` | `src/app.js` |
 
 ### Definition of Done
 - [ ] `GET /api/bplo/applications/pending` returns only `Pending` and `Under Review` applications
-- [ ] `PUT /api/bplo/applications/verify/:app_no` transitions to `Verified` only if all checks pass
+- [ ] `PUT /api/bplo/applications/verify/:app_no` and `PUT /api/bplo/applications/review/:app_no` work correctly
+- [ ] Application transitions to `Verified` only if `doc_verifications` and `application_data_reviews` pass, and Barangay clearance is `Issued` (if applicable)
 - [ ] `PUT /api/bplo/applications/return/:app_no` requires remarks, transitions to `Returned`
 - [ ] All actions RBAC-locked to `BPLO_Officer` role
 
@@ -407,8 +408,8 @@ graph TD
 
 ### Definition of Done
 - [ ] Barangay Officer can view pending clearance requests
-- [ ] Issue action sets clearance number and expiration date
-- [ ] Reject action requires remarks
+- [ ] Issue action sets clearance number, expiration date, and auto-updates `doc_verifications` to 'Yes'
+- [ ] Reject action requires remarks, auto-updates `doc_verifications` to 'No', and triggers `BARANGAY_CLEARANCE_REJECTED` email
 - [ ] RBAC restricts access to `Barangay_Officer` role only
 
 ---
@@ -479,12 +480,13 @@ graph TD
 | 9.2 | Wire `APPLICATION_SUBMITTED` trigger in application controller | Backend |
 | 9.3 | Wire `APPLICATION_RETURNED` trigger in BPLO controller | Backend |
 | 9.4 | Wire `APPLICATION_VERIFIED` trigger in BPLO controller | Backend |
-| 9.5 | Wire `TOP_GENERATED` trigger in treasury controller (attach TOP PDF) | Backend |
-| 9.6 | Wire `PAYMENT_RECORDED` trigger in treasury controller | Backend |
-| 9.7 | Wire `PERMIT_READY` trigger in document controller | Backend |
-| 9.8 | Wire `RETIREMENT_COMPLETE` trigger in retirement controller | Backend |
-| 9.9 | Wire `ACCOUNT_CREATED` trigger in auth controller | Backend |
-| 9.10 | Wire `PASSWORD_RESET` trigger in auth controller | Backend |
+| 9.5 | Wire `BARANGAY_CLEARANCE_REJECTED` trigger in barangay controller | Backend |
+| 9.6 | Wire `TOP_GENERATED` trigger in treasury controller (attach TOP PDF) | Backend |
+| 9.7 | Wire `PAYMENT_RECORDED` trigger in treasury controller | Backend |
+| 9.8 | Wire `PERMIT_READY` trigger in document controller | Backend |
+| 9.9 | Wire `RETIREMENT_COMPLETE` trigger in retirement controller | Backend |
+| 9.10 | Wire `ACCOUNT_CREATED` trigger in auth controller | Backend |
+| 9.11 | Wire `PASSWORD_RESET` trigger in auth controller | Backend |
 
 ### Definition of Done
 - [ ] Each trigger sends the correct email to the correct recipient

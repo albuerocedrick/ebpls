@@ -240,15 +240,27 @@ Clearance.*
 
 **Table: doc_verifications**
 
-| **Column**          | **Type**                  | **Description**                    |
-|---------------------|---------------------------|------------------------------------|
-| verification_id     | UUID PK                   |                                    |
-| application_no      | VARCHAR FK → applications |                                    |
-| clearance_type_id   | INT FK → clearance_types  | Brgy, Sanitary, Fire, Zoning, etc. |
-| status              | ENUM                      | 'Yes', 'No', 'Not Needed'          |
-| verified_by_user_id | UUID FK → users           |                                    |
-| verified_at         | TIMESTAMP                 |                                    |
-| remarks             | TEXT                      | Required when status = 'No'        |
+| **Column**          | **Type**                  | **Description**                                  |
+|---------------------|---------------------------|--------------------------------------------------|
+| verification_id     | UUID PK                   |                                                  |
+| application_no      | VARCHAR FK → applications |                                                  |
+| clearance_type_id   | INT FK → clearance_types  | Brgy, Sanitary, Fire, Zoning, etc.               |
+| status              | ENUM                      | 'Yes', 'No', 'Not Needed', 'Awaiting Issuance'   |
+| verified_by_user_id | UUID FK → users           |                                                  |
+| verified_at         | TIMESTAMP                 |                                                  |
+| remarks             | TEXT                      | Required when status = 'No'                      |
+
+**Table: application_data_reviews (NEW)**
+
+| **Column**          | **Type**                  | **Description**                                                       |
+|---------------------|---------------------------|-----------------------------------------------------------------------|
+| review_id           | UUID PK                   |                                                                       |
+| application_no      | VARCHAR FK → applications |                                                                       |
+| section             | VARCHAR                   | e.g., business_details, location, activities, financials              |
+| status              | ENUM                      | 'Verified', 'Discrepancy'                                             |
+| remarks             | TEXT                      | Required if Discrepancy                                               |
+| reviewed_by_user_id | UUID FK → users           |                                                                       |
+| reviewed_at         | TIMESTAMP                 |                                                                       |
 
 **4.6 Treasury & Billing**
 
@@ -325,7 +337,7 @@ skip a step.
 | Pending        | Applicant        | Final UAF submission                          | Under Review / Returned      |
 | Under Review   | BPLO Officer     | BPLO opens the application                    | Verified / Returned          |
 | Returned       | BPLO Officer     | Mandatory document missing or incorrect       | Pending (after resubmission) |
-| Verified       | BPLO Officer     | All doc_verifications = 'Yes' or 'Not Needed' | For Assessment               |
+| Verified       | BPLO Officer     | All doc_verifications = 'Yes' or 'Not Needed' AND all application_data_reviews = 'Verified'. If brgy_clearances exists, must be 'Issued' | For Assessment               |
 | For Assessment | System (auto)    | Set on Verified transition                    | Assessed                     |
 | Assessed       | Treasury Officer | TOP generated and finalized                   | For Payment                  |
 | For Payment    | System (auto)    | Set on TOP generation                         | Paid                         |
@@ -343,6 +355,8 @@ skip a step.
 
 Replaces the physical UAF with a digital multi-step wizard with
 autosave.
+
+*Rule: If the applicant ticks the Barangay Clearance checkbox, the system creates a brgy_clearances record with status 'Pending' AND creates a corresponding doc_verifications record for the Barangay clearance type with status 'Awaiting Issuance'.*
 
 **Database Tables:**
 
@@ -376,8 +390,7 @@ autosave.
 
 **Module B: BPLO Module (Verify & Process)**
 
-Handles document verification and routes applications to Treasury upon
-full approval.
+Handles document verification and cross-checks business details (declared business name vs. DTI/SEC registration, declared capitalization/gross sales vs. submitted financials, business location vs. municipal jurisdiction and zoning, business activities vs. BIR COR or DTI permit). Routes applications to Treasury upon full approval.
 
 **API Endpoints:**
 
@@ -386,6 +399,7 @@ full approval.
 | GET        | /api/bplo/applications/pending        | Queue of applications awaiting review                 |
 | GET        | /api/bplo/applications/:app_no        | Full application detail with pre-signed document URLs |
 | PUT        | /api/bplo/applications/verify/:app_no | Update verification checklist; triggers status change |
+| PUT        | /api/bplo/applications/review/:app_no | Flag data discrepancies per section with remarks      |
 | PUT        | /api/bplo/applications/return/:app_no | Return application with mandatory remarks             |
 
 **Enforcement Logic:**
@@ -428,6 +442,8 @@ interface for OTC payment logging.
 
 *Handles the integrated processing and issuance of the Barangay Business
 Clearance when the applicant ticks the checkbox on the UAF.*
+
+*Rule: When a Barangay Officer calls PUT /api/barangay/clearances/:id/issue, the system automatically updates the corresponding doc_verifications record for that application's Barangay clearance type to 'Yes'. When they call PUT /api/barangay/clearances/:id/reject, it updates to 'No'.*
 
 **API Endpoints:**
 
@@ -482,9 +498,10 @@ Generates and distributes finalized digital documents to applicants.
 All notifications use Nodemailer via Gmail SMTP or Brevo. The following
 events trigger automated emails:
 
-| **Trigger Event**     | **Recipient** | **Subject / Content**                                                 |
-|-----------------------|---------------|-----------------------------------------------------------------------|
-| APPLICATION_SUBMITTED | Applicant     | Confirmation that UAF was received; includes application number       |
+| **Trigger Event**             | **Recipient** | **Subject / Content**                                                 |
+|-------------------------------|---------------|-----------------------------------------------------------------------|
+| APPLICATION_SUBMITTED         | Applicant     | Confirmation that UAF was received; includes application number       |
+| BARANGAY_CLEARANCE_REJECTED   | Applicant     | Barangay Officer rejected the clearance; includes rejection remarks   |
 | APPLICATION_RETURNED  | Applicant     | BPLO returned the application; includes remarks and resubmission link |
 | APPLICATION_VERIFIED  | Applicant     | Application passed BPLO review; awaiting fee assessment               |
 | TOP_GENERATED         | Applicant     | Tax Order of Payment ready; PDF attached; OTC payment instructions    |

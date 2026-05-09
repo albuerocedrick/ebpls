@@ -78,7 +78,7 @@ graph LR
 
     subgraph "Module B — BPLO"
         B1["Application Queue"]
-        B2["Split-Screen Verifier"]
+        B2["Split-Screen Verifier & Data Review"]
         B3["Approve/Return"]
     end
 
@@ -110,6 +110,7 @@ graph LR
     B3 -->|verified| C1
     C3 -->|paid| F1 & F2
     A1 -->|checkbox| D1
+    D2 -->|"auto-updates doc_verifications"| B2
     E1 -->|assess| C1
     C3 -->|paid| E3
 ```
@@ -187,8 +188,15 @@ stateDiagram-v2
     Pending --> UnderReview : BPLO Opens
     Pending --> Returned : BPLO Returns
 
-    UnderReview --> Verified : All Docs Verified
-    UnderReview --> Returned : Docs Missing/Incorrect
+    note right of UnderReview
+        Requires:
+        1. All doc_verifications = 'Yes' or 'Not Needed'
+        2. All application_data_reviews = 'Verified'
+        3. brgy_clearances.status = 'Issued' (if exists)
+    end note
+
+    UnderReview --> Verified : Requirements Met
+    UnderReview --> Returned : Docs/Data Incorrect
 
     Returned --> Pending : Applicant Resubmits
 
@@ -219,8 +227,8 @@ stateDiagram-v2
 |---|---|---|---|
 | Draft | Pending | Applicant | All required UAF fields completed |
 | Pending | Under Review | BPLO Officer | Officer opens application |
-| Pending | Returned | BPLO Officer | Missing/incorrect documents, remarks required |
-| Under Review | Verified | BPLO Officer | All `doc_verifications` = 'Yes' or 'Not Needed' |
+| Pending | Returned | BPLO Officer | Missing/incorrect documents/data, remarks required |
+| Under Review | Verified | BPLO Officer | All `doc_verifications` = 'Yes' or 'Not Needed' AND all `application_data_reviews` = 'Verified'. If brgy_clearances record exists, brgy_clearances.status must = 'Issued' |
 | Returned | Pending | Applicant | Resubmission with corrections |
 | Verified | For Assessment | System | Auto on Verified transition |
 | For Assessment | Assessed | Treasury Officer | TOP generated and finalized |
@@ -242,7 +250,9 @@ erDiagram
     TAXPAYERS ||--o{ APPLICATION_DRAFTS : saves
     BUSINESSES ||--o{ APPLICATIONS : submits
     APPLICATIONS ||--o{ DOC_VERIFICATIONS : verified_by
+    APPLICATIONS ||--o{ APPLICATION_DATA_REVIEWS : verified_by
     APPLICATIONS ||--o| BARANGAY_CLEARANCES : "optional clearance"
+    BARANGAY_CLEARANCES ||--o| DOC_VERIFICATIONS : "auto-updates"
     APPLICATIONS ||--o| RETIREMENT_APPLICATIONS : "if retirement"
     APPLICATIONS ||--o{ ASSESSMENTS : assessed
     ASSESSMENTS ||--o{ TRANSACTIONS : "OTC payment"
@@ -297,7 +307,7 @@ erDiagram
 | **Auth & Identity** | `roles`, `users` | Authentication, JWT, RBAC |
 | **Profiles** | `taxpayers`, `businesses`, `organization_types` | Taxpayer & business registration |
 | **Applications** | `applications`, `application_drafts`, `application_types`, `payment_modes` | UAF workflow, draft persistence |
-| **Verification** | `doc_verifications`, `clearance_types` | BPLO document checklist |
+| **Verification** | `doc_verifications`, `application_data_reviews`, `clearance_types` | BPLO document & data verification |
 | **Barangay** | `barangay_clearances` | Integrated clearance issuance |
 | **Treasury** | `assessments`, `assessment_line_items`, `fee_types`, `transactions` | Fee calculation, OTC payment |
 | **Retirement** | `retirement_applications` | Business cessation processing |
@@ -377,6 +387,7 @@ graph TB
 | Event | Recipient | Trigger |
 |---|---|---|
 | `APPLICATION_SUBMITTED` | Applicant | UAF final submission |
+| `BARANGAY_CLEARANCE_REJECTED` | Applicant | Barangay Officer rejects the clearance (includes remarks) |
 | `APPLICATION_RETURNED` | Applicant | BPLO returns with remarks |
 | `APPLICATION_VERIFIED` | Applicant | All docs verified |
 | `TOP_GENERATED` | Applicant | Treasury generates TOP |
