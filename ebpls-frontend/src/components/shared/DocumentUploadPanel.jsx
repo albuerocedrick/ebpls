@@ -13,7 +13,7 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
-const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) => {
+const DocumentUploadPanel = ({ title, description, value, onChange, onRemove, disabled, onUploadStart, onUploadEnd }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -21,8 +21,9 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
+    if (disabled) return;
     setIsDragging(true);
-  }, []);
+  }, [disabled]);
 
   const handleDragLeave = useCallback((e) => {
     e.preventDefault();
@@ -30,10 +31,11 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
   }, []);
 
   const processFile = async (file) => {
-    if (!file) return;
+    if (!file || disabled) return;
 
     setIsUploading(true);
     setUploadProgress(10); 
+    if (onUploadStart) onUploadStart(); // Notify Parent that upload started
 
     try {
       // 1. Ask Backend for Pre-Signed URL
@@ -63,6 +65,7 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
       // 3. Save internal Supabase path to form state
       setTimeout(() => {
         setIsUploading(false);
+        if (onUploadEnd) onUploadEnd(); // Notify Parent that upload finished
         onChange({
           file_name: file.name,
           file_size: file.size,
@@ -76,6 +79,7 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
       console.error('[DocumentUpload] Error:', error);
       setIsUploading(false);
       setUploadProgress(0);
+      if (onUploadEnd) onUploadEnd(); // Notify Parent that upload finished/failed
       alert('Failed to upload document. Ensure it is a PDF, JPG, or PNG under 5MB.');
     }
   };
@@ -83,19 +87,22 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setIsDragging(false);
+    if (disabled) return;
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processFile(e.dataTransfer.files[0]);
     }
-  }, [onChange]);
+  }, [onChange, disabled]);
 
   const handleFileSelect = (e) => {
+    if (disabled) return;
     if (e.target.files && e.target.files.length > 0) {
       processFile(e.target.files[0]);
     }
   };
 
   const handleRemoveClick = () => {
+    if (disabled) return; // Prevent removing while another file is uploading
     if (value?.url) {
       URL.revokeObjectURL(value.url); 
     }
@@ -108,7 +115,7 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
   const isImage = value?.file_type?.startsWith('image/');
 
   return (
-    <div className="flex flex-col border border-[hsl(var(--color-border,0,0%,90%))] rounded-lg overflow-hidden bg-[hsl(var(--color-surface,0,0%,100%))] shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))] hover:shadow-[var(--shadow-md,0_4px_6px_-1px_rgba(0,0,0,0.1))] transition-shadow duration-200">
+    <div className={`flex flex-col border border-[hsl(var(--color-border,0,0%,90%))] rounded-lg overflow-hidden bg-[hsl(var(--color-surface,0,0%,100%))] shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))] transition-shadow duration-200 ${disabled && !isUploading ? 'opacity-70' : 'hover:shadow-[var(--shadow-md,0_4px_6px_-1px_rgba(0,0,0,0.1))]'}`}>
       
       <div className="bg-[hsl(var(--color-surface-raised,0,0%,96%))] p-3.5 border-b border-[hsl(var(--color-border,0,0%,90%))]">
         <h4 className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))] flex items-center justify-between">
@@ -145,7 +152,8 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
             <button 
               type="button"
               onClick={handleRemoveClick}
-              className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors shrink-0"
+              disabled={disabled}
+              className={`p-2 rounded-md transition-colors shrink-0 ${disabled ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:bg-red-50'}`}
             >
               <Trash2 size={18} />
             </button>
@@ -153,11 +161,11 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
         ) : 
 
         isUploading ? (
-          <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-[hsl(var(--color-border,0,0%,90%))] rounded-md bg-[hsl(var(--color-surface-raised,0,0%,98%))]">
+          <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-accent rounded-md bg-accent/5">
             <Loader2 size={32} className="text-accent animate-spin mb-3" />
             <p className="text-sm font-medium text-[hsl(var(--color-text,0,0%,10%))]">Uploading document...</p>
             
-            <div className="w-full max-w-xs mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="w-full max-w-xs mt-3 h-2 bg-white border border-accent/20 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-accent transition-all duration-300 ease-out"
                 style={{ width: `${uploadProgress}%` }}
@@ -171,8 +179,11 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md cursor-pointer transition-colors ${isDragging ? 'border-accent bg-accent/5' : 'border-[hsl(var(--color-border,0,0%,80%))] bg-[hsl(var(--color-surface-raised,0,0%,98%))] hover:bg-[hsl(var(--color-surface-raised,0,0%,96%))]'}`}
+            onClick={() => { if (!disabled) fileInputRef.current?.click(); }}
+            className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md transition-colors 
+              ${disabled ? 'border-[hsl(var(--color-border,0,0%,90%))] bg-[hsl(var(--color-surface-raised,0,0%,96%))] cursor-not-allowed opacity-60' 
+              : isDragging ? 'border-accent bg-accent/5 cursor-pointer' 
+              : 'border-[hsl(var(--color-border,0,0%,80%))] bg-[hsl(var(--color-surface-raised,0,0%,98%))] hover:bg-[hsl(var(--color-surface-raised,0,0%,96%))] cursor-pointer'}`}
           >
             <input 
               type="file" 
@@ -180,8 +191,9 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove }) 
               className="hidden" 
               accept=".pdf,.jpg,.jpeg,.png"
               onChange={handleFileSelect}
+              disabled={disabled}
             />
-            <div className="w-10 h-10 rounded-full bg-white border border-[hsl(var(--color-border,0,0%,90%))] flex items-center justify-center mb-3 shadow-sm">
+            <div className={`w-10 h-10 rounded-full bg-white border border-[hsl(var(--color-border,0,0%,90%))] flex items-center justify-center mb-3 shadow-sm ${disabled ? 'opacity-50' : ''}`}>
               <UploadCloud size={20} className={isDragging ? 'text-accent' : 'text-[hsl(var(--color-text-muted,0,0%,40%))]'} />
             </div>
             <p className="text-sm font-medium text-[hsl(var(--color-text,0,0%,10%))] text-center">

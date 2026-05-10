@@ -1,6 +1,6 @@
 // src/screens/applicant/uaf-steps/Step4_Documents.jsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import useApplicationStore from '../../../store/applicationStore';
 import DocumentUploadPanel from '../../../components/shared/DocumentUploadPanel';
 import { FileText, AlertCircle, Building2, CheckCircle2, Upload } from 'lucide-react';
@@ -39,6 +39,9 @@ const STANDARD_DOCUMENTS = [
 const Step4_Documents = () => {
   const data = useApplicationStore((state) => state.formData.step4);
   const setFormField = useApplicationStore((state) => state.setFormField);
+
+  // Global upload state to disable other panels when one is uploading
+  const [isUploadingAny, setIsUploadingAny] = useState(false);
 
   const uploadedDocs = data.documents || [];
   const requestClearance = data.request_barangay_clearance ?? false;
@@ -191,6 +194,9 @@ const Step4_Documents = () => {
               value={getUploadedFileMeta('BARANGAY_CLEARANCE')}
               onChange={(meta) => handleDocumentUpload('BARANGAY_CLEARANCE', meta)}
               onRemove={() => handleDocumentRemove('BARANGAY_CLEARANCE')}
+              disabled={isUploadingAny}
+              onUploadStart={() => setIsUploadingAny(true)}
+              onUploadEnd={() => setIsUploadingAny(false)}
             />
           </div>
         )}
@@ -224,6 +230,9 @@ const Step4_Documents = () => {
               value={getUploadedFileMeta(req.id)}
               onChange={(meta) => handleDocumentUpload(req.id, meta)}
               onRemove={() => handleDocumentRemove(req.id)}
+              disabled={isUploadingAny}
+              onUploadStart={() => setIsUploadingAny(true)}
+              onUploadEnd={() => setIsUploadingAny(false)}
             />
           ))}
         </div>
