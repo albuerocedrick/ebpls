@@ -1,7 +1,10 @@
 # eBPLS System Architecture
 
 **Electronic Business Permits and Licensing System — BOSS & E-Resibo**
-Municipality of Liliw | Architecture Document v2.0
+Municipality of Liliw | Architecture Document v3.0
+
+> **What changed in v3.0**
+> PayMongo added as an optional online payment channel. Updated: architecture diagram, tech stack, Module C API surface, state machine, DB table groups, permission matrix, deployment topology, and explicit exclusions.
 
 ---
 
@@ -9,7 +12,7 @@ Municipality of Liliw | Architecture Document v2.0
 
 **Pattern:** Web-Based Client-Server Architecture with Role-Based Access Control (RBAC)
 
-**Principle:** OTC Payment STRICT Enforcement — the system supports Over-The-Counter cash and manager's check payments ONLY. Online payment channels are **explicitly excluded**.
+**Payment Principle:** OTC remains the primary payment channel. PayMongo online payment (GCash, Card, Payment Link) is an optional additive channel. Both channels produce the same outcome. The Retirement Module uses OTC only.
 
 ```mermaid
 graph TB
@@ -27,6 +30,7 @@ graph TB
         AL["Audit Logger"]
         EM["Email Service<br/>(Nodemailer / Brevo)"]
         PDF["PDF Generator<br/>(pdf-lib)"]
+        WH["Webhook Handler<br/>(HMAC-SHA256 Verified)"]
     end
 
     subgraph "Data Tier (Supabase)"
@@ -34,7 +38,12 @@ graph TB
         FS["Supabase Storage<br/>(Pre-Signed URLs)"]
     end
 
-    A & B & C & D & E -->|"REST API<br/>(HTTPS + JWT)"| GW
+    subgraph "External Services"
+        PM["PayMongo<br/>(Payment Gateway)"]
+        SMTP["Gmail SMTP<br/>or Brevo"]
+    end
+
+    A & B & C & D & E -->|"REST API (HTTPS + JWT)"| GW
     GW --> SM
     GW --> AL
     SM --> PG
@@ -42,7 +51,13 @@ graph TB
     GW --> EM
     GW --> PDF
     PDF --> FS
-    A -->|"Document Upload<br/>(Pre-Signed URL)"| FS
+    A -->|"Document Upload (Pre-Signed URL)"| FS
+    GW -->|"Create Payment Intent"| PM
+    PM -->|"payment.paid / payment.failed<br/>(Webhook POST)"| WH
+    WH --> SM
+    WH --> AL
+    WH --> EM
+    EM --> SMTP
 ```
 
 ---
@@ -60,6 +75,7 @@ graph TB
 | **Maps** | Leaflet.js + OpenStreetMap | Business location pinning (no API key) |
 | **Email** | Nodemailer (Gmail SMTP) / Brevo | Transactional notifications |
 | **PDF** | pdf-lib | Permit, E-Resibo, TOP, Barangay Clearance rendering |
+| **Payment Gateway** | PayMongo | Online GCash / Card / Payment Link processing |
 
 ---
 
@@ -73,7 +89,7 @@ graph LR
         A1["UAF Wizard"]
         A2["Draft/Autosave"]
         A3["Doc Upload"]
-        A4["Status Tracker"]
+        A4["Status Tracker<br/>(+ Online Payment UI)"]
     end
 
     subgraph "Module B — BPLO"
@@ -85,7 +101,8 @@ graph LR
     subgraph "Module C — Treasury"
         C1["Fee Assessment"]
         C2["TOP Generator"]
-        C3["Cashier POS"]
+        C3["Cashier POS (OTC)"]
+        C4["Online Payment Initiator"]
     end
 
     subgraph "Module D — Barangay"
@@ -96,7 +113,7 @@ graph LR
     subgraph "Module E — Retirement"
         E1["Retirement Request"]
         E2["Final Assessment"]
-        E3["Completion"]
+        E3["Completion (OTC only)"]
     end
 
     subgraph "Module F — Reporting"
@@ -106,9 +123,15 @@ graph LR
         F4["Barangay Clearance PDF"]
     end
 
+    subgraph "Webhook (New)"
+        W1["PayMongo Webhook Handler"]
+    end
+
     A1 -->|submit| B1
     B3 -->|verified| C1
-    C3 -->|paid| F1 & F2
+    C3 -->|OTC paid| F1 & F2
+    C4 -->|online initiated| W1
+    W1 -->|payment.paid| F1 & F2
     A1 -->|checkbox| D1
     D2 -->|"auto-updates doc_verifications"| B2
     E1 -->|assess| C1
@@ -126,7 +149,7 @@ graph LR
 | DELETE | `/api/applications/drafts/:draft_id` | Delete draft on submission |
 | POST | `/api/applications/uaf` | Final UAF submission |
 | POST | `/api/applications/upload` | Secure upload via pre-signed URL |
-| GET | `/api/applications/:app_no/status` | Poll current status |
+| GET | `/api/applications/:app_no/status` | Poll current status (used during PaymentProcessing) |
 
 #### Module B — BPLO (Verify & Process)
 
@@ -134,25 +157,27 @@ graph LR
 |---|---|---|
 | GET | `/api/bplo/applications/pending` | Queue of applications awaiting review |
 | GET | `/api/bplo/applications/:app_no` | Full detail with pre-signed doc URLs |
+| PUT | `/api/bplo/applications/review/:app_no` | Upsert `application_data_reviews` sections |
 | PUT | `/api/bplo/applications/verify/:app_no` | Update verification checklist |
 | PUT | `/api/bplo/applications/return/:app_no` | Return with mandatory remarks |
 
-#### Module C — Treasury (Assess & Pay — OTC Only)
+#### Module C — Treasury (Assess & Pay)
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| POST | `/api/treasury/assess` | Calculate fees, generate assessment + TOP |
-| PUT | `/api/treasury/assess/:id/override` | Override line item (audit-logged) |
-| GET | `/api/documents/top/:app_no` | Generate TOP PDF |
-| POST | `/api/treasury/payments/otc` | Record OTC payment (Cash / Manager Check) |
+| Method | Endpoint | Purpose | Auth |
+|---|---|---|---|
+| POST | `/api/treasury/assess` | Calculate fees, generate assessment + TOP | Treasury_Officer |
+| PUT | `/api/treasury/assess/:id/override` | Override line item (audit-logged) | Treasury_Officer |
+| GET | `/api/documents/top/:app_no` | Generate TOP PDF | Treasury_Officer |
+| POST | `/api/treasury/payments/otc` | Record OTC payment (Cash / Manager Check) — **unchanged** | Treasury_Officer |
+| **POST** | **`/api/treasury/payments/online`** | **Initiate PayMongo Payment Intent; create pending transaction; transition to PaymentProcessing** | **Applicant or Treasury_Officer** |
 
 #### Module D — Barangay Clearance
 
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/api/barangay/clearances/pending` | Clearance requests queue |
-| PUT | `/api/barangay/clearances/:id/issue` | Mark clearance as issued |
-| PUT | `/api/barangay/clearances/:id/reject` | Reject with remarks |
+| PUT | `/api/barangay/clearances/:id/issue` | Mark clearance as issued; auto-updates `doc_verifications` to 'Yes' |
+| PUT | `/api/barangay/clearances/:id/reject` | Reject with remarks; auto-updates `doc_verifications` to 'No'; sends email |
 | GET | `/api/documents/barangay-clearance/:id` | Generate clearance PDF |
 
 #### Module E — Business Retirement
@@ -164,6 +189,8 @@ graph LR
 | POST | `/api/retirements/:id/assess` | Compute final taxes |
 | PUT | `/api/retirements/:id/complete` | Mark business as retired |
 
+> **Note:** Retirement settlement uses `POST /api/treasury/payments/otc` exclusively. Online payment is not available for the Retirement Module.
+
 #### Module F — Reporting & Documents
 
 | Method | Endpoint | Purpose |
@@ -172,47 +199,51 @@ graph LR
 | GET | `/api/documents/permit/:app_no?lob=:id` | Per-line-of-business permit |
 | GET | `/api/documents/eresibo/:transaction_id` | Official Receipt (E-Resibo) PDF |
 
+#### Webhooks *(New in v3.0)*
+
+| Method | Endpoint | Purpose | Auth |
+|---|---|---|---|
+| POST | `/api/webhooks/paymongo` | Receive PayMongo payment events; raw body; HMAC-SHA256 verified | None (PayMongo server-to-server) |
+
+> **Critical implementation constraint:** The webhook route is mounted with `express.raw({ type: 'application/json' })` and registered in `app.js` **before** the global `express.json()` middleware. Mounting after will pre-parse the body and break HMAC verification.
+
 ---
 
 ## 4. Application State Machine
 
-> [!IMPORTANT]
 > The backend **MUST reject** any status update that does not follow the transitions below. All violations are logged in `audit_logs`.
 
 ```mermaid
 stateDiagram-v2
     [*] --> Draft : Autosave (Applicant)
-
     Draft --> Pending : Final Submission (Applicant)
 
     Pending --> UnderReview : BPLO Opens
     Pending --> Returned : BPLO Returns
 
     note right of UnderReview
-        Requires:
-        1. All doc_verifications = 'Yes' or 'Not Needed'
-        2. All application_data_reviews = 'Verified'
-        3. brgy_clearances.status = 'Issued' (if exists)
+        Requires ALL:
+        1. doc_verifications = 'Yes' or 'Not Needed'
+        2. application_data_reviews = 'Verified'
+        3. barangay_clearances.status = 'Issued' (if exists)
     end note
 
     UnderReview --> Verified : Requirements Met
     UnderReview --> Returned : Docs/Data Incorrect
-
     Returned --> Pending : Applicant Resubmits
-
     Verified --> ForAssessment : System Auto-Route
-
     ForAssessment --> Assessed : TOP Generated (Treasury)
-
     Assessed --> ForPayment : System Auto-Set
 
-    ForPayment --> Paid : OTC Payment Recorded (Cashier)
+    ForPayment --> Paid : OTC Payment Recorded (Cashier) [unchanged]
+    ForPayment --> PaymentProcessing : Applicant Initiates PayMongo [NEW]
+    PaymentProcessing --> Paid : payment.paid Webhook Confirmed [NEW]
+    PaymentProcessing --> ForPayment : payment.failed — Allow Retry [NEW]
 
     Paid --> Completed : Permit + E-Resibo Generated (System)
-
     Completed --> [*]
 
-    state "Retirement Flow" as RF {
+    state "Retirement Flow (OTC Only)" as RF {
         [*] --> RetirementPending : Submit Retirement
         RetirementPending --> RetirementAssessed : Final Tax Computed
         RetirementAssessed --> RetirementPaid : OTC Payment
@@ -226,14 +257,17 @@ stateDiagram-v2
 | From | To | Actor | Guard Condition |
 |---|---|---|---|
 | Draft | Pending | Applicant | All required UAF fields completed |
-| Pending | Under Review | BPLO Officer | Officer opens application |
-| Pending | Returned | BPLO Officer | Missing/incorrect documents/data, remarks required |
-| Under Review | Verified | BPLO Officer | All `doc_verifications` = 'Yes' or 'Not Needed' AND all `application_data_reviews` = 'Verified'. If brgy_clearances record exists, brgy_clearances.status must = 'Issued' |
+| Pending | UnderReview | BPLO Officer | Officer opens application |
+| Pending | Returned | BPLO Officer | Missing / incorrect documents or data; remarks required |
+| UnderReview | Verified | BPLO Officer | All `doc_verifications` = 'Yes' or 'Not Needed' AND all `application_data_reviews` = 'Verified' AND (if exists) `barangay_clearances.status` = 'Issued' |
 | Returned | Pending | Applicant | Resubmission with corrections |
-| Verified | For Assessment | System | Auto on Verified transition |
-| For Assessment | Assessed | Treasury Officer | TOP generated and finalized |
-| Assessed | For Payment | System | Auto on TOP generation |
-| For Payment | Paid | Treasury Cashier | OTC payment with valid OR number |
+| Verified | ForAssessment | System | Auto on Verified transition |
+| ForAssessment | Assessed | Treasury Officer | TOP generated and finalized |
+| Assessed | ForPayment | System | Auto on TOP generation |
+| **ForPayment** | **PaymentProcessing** | **System** | **Applicant initiates PayMongo checkout; Payment Intent created** |
+| **ForPayment** | **Paid** | **Treasury Cashier** | **OTC payment with valid OR number (unchanged)** |
+| **PaymentProcessing** | **Paid** | **System (webhook)** | **PayMongo fires payment.paid; HMAC verified; idempotency check passes** |
+| **PaymentProcessing** | **ForPayment** | **System (webhook)** | **PayMongo fires payment.failed or link expires** |
 | Paid | Completed | System | Permit + E-Resibo generated |
 
 ---
@@ -245,58 +279,35 @@ stateDiagram-v2
 ```mermaid
 erDiagram
     ROLES ||--o{ USERS : has
-    USERS ||--o| TAXPAYERS : "1:1 profile"
+    USERS ||--|| TAXPAYERS : "has profile"
     TAXPAYERS ||--o{ BUSINESSES : owns
-    TAXPAYERS ||--o{ APPLICATION_DRAFTS : saves
     BUSINESSES ||--o{ APPLICATIONS : submits
-    APPLICATIONS ||--o{ DOC_VERIFICATIONS : verified_by
-    APPLICATIONS ||--o{ APPLICATION_DATA_REVIEWS : verified_by
-    APPLICATIONS ||--o| BARANGAY_CLEARANCES : "optional clearance"
-    BARANGAY_CLEARANCES ||--o| DOC_VERIFICATIONS : "auto-updates"
-    APPLICATIONS ||--o| RETIREMENT_APPLICATIONS : "if retirement"
-    APPLICATIONS ||--o{ ASSESSMENTS : assessed
-    ASSESSMENTS ||--o{ TRANSACTIONS : "OTC payment"
+    APPLICATIONS ||--o{ DOC_VERIFICATIONS : requires
+    APPLICATIONS ||--o{ APPLICATION_DATA_REVIEWS : reviewed_in
+    APPLICATIONS ||--o{ BARANGAY_CLEARANCES : "may request"
+    APPLICATIONS ||--|| ASSESSMENTS : has
+    ASSESSMENTS ||--o{ ASSESSMENT_LINE_ITEMS : contains
+    ASSESSMENTS ||--o{ TRANSACTIONS : paid_via
+    TRANSACTIONS ||--o{ PAYMENT_GATEWAY_LOGS : "audited in"
+    APPLICATIONS ||--o{ PERMITS : generates
     APPLICATIONS ||--o{ EMAIL_NOTIFICATIONS : triggers
     USERS ||--o{ AUDIT_LOGS : performs
 
-    ROLES {
-        int role_id PK
-        varchar role_name
-    }
-    USERS {
-        uuid user_id PK
-        varchar email UK
-        varchar password_hash
-        int role_id FK
-        boolean is_active
-    }
-    TAXPAYERS {
-        uuid taxpayer_id PK
-        uuid user_id FK
-        varchar tin_no UK
-    }
-    BUSINESSES {
-        uuid business_id PK
-        uuid taxpayer_id FK
-        boolean is_retired
-    }
-    APPLICATIONS {
-        varchar application_no PK
-        uuid business_id FK
-        varchar status
-    }
     TRANSACTIONS {
         uuid transaction_id PK
         uuid assessment_id FK
         varchar or_number UK
-        enum tendered_type "Cash | Manager Check"
+        enum tendered_type "Cash|Manager Check|GCash|Card|Online"
+        varchar paymongo_payment_intent_id UK
+        varchar paymongo_payment_id UK
+        varchar payment_channel
     }
-    AUDIT_LOGS {
+    PAYMENT_GATEWAY_LOGS {
         uuid log_id PK
-        uuid user_id FK
-        varchar action
-        jsonb old_value
-        jsonb new_value
+        varchar paymongo_event_id UK
+        varchar event_type
+        jsonb raw_payload
+        boolean processed
     }
 ```
 
@@ -307,9 +318,10 @@ erDiagram
 | **Auth & Identity** | `roles`, `users` | Authentication, JWT, RBAC |
 | **Profiles** | `taxpayers`, `businesses`, `organization_types` | Taxpayer & business registration |
 | **Applications** | `applications`, `application_drafts`, `application_types`, `payment_modes` | UAF workflow, draft persistence |
-| **Verification** | `doc_verifications`, `application_data_reviews`, `clearance_types` | BPLO document & data verification |
+| **Verification** | `doc_verifications`, `application_data_reviews`, `requirement_types`, `clearance_types` | BPLO document & data verification |
 | **Barangay** | `barangay_clearances` | Integrated clearance issuance |
-| **Treasury** | `assessments`, `assessment_line_items`, `fee_types`, `transactions` | Fee calculation, OTC payment |
+| **Treasury** | `assessments`, `assessment_line_items`, `fee_types`, `transactions`, `payment_modes` | Fee calculation, OTC + online payment |
+| **Payment Audit** | `payment_gateway_logs` | Webhook audit trail, idempotency checks |
 | **Retirement** | `retirement_applications` | Business cessation processing |
 | **Documents** | `permits`, `permit_line_items`, `business_activities` | Permit generation per LOB |
 | **System** | `audit_logs`, `email_notifications` | Compliance, DPA, notifications |
@@ -329,16 +341,18 @@ graph TB
     end
 
     subgraph "Modules"
-        MA["Module A<br/>Apply"]
-        MB["Module B<br/>Verify"]
-        MC["Module C<br/>Assess & Pay"]
-        MD["Module D<br/>Barangay"]
-        ME["Module E<br/>Retirement"]
-        MF["Module F<br/>Reports"]
+        MA["Module A — Apply"]
+        MB["Module B — Verify"]
+        MC["Module C — Assess & Pay"]
+        MD["Module D — Barangay"]
+        ME["Module E — Retirement"]
+        MF["Module F — Reports"]
+        MW["Webhooks — PayMongo"]
     end
 
     R1 -->|"Full Access"| MA
     R1 -->|"Own Docs Only"| MF
+    R1 -->|"Initiate Online Payment"| MC
     R2 -->|"Full Access"| MB
     R2 -->|"Read Only"| MA
     R3 -->|"Full Access"| MC
@@ -346,6 +360,7 @@ graph TB
     R3 -->|"Read Only"| MB
     R4 -->|"Full Access"| MD
     R5 -->|"Full Access"| MA & MB & MC & MD & ME & MF
+    MW -.->|"Server-to-Server<br/>(No JWT)"| MC
 ```
 
 ### Permission Matrix
@@ -360,6 +375,7 @@ graph TB
 | Assess Fees | — | — | ✅ | — | — |
 | Override Fee Items | — | — | ✅ | — | — |
 | Record OTC Payment | — | — | ✅ | — | — |
+| **Initiate Online Payment** | **✅** | **—** | **✅** | **—** | **—** |
 | Issue Brgy Clearance | — | — | — | ✅ | — |
 | Process Retirement | — | ✅ | ✅ | — | ✅ |
 | Download Documents | ✅ (own) | ✅ | ✅ | — | ✅ |
@@ -381,6 +397,9 @@ graph TB
 | **File Access** | Pre-signed URLs with 15-minute expiry |
 | **Audit** | Every data mutation → `audit_logs` with old/new JSONB snapshots |
 | **Privacy** | DPA 2012 compliance; all PII access logged; admin access reports |
+| **Webhook Security** | HMAC-SHA256 verification of `Paymongo-Signature` header before any processing |
+| **Webhook Idempotency** | `payment_gateway_logs.paymongo_event_id` UNIQUE constraint prevents duplicate processing |
+| **Credentials** | `PAYMONGO_SECRET_KEY` and `PAYMONGO_WEBHOOK_SECRET` stored in env vars only; never logged or stored in DB |
 
 ### 7.2 Email Notification Triggers
 
@@ -391,7 +410,7 @@ graph TB
 | `APPLICATION_RETURNED` | Applicant | BPLO returns with remarks |
 | `APPLICATION_VERIFIED` | Applicant | All docs verified |
 | `TOP_GENERATED` | Applicant | Treasury generates TOP |
-| `PAYMENT_RECORDED` | Applicant | OTC payment confirmed |
+| `PAYMENT_RECORDED` | Applicant | OTC **or online** payment confirmed (same template; OR format distinguishes channel) |
 | `PERMIT_READY` | Applicant | Permit + E-Resibo generated |
 | `RETIREMENT_COMPLETE` | Applicant | Business retirement finalized |
 | `ACCOUNT_CREATED` | New User | Registration with activation link |
@@ -399,14 +418,29 @@ graph TB
 
 ### 7.3 Audit Logging Strategy
 
-Every significant system action is captured in `audit_logs`:
+Every significant action is captured in `audit_logs`:
 
-- **Who:** `user_id` (actor)
-- **What:** `action` (e.g., `APPLICATION_SUBMITTED`, `PAYMENT_RECORDED`)
+- **Who:** `user_id` (actor; null for system/webhook actions)
+- **What:** `action` (e.g. `ONLINE_PAYMENT_INITIATED`, `ONLINE_PAYMENT_CONFIRMED`, `ONLINE_PAYMENT_FAILED`)
 - **Which:** `entity_type` + `entity_id` (affected record)
 - **Before/After:** `old_value` / `new_value` (JSONB snapshots)
 - **Where:** `ip_address` (client IP)
 - **When:** `created_at` (server timestamp)
+
+Webhook events also written to `payment_gateway_logs` (append-only audit table with raw payload).
+
+### 7.4 PayMongo Integration Notes
+
+| Concern | Specification |
+|---|---|
+| API Base URL | `https://api.paymongo.com/v1` |
+| Authentication | Base64-encode `PAYMONGO_SECRET_KEY:` (trailing colon); pass as `Authorization: Basic <encoded>` |
+| Amount units | Centavos (PHP × 100). PHP 500.00 → `50000` |
+| Test card | `4343434343434343`, any future expiry, any CVV |
+| Test GCash | Use PayMongo sandbox instructions |
+| Key prefix | `sk_test_...` for development; `sk_live_...` for production |
+| Webhook tunnel | Use ngrok in development; PayMongo requires a publicly accessible URL |
+| OR number format | `PM-{YYYYMMDD}-{6-digit-sequence}` for online payments |
 
 ---
 
@@ -417,17 +451,27 @@ Every significant system action is captured in `audit_logs`:
 ```
 /src
 ├── /components      # Reusable UI — Buttons, Inputs, Map, Badges
-├── /screens         # Main views per module
-│   ├── UAFWizard
-│   ├── BPLODashboard
-│   ├── CashierPOS
-│   ├── BarangayPortal
-│   └── AdminConsole
-├── /store           # Zustand slices
+├── /screens
+│   ├── /applicant
+│   │   ├── UAFWizard
+│   │   └── StatusTracker    ← Updated: online payment button + polling UI
+│   ├── /bplo
+│   │   ├── Dashboard
+│   │   └── SplitScreenVerifier
+│   ├── /treasury
+│   │   ├── AssessmentGrid
+│   │   └── CashierPOS       ← Online payment initiation added
+│   ├── /barangay
+│   │   └── ClearanceQueue
+│   └── /admin
+│       ├── MasterData
+│       ├── DocumentBuilder
+│       └── AuditLogs
+├── /store
 │   ├── authSlice
-│   ├── applicationSlice
+│   ├── applicationSlice      ← Updated: PaymentProcessing status added
 │   └── notificationSlice
-├── /utils           # Tax calc helpers, date formatters, PDF builders
+├── /utils           # Tax calc helpers, date formatters
 └── /hooks           # useAutosave, useApplicationStatus, useNotifications
 ```
 
@@ -435,9 +479,9 @@ Every significant system action is captured in `audit_logs`:
 
 | Portal | Design | Key Pattern |
 |---|---|---|
-| **Applicant** | Mobile-first | Quick-action buttons, status badges, autosave indicator |
-| **BPLO** | Desktop-first | Split-screen verifier, sortable data tables, SLA indicators |
-| **Treasury** | Desktop POS-like | Assessment grid, high-contrast cashier panel, large typography |
+| **Applicant** | Mobile-first | Quick-action buttons, status badges, autosave indicator, online payment button, polling for PaymentProcessing |
+| **BPLO** | Desktop-first | Split-screen verifier, data review panel, sortable tables, SLA indicators |
+| **Treasury** | Desktop POS-like | Assessment grid, high-contrast cashier panel, large typography, online payment initiation |
 | **Barangay** | Desktop | Clearance queue with issue/reject actions |
 | **Admin** | Utilitarian | Health metrics, master data CRUD, DocumentBuilder, audit viewer |
 
@@ -453,7 +497,7 @@ graph TB
 
     subgraph "Cloud Infrastructure"
         subgraph "Compute"
-            API["Node.js + Express<br/>API Server"]
+            API["Node.js + Express<br/>API Server<br/>(includes Webhook Handler)"]
         end
         subgraph "Supabase (Managed)"
             DB["PostgreSQL<br/>(RLS + 3NF Schema)"]
@@ -464,12 +508,20 @@ graph TB
         end
     end
 
+    subgraph "External Services"
+        PM["PayMongo<br/>(Payment Gateway API)"]
+    end
+
     BR -->|"HTTPS"| API
     API -->|"Supabase Client"| DB
     API -->|"Pre-Signed URLs"| ST
     API -->|"SMTP/API"| SMTP
-    BR -->|"Direct Upload<br/>(Pre-Signed)"| ST
+    BR -->|"Direct Upload (Pre-Signed)"| ST
+    API -->|"Create Payment Intent<br/>(HTTPS)"| PM
+    PM -->|"payment.paid / payment.failed<br/>Webhook POST (HTTPS)"| API
 ```
+
+> **Webhook requirement:** The API server must be publicly accessible to receive PayMongo webhook callbacks. Use ngrok or a deployed environment during development. `localhost` URLs will not work with PayMongo.
 
 ---
 
@@ -482,23 +534,26 @@ graph TB
 | **Concurrent Users** | Handle January renewal spikes |
 | **Auth Security** | bcrypt (cost ≥ 12), JWT 24h expiry |
 | **File Security** | Pre-signed URLs, 15-min expiry |
+| **Webhook Security** | HMAC-SHA256 verified; reject 400 on failure |
+| **Idempotency** | Duplicate webhooks produce no side effects |
 | **Privacy** | DPA 2012 compliant, full audit trail |
-| **Payment** | OTC only (Cash + Manager Check) |
+| **Payment** | OTC (Cash + Manager Check) + Online via PayMongo |
 | **Mobile** | Applicant portal fully responsive |
 
 ---
 
 ## 11. Explicit Exclusions
 
-> [!CAUTION]
-> The following are **permanently out of scope** and must never be implemented:
-> 1. Online payment gateways (Landbank, DBP, GCash, PayMaya, credit/debit)
+> The following are **out of scope** and must not be implemented:
+> 1. ~~Online payment gateways~~ — **PayMongo is in scope. All other gateways remain excluded** (Landbank ePay, DBP PayConnect, PayMaya, direct GCash integration outside PayMongo)
 > 2. Legacy system data migration
 > 3. National database integration (BIR, DTI, SEC)
 > 4. SMS notifications
 > 5. Native mobile apps (iOS/Android)
 > 6. Multi-LGU or federated deployment
+> 7. **Online payment for the Retirement Module (OTC only)**
 
 ---
 
-*Architecture derived from [eBPLS SDD v2.0](file:///c:/projects/eBPLS/system-planning/eBPLS_SDD_v2.md) — Municipality of Liliw*
+*eBPLS System Architecture v3.0 — Municipality of Liliw*
+*Previous version: Architecture v2.0 (OTC-only). This version integrates PayMongo as an optional online payment channel.*

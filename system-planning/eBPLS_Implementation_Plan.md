@@ -1,15 +1,14 @@
 # eBPLS Agile Implementation Plan
 
 **Electronic Business Permits and Licensing System — BOSS & E-Resibo**
-Municipality of Liliw | **v3.0 — Phases Consolidated & Chronological**
+Municipality of Liliw | **v4.0 — PayMongo Online Payment Added**
 
 ---
 
-> [!NOTE]
-> **What changed in v3.0 (from v2.1)**
-> All A/B phase splits have been merged into single phases. Tasks within each phase are now ordered chronologically — backend foundation first, then frontend — so each layer has what it needs before the next begins. No functional scope was changed; this is a structural reorganization only.
+> **What changed in v4.0 (from v3.0)**
+> PayMongo online payment integration added as an optional channel. Affected phases: **Phase 1** (migration 018), **Phase 5** (new service, routes, and controller files), **Phase 9** (email wiring for online payment), and **Phase 11** (6 new QA test cases). All other phases are unchanged.
 >
-> **Design fixes carried over from v2.1:**
+> **Preserved from v3.0:**
 > 1. **BPLO Full Application Review** — `application_data_reviews` table + data review panel in the BPLO verifier.
 > 2. **Barangay Clearance Feedback Loop** — Barangay clearance outcome auto-updates the BPLO verification checklist.
 
@@ -40,17 +39,17 @@ Municipality of Liliw | **v3.0 — Phases Consolidated & Chronological**
 ```mermaid
 graph TD
     P0["Phase 0<br/>Skeleton UI"]
-    P1["Phase 1<br/>Database Schema & Supabase<br/>⚠️ UPDATED"]
+    P1["Phase 1<br/>Database Schema & Supabase<br/>⚠️ UPDATED (018 migration)"]
     P2["Phase 2<br/>Auth + Shared Foundation"]
-    P3["Phase 3<br/>Applicant Module<br/>✅ DONE + 3C Patch Required"]
+    P3["Phase 3<br/>Applicant Module<br/>✅ DONE + 3C Patch Complete"]
     P4["Phase 4<br/>BPLO Module<br/>⚠️ UPDATED"]
-    P5["Phase 5<br/>Treasury Module"]
+    P5["Phase 5<br/>Treasury Module<br/>⚠️ UPDATED — PayMongo added"]
     P6["Phase 6<br/>Barangay Module<br/>⚠️ UPDATED"]
     P7["Phase 7<br/>Business Retirement Module"]
     P8["Phase 8<br/>Document Generation (PDF)"]
-    P9["Phase 9<br/>Email Notifications<br/>⚠️ UPDATED — 10 triggers"]
+    P9["Phase 9<br/>Email Notifications<br/>⚠️ UPDATED — online payment wiring"]
     P10["Phase 10<br/>Admin Module"]
-    P11["Phase 11<br/>QA, Polish & Deploy"]
+    P11["Phase 11<br/>QA, Polish & Deploy<br/>⚠️ UPDATED — 6 new test cases"]
 
     P0 --> P1
     P1 --> P2
@@ -78,6 +77,7 @@ graph TD
 | UAF Barangay Hook Patch (Phase 3C) | ✅ Owner | |
 | BPLO Module (Verify & Process) | | ✅ Owner |
 | Treasury Module (Assess & POS) | ✅ Owner | |
+| **PayMongo Service & Webhook Handler** | **✅ Owner** | |
 | Business Retirement Module | | ✅ Owner |
 | Barangay Clearance Module | ✅ Owner | |
 | Admin Module | | ✅ Owner |
@@ -94,10 +94,10 @@ graph TD
 | **2** | Phase 1: DB Schema, RLS, Seed (collab) | Phase 1: DB Schema, RLS, Seed (collab) |
 | **3** | Phase 2: Auth Backend + Frontend + Shared Middleware (collab) | Phase 2: Auth Backend + Frontend + Shared Middleware (collab) |
 | **4** | ~~Applicant Module~~ ✅ Done + **Phase 3C Patch** | Phase 4: BPLO Module — Backend API first, then Frontend |
-| **5** | Phase 5: Treasury Module — Backend API first, then Frontend | Phase 7: Retirement Module — Backend API first, then Frontend |
-| **6** | Phase 6: Barangay Module — Backend API first, then Frontend + **doc_verifications auto-update** | Phase 10: Admin Module — Backend API first, then Frontend |
-| **7** | Phase 8: PDF Generation (all documents) | Phase 9: Email Notifications (all **10** triggers) |
-| **8-9** | QA: Applicant + Treasury + Barangay + PDF flows | QA: BPLO + Retirement + Admin + Email flows |
+| **5** | Phase 5: Treasury Module (OTC + PayMongo) — Backend first, then Frontend | Phase 7: Retirement Module — Backend API first, then Frontend |
+| **6** | Phase 6: Barangay Module — Backend API first, then Frontend | Phase 10: Admin Module — Backend API first, then Frontend |
+| **7** | Phase 8: PDF Generation (all documents) | Phase 9: Email Notifications (all **10** triggers + online payment wiring) |
+| **8-9** | QA: Applicant + Treasury + Barangay + PDF + PayMongo flows | QA: BPLO + Retirement + Admin + Email flows |
 
 ---
 
@@ -143,48 +143,55 @@ graph TD
 
 **Priority:** 🔴 Critical Path — blocks everything else.
 
-**What changed:** Added migration for `application_data_reviews` table (new). Updated `doc_verifications` status ENUM to include `Awaiting Issuance`. Added FK relationship note between `barangay_clearances` and `doc_verifications`.
+**What changed in v4.0:** Added migration `018_paymongo_payment.sql` — extends `transactions` table with PayMongo columns, adds `GCash`/`Card`/`Online` to the `tendered_type` enum, creates the `payment_gateway_logs` table with RLS, and adds `PaymentProcessing` to the `application_status` enum.
 
 ### Tasks
 
 | # | Task | File / Location | Changed? |
 |---|---|---|---|
 | 1.1 | Create migration: `roles` table (seed 5 roles) | `supabase/migrations/001_roles.sql` | — |
-| 1.2 | Create migration: `users` table with FK to `roles`, bcrypt hash column | `supabase/migrations/002_users.sql` | — |
+| 1.2 | Create migration: `users` table with FK to `roles` | `supabase/migrations/002_users.sql` | — |
 | 1.3 | Create migration: `taxpayers` table (1:1 with users) | `supabase/migrations/003_taxpayers.sql` | — |
 | 1.4 | Create migration: `businesses`, `organization_types` | `supabase/migrations/004_businesses.sql` | — |
 | 1.5 | Create migration: `applications`, `application_drafts`, `application_types`, `payment_modes` | `supabase/migrations/005_applications.sql` | — |
-| 1.6 | Create migration: `doc_verifications`, `clearance_types` (patched by `015_design_gaps_fix.sql` to add `'Yes'`, `'No'`, `'Awaiting Issuance'`) | `supabase/migrations/006_verifications.sql` | ⚠️ Patched |
-| 1.7 | Create migration: `barangay_clearances` — linked to `doc_verifications` via `application_no`; no hard FK but relationship enforced at the service layer | `supabase/migrations/007_barangay.sql` | ⚠️ Updated |
+| 1.6 | Create migration: `doc_verifications`, `clearance_types` (patched by `015` to add `'Yes'`, `'No'`, `'Awaiting Issuance'`) | `supabase/migrations/006_verifications.sql` | ⚠️ Patched |
+| 1.7 | Create migration: `barangay_clearances` | `supabase/migrations/007_barangay.sql` | — |
 | 1.8 | Create migration: `assessments`, `assessment_line_items`, `fee_types`, `transactions` | `supabase/migrations/008_treasury.sql` | — |
 | 1.9 | Create migration: `retirement_applications` | `supabase/migrations/009_retirements.sql` | — |
 | 1.10 | Create migration: `permits`, `permit_line_items`, `business_activities` | `supabase/migrations/010_permits.sql` | — |
 | 1.11 | Create migration: `audit_logs` | `supabase/migrations/011_audit_logs.sql` | — |
-| 1.12 | Create migration: `email_notifications` (patched by `015_design_gaps_fix.sql` to add `BARANGAY_CLEARANCE_REJECTED`) | `supabase/migrations/012_email_notifications.sql` | ⚠️ Patched |
-| 1.13 | Enable RLS on all base tables; write initial policies (patched by `015_design_gaps_fix.sql` for `application_data_reviews` RLS) | `supabase/migrations/013_rls_policies.sql` | ⚠️ Patched |
-| 1.14 | Seed lookup tables: roles, application_types, payment_modes, clearance_types, fee_types, organization_types | `supabase/seed.sql` | — |
-| **1.15** | **Migrations `015` & `016` — adds `application_data_reviews` table, updates `doc_verifications` status constraint (`Yes`/`No`/`Awaiting Issuance`), adds `BARANGAY_CLEARANCE_REJECTED` trigger, and patches RLS policies** | **`supabase/migrations/`** | **🆕 New** |
+| 1.12 | Create migration: `email_notifications` | `supabase/migrations/012_email_notifications.sql` | — |
+| 1.13 | Enable RLS on all base tables; write initial policies | `supabase/migrations/013_rls_policies.sql` | ⚠️ Patched |
+| 1.14 | Seed lookup tables: roles, application_types, payment_modes, clearance_types, fee_types, organization_types, business_activities | `supabase/seed.sql` | — |
+| 1.15 | Migrations `015` & `016` — adds `application_data_reviews` table, updates `doc_verifications` status constraint, adds `BARANGAY_CLEARANCE_REJECTED` trigger, patches RLS | `supabase/migrations/` | 🆕 Prior |
+| 1.16 | Migration `017` — `uaf_create_barangay_clearance_hook` RPC (atomic barangay clearance + doc_verifications insert) | `supabase/migrations/017_uaf_clearance_hook.sql` | 🆕 Prior |
+| **1.17** | **Migration `018` — PayMongo payment integration:** | **`supabase/migrations/018_paymongo_payment.sql`** | **🆕 New** |
+| | Add `'GCash'`, `'Card'`, `'Online'` values to `tendered_type` enum | | |
+| | Add `PaymentProcessing` to `application_status` enum | | |
+| | Add columns to `transactions`: `paymongo_payment_intent_id VARCHAR UNIQUE`, `paymongo_payment_id VARCHAR UNIQUE`, `payment_channel VARCHAR` | | |
+| | Create `payment_gateway_logs` table with RLS (insert from service role only; no delete policy) | | |
 
 ### Definition of Done
 - [ ] All tables exist in Supabase with correct constraints, FKs, and enums
-- [ ] `doc_verifications.status` ENUM includes `'Awaiting Issuance'`
-- [ ] `application_data_reviews` table exists with correct columns and RLS enabled
-- [ ] RLS is enabled on every table
+- [ ] `application_status` enum includes `'PaymentProcessing'`
+- [ ] `tendered_type` enum includes `'GCash'`, `'Card'`, `'Online'`
+- [ ] `transactions` table has `paymongo_payment_intent_id`, `paymongo_payment_id`, `payment_channel` columns
+- [ ] `payment_gateway_logs` table exists with UNIQUE constraint on `paymongo_event_id`
+- [ ] RLS is enabled on every table including `payment_gateway_logs`
+- [ ] `doc_verifications.status` includes `'Awaiting Issuance'`
+- [ ] `application_data_reviews` table exists with correct columns
 - [ ] Seed data populated for all lookup tables
 
 ---
 
 ## Phase 2: Auth & Shared Foundation (Both Devs)
 
-**Goal:** Build all shared backend utilities, middleware, and the full authentication flow (backend + frontend).
-
-**Order:** Backend utilities and middleware are built first so the frontend auth store and protected routes have a working API to connect to.
+**Goal:** Build all shared backend utilities, middleware, and the full authentication flow.
 
 ### Tasks
 
 | # | Task | File / Location | Owner |
 |---|---|---|---|
-| **— Backend Foundation —** | | | |
 | 2.1 | Create `constants.js` — role enums, valid status transitions, error codes | `src/utils/constants.js` | Both |
 | 2.2 | Create `helpers.js` — UUID generator, date formatters | `src/utils/helpers.js` | Both |
 | 2.3 | Build `auth.middleware.js` — JWT validation | `src/middlewares/` | Both |
@@ -194,180 +201,194 @@ graph TD
 | 2.7 | Create `audit.service.js` — writes rows to `audit_logs` | `src/services/` | Both |
 | 2.8 | Create `auth.controller.js` — register, login, forgot password handlers | `src/controllers/` | Both |
 | 2.9 | Create `auth.routes.js` and mount in `app.js` | `src/routes/` | Both |
-| **— Frontend Auth —** | | | |
 | 2.10 | Create `authStore.js` (Zustand) — session state, persisted to localStorage | `src/store/` | Both |
-| 2.11 | Create `useAuth.js` hook — wraps authStore with convenience selectors | `src/hooks/` | Both |
-| 2.12 | Implement Protected Route wrapper — redirects unauthenticated users | `src/components/shared/` | Both |
-| 2.13 | Build `LandingPage.jsx` — public landing with navigation to Login/Register | `src/screens/public/` | Both |
-| 2.14 | Build `Login.jsx` — connects to `POST /api/auth/login`, stores JWT in authStore | `src/screens/auth/` | Both |
-| 2.15 | Build `Register.jsx` — connects to `POST /api/auth/register` | `src/screens/auth/` | Both |
-| 2.16 | Build `ForgotPassword.jsx` — connects to password reset flow | `src/screens/auth/` | Both |
+| 2.11 | Create `useAuth.js` hook | `src/hooks/` | Both |
+| 2.12 | Implement Protected Route wrapper | `src/components/shared/` | Both |
+| 2.13 | Build `LandingPage.jsx` | `src/screens/public/` | Both |
+| 2.14 | Build `Login.jsx` | `src/screens/auth/` | Both |
+| 2.15 | Build `Register.jsx` | `src/screens/auth/` | Both |
+| 2.16 | Build `ForgotPassword.jsx` | `src/screens/auth/` | Both |
 
 ### Definition of Done
 - [ ] `POST /api/auth/register` creates user with bcrypt hash (cost 12+)
 - [ ] `POST /api/auth/login` returns JWT with user role
 - [ ] All protected routes reject requests without valid JWT
 - [ ] RBAC middleware blocks unauthorized roles
-- [ ] Landing page renders with navigation to Login/Register
-- [ ] Protected routes redirect unauthenticated users
 - [ ] Zustand auth store persists session in localStorage
 
 ---
 
 ## Phase 3: Applicant Module ✅ DONE (Phase 3C Patch Required)
 
-> **Phase 3A (Frontend — UAF Wizard) and Phase 3B (Backend — Application API) are complete.**
-> One backend behaviour must be patched via **Phase 3C** before Phase 4 can be tested end-to-end.
+> **Phase 3A and 3B complete. Phase 3C backend patch complete (3C.1–3C.5 done).**
 
-### Phase 3C: Backend Patch — UAF Barangay Clearance Hook ⚠️ REQUIRED
-
-**Goal:** Fix the gap where ticking the Barangay Clearance checkbox creates a `brgy_clearances` record but does NOT create the corresponding `doc_verifications` record. Without this patch, the BPLO module cannot track or enforce the clearance outcome.
-
-**Owner:** Dev A
-**Depends on:** Phase 1 schema must include `'Awaiting Issuance'` ENUM value.
-**Must complete before:** Phase 4 is tested end-to-end.
+### Phase 3C — Final Verification Tasks
 
 | # | Task | File / Location |
 |---|---|---|
-| ~~3C.1~~ | ~~Open `application.service.js` — locate the UAF final submission handler (`POST /api/applications/uaf`)~~ | ✅ Done |
-| ~~3C.2~~ | ~~Add logic: after `brgy_clearances` record is created with `status = 'Pending'`, immediately insert a corresponding `doc_verifications` record for that `application_no` where `clearance_type` = Barangay and `status = 'Awaiting Issuance'`~~ | ✅ Done — via `uaf_create_barangay_clearance_hook` RPC |
-| ~~3C.3~~ | ~~Wrap both inserts (`brgy_clearances` + `doc_verifications`) in a single database transaction so they succeed or fail together — no orphaned records~~ | ✅ Done — atomic Postgres function in `017_uaf_clearance_hook.sql` |
-| ~~3C.4~~ | ~~Add logic: if the applicant does NOT tick the checkbox, insert the Barangay `doc_verifications` row with `status = 'Pending'`~~ | ✅ Done — PATH B in RPC |
-| ~~3C.5~~ | ~~Update `constants.js` — add `AWAITING_ISSUANCE` to the `DOC_VERIFICATION_STATUS` enum object~~ | ✅ Done |
-| 3C.6 | Manual test: submit UAF with checkbox ticked → confirm both `brgy_clearances` (Pending) and `doc_verifications` (Awaiting Issuance) rows exist in Supabase | Postman / Thunder Client |
+| 3C.6 | Manual test: submit UAF with checkbox ticked → confirm both `barangay_clearances` (Pending) and `doc_verifications` (Awaiting Issuance) rows exist | Postman / Thunder Client |
 | 3C.7 | Manual test: submit UAF without checkbox → confirm `doc_verifications` row for Barangay exists with `status = 'Pending'` | Postman / Thunder Client |
 
 ### Definition of Done
-- [x] Ticking the checkbox creates both a `brgy_clearances` record (`Pending`) and a `doc_verifications` record (`Awaiting Issuance`) atomically
-- [x] Not ticking the checkbox creates a `doc_verifications` record (`Pending`) for Barangay — no `brgy_clearances` record is created
-- [ ] Both paths verified in Supabase directly (manual test 3C.6 & 3C.7)
-- [x] No orphaned `brgy_clearances` records exist without a corresponding `doc_verifications` row
+- [x] Ticking the checkbox creates both records atomically
+- [x] Not ticking creates only a `doc_verifications` (Pending) record
+- [ ] Both paths verified in Supabase directly (3C.6 & 3C.7)
+- [x] No orphaned `barangay_clearances` records
 
 ---
 
-## Phase 4: BPLO Module ⚠️ UPDATED
+## Phase 4: BPLO Module ⚠️ UPDATED (Unchanged from v3.0)
 
-**Goal:** Build the BPLO verification flow — backend API first (state machine, data review endpoint, guard logic), then the desktop-first frontend (split-screen verifier, data review panel, clearance status badge).
+**Goal:** Build the BPLO verification flow — backend API first, then desktop-first frontend.
 
 **Owner:** Dev B
 **Depends on:** Phase 3C patch complete and verified.
 
-**What changed:** Added `PUT /api/bplo/applications/review/:app_no` endpoint and `application_data_reviews` upsert logic. Updated the `Under Review → Verified` state machine guard to require all three conditions. Added `DataReviewPanel.jsx` component and Barangay clearance status badge to the verifier.
+### Tasks
+
+| # | Task | File / Location | Changed? |
+|---|---|---|---|
+| 4.1 | Build `bplo.controller.js` — pending queue, application detail, verify, return handlers | `src/controllers/bplo.controller.js` | ⚠️ Updated |
+| 4.2 | Add handler: `reviewApplication` — upserts `application_data_reviews` per section | `src/controllers/bplo.controller.js` | 🆕 New |
+| 4.3 | Update `Under Review → Verified` guard: require all `doc_verifications` = 'Yes'/'Not Needed' AND all `application_data_reviews` = 'Verified' AND (if exists) `barangay_clearances.status` = 'Issued' | `src/services/application.service.js` | ⚠️ Updated |
+| 4.4 | Build `bplo.routes.js` | `src/routes/bplo.routes.js` | ⚠️ Updated |
+| 4.5 | Add route: `PUT /api/bplo/applications/review/:app_no` → `bplo.controller.reviewApplication` | `src/routes/bplo.routes.js` | 🆕 New |
+| 4.6 | Mount BPLO routes in `app.js` | `src/app.js` | — |
+| 4.7 | Build `Dashboard.jsx` — sortable data table with SLA urgency indicators | `src/screens/bplo/` | — |
+| 4.8 | Build `DataReviewPanel.jsx` — four review sections with Verified/Discrepancy toggle | `src/components/bplo/` | 🆕 New |
+| 4.9 | Build `SplitScreenVerifier.jsx` — three-panel layout with Barangay clearance status badge | `src/screens/bplo/` | ⚠️ Updated |
+| 4.10 | Wire Approve/Return footer guard — Approve disabled until all guard conditions pass | `src/screens/bplo/` | 🆕 New |
+
+### Definition of Done
+- [ ] `PUT /api/bplo/applications/review/:app_no` upserts `application_data_reviews` rows correctly
+- [ ] `PUT /api/bplo/applications/verify/:app_no` returns `403` if any data review section is Discrepancy or missing
+- [ ] `PUT /api/bplo/applications/verify/:app_no` returns `403` if `barangay_clearances` exists and status is not 'Issued'
+- [ ] All actions RBAC-locked to `BPLO_Officer` and logged in `audit_logs`
+
+---
+
+## Phase 5: Treasury Module ⚠️ UPDATED
+
+**Goal:** Build the treasury assessment flow, OTC payment recording, and the new PayMongo online payment channel.
+
+**Owner:** Dev A
+**Depends on:** Phase 4 (applications must reach `Verified` status).
+
+**What changed in v4.0:** Added `paymongo.service.js`, `treasury.online.routes.js`, `webhook.routes.js`, and `webhook.controller.js`. Updated `constants.js`, `env.js`, `application.service.js`, and `app.js`. Added online payment UI to `StatusTracker.jsx` and `PaymentProcessing` status to `applicationSlice.js`.
 
 ### Tasks
 
 | # | Task | File / Location | Changed? |
 |---|---|---|---|
-| **— Backend API —** | | | |
-| 4.1 | Build `bplo.controller.js` — pending queue handler, application detail view, verify handler, return handler | `src/controllers/bplo.controller.js` | ⚠️ Updated |
-| **4.2** | **Add `reviewApplication` handler to `bplo.controller.js`: accepts an array of section reviews `[{ section, status, remarks }]` for a given `application_no`. Upserts rows in `application_data_reviews`. Remarks field is mandatory when `status = 'Discrepancy'`** | **`src/controllers/bplo.controller.js`** | **🆕 New** |
-| **4.3** | **Update the `Under Review → Verified` state machine guard in `application.service.js`: transition only allowed when ALL three conditions pass — (1) all `doc_verifications` rows for the `application_no` are `'Yes'` or `'Not Needed'`; (2) all `application_data_reviews` rows are `'Verified'`; (3) if a `brgy_clearances` record exists for this `application_no`, its `status` must be `'Issued'`** | **`src/services/application.service.js`** | **🆕 New** |
-| 4.4 | Build `bplo.routes.js` — all BPLO endpoints, RBAC locked to `BPLO_Officer` | `src/routes/bplo.routes.js` | ⚠️ Updated |
-| **4.5** | **Add route: `PUT /api/bplo/applications/review/:app_no` → `bplo.controller.reviewApplication`, RBAC locked to `BPLO_Officer`** | **`src/routes/bplo.routes.js`** | **🆕 New** |
-| 4.6 | Mount BPLO routes in `app.js` | `src/app.js` | — |
+| **— Backend API (OTC — Unchanged) —** | | | |
+| 5.1 | Build `assessment.service.js` — fee calculation with Mayor's Permit + 10% Fire Safety rule | `src/services/` | — |
+| 5.2 | Build `treasury.controller.js` — assess, override, record OTC payment handlers | `src/controllers/` | — |
+| 5.3 | Build `treasury.routes.js` — OTC Treasury endpoints, RBAC protected | `src/routes/` | — |
+| 5.4 | Mount Treasury routes in `app.js` | `src/app.js` | — |
+| **— Backend API (PayMongo — New) —** | | | |
+| **5.5** | **Update `src/config/env.js` — add 4 PayMongo env vars to Zod schema:** `PAYMONGO_SECRET_KEY`, `PAYMONGO_WEBHOOK_SECRET`, `PAYMONGO_SUCCESS_URL`, `PAYMONGO_CANCEL_URL` | **`src/config/env.js`** | **🆕 New** |
+| **5.6** | **Update `src/utils/constants.js` — add:** `APPLICATION_STATUS.PAYMENT_PROCESSING = 'PaymentProcessing'`; `TRANSACTION_TENDERED_TYPE.GCASH`, `.CARD`, `.ONLINE`; `AUDIT_ACTIONS.ONLINE_PAYMENT_INITIATED`, `.ONLINE_PAYMENT_CONFIRMED`, `.ONLINE_PAYMENT_FAILED` | **`src/utils/constants.js`** | **🆕 New** |
+| **5.7** | **Create `src/services/paymongo.service.js`** with four functions: | **`src/services/`** | **🆕 New** |
+| | `createPaymentIntent(amount, description, applicationNo)` — POST to `https://api.paymongo.com/v1/payment_intents`; amount in centavos (PHP × 100) | | |
+| | `createPaymentLink(amount, description, applicationNo)` — alternative simpler integration | | |
+| | `verifyWebhookSignature(rawBody, signatureHeader)` — HMAC-SHA256 using `PAYMONGO_WEBHOOK_SECRET`; return `false` and log on failure (do not throw) | | |
+| | `getPayment(paymentId)` — retrieve payment details for manual fallback | | |
+| **5.8** | **Update `src/services/application.service.js` — add 3 new state machine transitions to the guard:** `ForPayment → PaymentProcessing`, `PaymentProcessing → Paid`, `PaymentProcessing → ForPayment`. Do not alter existing transitions. | **`src/services/application.service.js`** | **🆕 New** |
+| **5.9** | **Create `src/routes/treasury.online.routes.js` — `POST /api/treasury/payments/online`:** RBAC: Applicant or Treasury_Officer. Guard: application must be in `ForPayment`. Behavior: call `paymongo.service.createPaymentIntent()`, create `transactions` row (status = 'Pending', `paymongo_payment_intent_id` set), transition status to `PaymentProcessing`, log to `audit_logs` (`ONLINE_PAYMENT_INITIATED`), return `checkout_url`. | **`src/routes/`** | **🆕 New** |
+| **5.10** | **Create `src/routes/webhook.routes.js` — `POST /api/webhooks/paymongo`:** No JWT auth. Uses `express.raw({ type: 'application/json' })`. Delegates to `webhook.controller.handlePaymongo`. | **`src/routes/`** | **🆕 New** |
+| **5.11** | **Create `src/controllers/webhook.controller.js`** with `handlePaymongo` handler: | **`src/controllers/`** | **🆕 New** |
+| | 1. Verify HMAC-SHA256 signature — reject 400 if invalid | | |
+| | 2. Idempotency check — query `payment_gateway_logs` for `paymongo_event_id`; if already `processed = true`, return 200 immediately | | |
+| | 3. Insert into `payment_gateway_logs` with `processed = false` | | |
+| | 4. **On `payment.paid`:** find transaction by `paymongo_payment_intent_id`; update transaction (`paymongo_payment_id`, `payment_channel`, `paid_at = NOW()`); generate system OR number (`PM-{YYYYMMDD}-{6-digit-seq}`); transition application to `Paid`; trigger document generation (Permit + E-Resibo); enqueue `PAYMENT_RECORDED` email; update `payment_gateway_logs.processed = true`; log `ONLINE_PAYMENT_CONFIRMED` to `audit_logs` | | |
+| | 5. **On `payment.failed`:** find transaction; update `transactions.status = 'Failed'`; transition application back to `ForPayment`; update `payment_gateway_logs.processed = true`; log `ONLINE_PAYMENT_FAILED` to `audit_logs` | | |
+| | 6. Always return 200 to PayMongo — never 500 | | |
+| **5.12** | **Update `src/app.js` — mount routes correctly:** Register `express.raw({ type: 'application/json' })` + `webhookRoutes` at `/api/webhooks` **BEFORE** `app.use(express.json())`. Register `treasuryOnlineRoutes` at `/api/treasury` after `express.json()`. | **`src/app.js`** | **🆕 New** |
 | **— Frontend UI —** | | | |
-| 4.7 | Build `Dashboard.jsx` — sortable data table with SLA urgency indicators | `src/screens/bplo/` | — |
-| **4.8** | **Build `DataReviewPanel.jsx` — four review sections: Business Details, Location, Business Activities, Financial Declaration. Each section shows the declared value alongside the supporting document for cross-checking. BPLO marks each section as `Verified` or `Discrepancy` with a required remarks field on Discrepancy. Calls `PUT /api/bplo/applications/review/:app_no` on submit** | **`src/components/bplo/`** | **🆕 New** |
-| **4.9** | **Build `SplitScreenVerifier.jsx` — three-panel layout: left pane (document viewer with zoom), top-right pane (document verification checklist), bottom-right pane (`DataReviewPanel`). Add Barangay Clearance status indicator: if a `brgy_clearances` record exists, show a read-only badge displaying current status (Pending / Issued / Rejected)** | **`src/screens/bplo/`** | **⚠️ Updated** |
-| **4.10** | **Wire Approve/Return footer guard in `SplitScreenVerifier.jsx`: Approve button is disabled until ALL `doc_verifications` rows = `'Yes'` or `'Not Needed'` AND ALL `application_data_reviews` rows = `'Verified'` AND (if applicable) `brgy_clearances.status = 'Issued'`** | **`src/screens/bplo/`** | **🆕 New** |
+| 5.13 | Build `AssessmentGrid.jsx` — spreadsheet-style fee view, override fields highlighted in yellow | `src/screens/treasury/` | — |
+| 5.14 | Build `CashierPOS.jsx` — OTC payment: Cash/Manager Check selector, OR number, change computation | `src/screens/treasury/` | — |
+| **5.15** | **Update `src/screens/applicant/StatusTracker.jsx`** — when status = `ForPayment`: show two options: (1) "Pay OTC" with existing instructions; (2) "Pay Online via PayMongo" button that calls `POST /api/treasury/payments/online` and redirects to `checkout_url`. When status = `PaymentProcessing`: show pending message *"Your online payment is being confirmed. This page will update automatically."* Poll `GET /api/applications/:app_no/status` every 5 seconds. Once status = `Paid`/`Completed`, show download buttons. | **`src/screens/applicant/`** | **🆕 New** |
+| **5.16** | **Update `src/store/applicationSlice.js`** — add `PaymentProcessing` to the handled statuses in store logic | **`src/store/`** | **🆕 New** |
 
-### Definition of Done
-- [ ] `GET /api/bplo/applications/pending` returns only `Pending` and `Under Review` applications
-- [ ] `PUT /api/bplo/applications/review/:app_no` upserts `application_data_reviews` rows correctly
-- [ ] `PUT /api/bplo/applications/verify/:app_no` returns `403` if any data review section is missing or `Discrepancy`
-- [ ] `PUT /api/bplo/applications/verify/:app_no` returns `403` if `brgy_clearances` record exists and status is not `'Issued'`
-- [ ] `PUT /api/bplo/applications/return/:app_no` requires remarks and transitions to `Returned`
-- [ ] Dashboard shows pending applications sorted by submission date
-- [ ] Split-screen verifier loads uploaded documents via pre-signed URLs
-- [ ] Document verification checklist (Yes / No / Not Needed / Awaiting Issuance) renders correctly
-- [ ] Data review panel shows all four sections with declared vs. document values
-- [ ] Approve button is disabled when any guard condition fails
-- [ ] All actions RBAC-locked to `BPLO_Officer` role and logged in `audit_logs`
+### New Files Created
 
----
+| File | Purpose |
+|---|---|
+| `supabase/migrations/018_paymongo_payment.sql` | DB migration: enum additions, `transactions` columns, `payment_gateway_logs` table, RLS |
+| `src/services/paymongo.service.js` | PayMongo API client: Payment Intent, Payment Link, webhook verification, payment retrieval |
+| `src/routes/treasury.online.routes.js` | `POST /api/treasury/payments/online` — RBAC protected |
+| `src/routes/webhook.routes.js` | `POST /api/webhooks/paymongo` — raw body, no JWT |
+| `src/controllers/webhook.controller.js` | Webhook handler: signature check, idempotency, state transitions, trigger docs + email |
 
-## Phase 5: Treasury Module
+### Files Modified (Targeted Changes Only)
 
-**Goal:** Build the treasury assessment and OTC payment flow — fee calculation service and API first, then the assessment grid and cashier POS frontend.
-
-**Owner:** Dev A
-**Depends on:** Phase 4 (applications must reach `Verified` status before Treasury can assess).
-
-### Tasks
-
-| # | Task | File / Location |
-|---|---|---|
-| **— Backend API —** | | |
-| 5.1 | Build `assessment.service.js` — fee calculation with Mayor's Permit + 10% Fire Safety rule | `src/services/` |
-| 5.2 | Build `treasury.controller.js` — assess, override, record OTC payment handlers | `src/controllers/` |
-| 5.3 | Build `treasury.routes.js` — all Treasury endpoints, RBAC protected | `src/routes/` |
-| 5.4 | Mount Treasury routes in `app.js` | `src/app.js` |
-| **— Frontend UI —** | | |
-| 5.5 | Build `AssessmentGrid.jsx` — spreadsheet-style fee view, override fields highlighted in yellow | `src/screens/treasury/` |
-| 5.6 | Build `CashierPOS.jsx` — high-contrast, large typography, amount tendered, OR number input, change computation | `src/screens/treasury/` |
+| File | Change |
+|---|---|
+| `src/config/env.js` | Add 4 PayMongo env vars to Zod schema |
+| `src/utils/constants.js` | Add `PAYMENT_PROCESSING` status, `GCASH`/`CARD`/`ONLINE` tendered types, 3 new audit actions |
+| `src/services/application.service.js` | Add 3 new state machine transitions; do not alter existing ones |
+| `src/app.js` | Mount 2 new route files; webhook route gets `express.raw()` before global `express.json()` |
+| `src/screens/applicant/StatusTracker.jsx` | Add online payment button for `ForPayment`; add polling UI for `PaymentProcessing` |
+| `src/store/applicationSlice.js` | Add `PaymentProcessing` to status handling |
 
 ### Definition of Done
 - [ ] `POST /api/treasury/assess` auto-calculates fees per revenue code
 - [ ] Fire Safety = exactly 10% of applicable LGU fees
-- [ ] `POST /api/treasury/payments/otc` only accepts `Cash` or `Manager Check`
-- [ ] Overrides logged in `audit_logs`
-- [ ] State transitions: `For Assessment` → `Assessed` → `For Payment` → `Paid`
-- [ ] Assessment grid auto-calculates fees and allows overrides
-- [ ] Cashier POS records OTC payment with Cash/Manager Check selector
-- [ ] Change is computed and displayed automatically
-- [ ] Confirm Payment button is prominent and accessible
+- [ ] `POST /api/treasury/payments/otc` only accepts `Cash` or `Manager Check` (unchanged)
+- [ ] `POST /api/treasury/payments/online` creates Payment Intent, returns `checkout_url`, transitions to `PaymentProcessing`
+- [ ] `POST /api/webhooks/paymongo` verifies HMAC-SHA256 signature; rejects 400 on invalid
+- [ ] Duplicate `payment.paid` webhook is idempotent — no duplicate transaction, PDF, or email
+- [ ] `payment.paid` webhook transitions application to `Paid` and triggers document generation
+- [ ] `payment.failed` webhook reverts application to `ForPayment`
+- [ ] Online OR number uses `PM-{YYYYMMDD}-{seq}` format
+- [ ] Webhook route receives raw body (not pre-parsed JSON)
+- [ ] `PaymentProcessing` status shows correct polling UI in `StatusTracker.jsx`
+- [ ] Overrides logged in `audit_logs`; PayMongo events logged in `payment_gateway_logs`
 
 ---
 
-## Phase 6: Barangay Clearance Module ⚠️ UPDATED
+## Phase 6: Barangay Clearance Module ⚠️ UPDATED (Unchanged from v3.0)
 
-**Goal:** Build the integrated Barangay Clearance processing — backend handlers with the feedback loop fix first, then the clearance queue frontend.
+**Goal:** Build the integrated Barangay Clearance processing with the feedback loop fix.
 
 **Owner:** Dev A
-**Depends on:** Phase 3C (the `doc_verifications` row created on UAF submission is what the Issue/Reject handlers update here).
-
-**What changed:** The `issueClearance` and `rejectClearance` handlers now auto-update the corresponding `doc_verifications` row in a single transaction. Reject also enqueues a `BARANGAY_CLEARANCE_REJECTED` email.
+**Depends on:** Phase 3C patch complete.
 
 ### Tasks
 
 | # | Task | File / Location | Changed? |
 |---|---|---|---|
-| **— Backend API —** | | | |
-| 6.1 | Build `barangay.controller.js` — pending queue handler, issue handler, reject handler | `src/controllers/` | ⚠️ Updated |
-| **6.2** | **In `issueClearance` handler: after setting `brgy_clearances.status = 'Issued'`, find the `doc_verifications` row for this `application_no` where `clearance_type` = Barangay, and update its `status` to `'Yes'`. Both updates must be in a single transaction** | **`src/controllers/barangay.controller.js`** | **🆕 New** |
-| **6.3** | **In `rejectClearance` handler: after setting `brgy_clearances.status = 'Rejected'`, update the corresponding `doc_verifications` row to `status = 'No'`. Remarks are mandatory. After the transaction, enqueue a `BARANGAY_CLEARANCE_REJECTED` email notification to the applicant** | **`src/controllers/barangay.controller.js`** | **🆕 New** |
+| 6.1 | Build `barangay.controller.js` — pending queue, issue, reject handlers | `src/controllers/` | ⚠️ Updated |
+| 6.2 | In `issueClearance`: after setting `barangay_clearances.status = 'Issued'`, update corresponding `doc_verifications` row to `'Yes'` — single transaction | `src/controllers/barangay.controller.js` | 🆕 New |
+| 6.3 | In `rejectClearance`: after setting status to `'Rejected'`, update `doc_verifications` to `'No'`; remarks mandatory; enqueue `BARANGAY_CLEARANCE_REJECTED` email | `src/controllers/barangay.controller.js` | 🆕 New |
 | 6.4 | Build `barangay.routes.js` — RBAC locked to `Barangay_Officer` | `src/routes/` | — |
 | 6.5 | Mount Barangay routes in `app.js` | `src/app.js` | — |
-| **— Frontend UI —** | | | |
-| 6.6 | Build `ClearanceQueue.jsx` — pending clearance requests list with issue/reject actions and a mandatory remarks field | `src/screens/barangay/` | — |
+| 6.6 | Build `ClearanceQueue.jsx` — pending list with issue/reject actions | `src/screens/barangay/` | — |
 
 ### Definition of Done
-- [ ] Barangay Officer can view pending clearance requests
-- [ ] Issue action sets clearance number, expiration date, and **automatically updates `doc_verifications` row to `'Yes'`**
-- [ ] Reject action requires remarks, **automatically updates `doc_verifications` row to `'No'`**, and **enqueues `BARANGAY_CLEARANCE_REJECTED` email**
-- [ ] After Issue: BPLO sees the Barangay row in their checklist as `'Yes'`
-- [ ] After Reject: BPLO sees `'No'` and cannot approve until resolved
-- [ ] RBAC restricts all routes to `Barangay_Officer` role
+- [ ] Issue action auto-updates `doc_verifications` to 'Yes'
+- [ ] Reject action auto-updates `doc_verifications` to 'No' and enqueues `BARANGAY_CLEARANCE_REJECTED` email
+- [ ] RBAC restricts all routes to `Barangay_Officer`
 - [ ] All actions logged in `audit_logs`
 
 ---
 
 ## Phase 7: Business Retirement Module
 
-**Goal:** Build the business retirement flow — backend API first, then retirement screens in the Applicant and BPLO dashboards.
+**Goal:** Build the business retirement flow.
 
 **Owner:** Dev B
 **Depends on:** Phase 5 Treasury API (retirement settlement reuses `POST /api/treasury/payments/otc`).
+
+> **PayMongo online payment is NOT added to the Retirement Module. OTC only.**
 
 ### Tasks
 
 | # | Task | File / Location |
 |---|---|---|
-| **— Backend API —** | | |
 | 7.1 | Build `retirement.controller.js` — submit, pending, assess, complete handlers | `src/controllers/` |
 | 7.2 | Build `retirement.routes.js` — RBAC protected per handler | `src/routes/` |
 | 7.3 | Mount Retirement routes in `app.js` | `src/app.js` |
-| **— Frontend UI —** | | |
 | 7.4 | Add Retirement submission screen to Applicant dashboard | Frontend |
 | 7.5 | Add Retirement review panel to BPLO dashboard | Frontend |
 
@@ -381,28 +402,26 @@ graph TD
 
 ## Phase 8: Document Generation (PDF)
 
-**Goal:** Build all PDF generation endpoints and wire download buttons to the Applicant dashboard.
+**Goal:** Build all PDF generation endpoints. Document generation is triggered by both OTC and online payment paths — no changes to generation logic, only to what triggers it.
 
 **Owner:** Dev A
-**Depends on:** Phases 5 and 6 (permits and clearances must exist before they can be generated).
+**Depends on:** Phases 5 and 6.
 
 ### Tasks
 
 | # | Task | File / Location |
 |---|---|---|
-| **— Backend —** | | |
 | 8.1 | Build `pdf.service.js` — core template engine with `{{placeholder}}` mapping | `src/services/` |
 | 8.2 | Build `document.controller.js` — permit, E-Resibo, TOP, clearance endpoint handlers | `src/controllers/` |
 | 8.3 | Build `document.routes.js` — all document endpoints, auth protected | `src/routes/` |
 | 8.4 | Create PDF templates for: Business Permit, E-Resibo, TOP, Barangay Clearance | `src/templates/` |
 | 8.5 | Mount document routes in `app.js` | `src/app.js` |
-| **— Frontend —** | | |
 | 8.6 | Add download buttons to Applicant Dashboard for each available document type | `src/screens/applicant/` |
 
 ### Definition of Done
 - [ ] `GET /api/documents/permit/:app_no` returns a valid Business Permit PDF
 - [ ] Per-line-of-business permits work via `?lob=:activity_id`
-- [ ] `GET /api/documents/eresibo/:transaction_id` returns Official Receipt PDF
+- [ ] `GET /api/documents/eresibo/:transaction_id` returns Official Receipt PDF — works for both OTC and PayMongo OR numbers
 - [ ] `GET /api/documents/top/:app_no` returns TOP PDF
 - [ ] `GET /api/documents/barangay-clearance/:id` returns Barangay Clearance PDF
 
@@ -410,12 +429,12 @@ graph TD
 
 ## Phase 9: Email Notifications ⚠️ UPDATED
 
-**Goal:** Build `email.service.js` and wire all **10** transactional email triggers across every controller.
+**Goal:** Build `email.service.js` and wire all **10** transactional email triggers across every controller, including the online payment path.
 
 **Owner:** Dev B
-**Depends on:** All controller files from Phases 4–8 must exist so triggers can be wired in.
+**Depends on:** All controller files from Phases 4–8 must exist.
 
-**What changed:** Added task 9.11 for the new `BARANGAY_CLEARANCE_REJECTED` trigger (already called inside `barangay.controller.rejectClearance` from Phase 6.3 — this task verifies the template exists and the service is wired correctly).
+**What changed in v4.0:** `PAYMENT_RECORDED` template must support both OTC (cashier OR number) and online (PM-prefixed OR number) paths from the same template. The trigger fires from both `treasury.controller.js` (OTC) and `webhook.controller.js` (online). Task 9.11 verifies `BARANGAY_CLEARANCE_REJECTED` is correctly wired.
 
 ### Tasks
 
@@ -428,14 +447,16 @@ graph TD
 | 9.5 | Wire `APPLICATION_RETURNED` trigger in `bplo.controller.js` | Backend | — |
 | 9.6 | Wire `APPLICATION_VERIFIED` trigger in `bplo.controller.js` | Backend | — |
 | 9.7 | Wire `TOP_GENERATED` trigger in `treasury.controller.js` (attach TOP PDF) | Backend | — |
-| 9.8 | Wire `PAYMENT_RECORDED` trigger in `treasury.controller.js` | Backend | — |
+| **9.8** | **Wire `PAYMENT_RECORDED` in both `treasury.controller.js` (OTC path) AND `webhook.controller.js` (online payment path). Same template — the OR number field accepts both cashier-issued and `PM-{YYYYMMDD}-{seq}` formats. Verify the template renders correctly for both.** | **Backend** | **⚠️ Updated** |
 | 9.9 | Wire `PERMIT_READY` trigger in `document.controller.js` | Backend | — |
 | 9.10 | Wire `RETIREMENT_COMPLETE` trigger in `retirement.controller.js` | Backend | — |
 | **9.11** | **Verify `BARANGAY_CLEARANCE_REJECTED` trigger: already called inside `barangay.controller.rejectClearance` (Phase 6.3). Confirm the `email.service.js` template exists — recipient: Applicant, content: rejection remarks + instructions to re-apply at barangay hall** | **Backend** | **🆕 New** |
 
 ### Definition of Done
 - [ ] All **10** triggers send the correct email to the correct recipient
-- [ ] `BARANGAY_CLEARANCE_REJECTED` email includes the rejection remarks in the body
+- [ ] `PAYMENT_RECORDED` email fires for both OTC and online payment paths
+- [ ] `PAYMENT_RECORDED` template renders the OR number correctly for both formats
+- [ ] `BARANGAY_CLEARANCE_REJECTED` email includes rejection remarks
 - [ ] In dev mode, emails are logged to console (not sent)
 - [ ] `email_notifications` table tracks every email with status
 
@@ -443,47 +464,45 @@ graph TD
 
 ## Phase 10: Admin Module
 
-**Goal:** Build the admin management tools — backend CRUD endpoints first, then admin frontend screens.
+**Goal:** Build the admin management tools.
 
 **Owner:** Dev B
-**Depends on:** All prior phases (admin manages lookup data and users used across the system).
+**Depends on:** All prior phases.
 
 ### Tasks
 
 | # | Task | File / Location |
 |---|---|---|
-| **— Backend API —** | | |
-| 10.1 | Build admin API endpoints — user management (toggle `is_active`), lookup table CRUD, template management | `src/controllers/` + `src/routes/` |
+| 10.1 | Build admin API endpoints — user management, lookup table CRUD, template management | `src/controllers/` + `src/routes/` |
 | 10.2 | Mount Admin routes in `app.js`, RBAC locked to `Admin` role | `src/app.js` |
-| **— Frontend UI —** | | |
 | 10.3 | Build `MasterData.jsx` — CRUD tables for fee types, clearance types, org types | `src/screens/admin/` |
-| 10.4 | Build `DocumentBuilder.jsx` — template upload and placeholder mapping | `src/screens/admin/` |
+| 10.4 | Build `DocumentBuilder.jsx` — template upload and `{{placeholder}}` mapping | `src/screens/admin/` |
 | 10.5 | Build `AuditLogs.jsx` — filterable log viewer (by user, action, date, entity) for DPA compliance | `src/screens/admin/` |
 
 ### Definition of Done
 - [ ] Admin can manage users and toggle `is_active`
 - [ ] Admin can update all lookup table values
-- [ ] Audit log viewer filters by user, action, date, and entity
+- [ ] Audit log viewer filters by user, action (including `ONLINE_PAYMENT_INITIATED`, `ONLINE_PAYMENT_CONFIRMED`, `ONLINE_PAYMENT_FAILED`), date, and entity
 - [ ] Document Builder allows template upload and placeholder mapping
 - [ ] RBAC restricts all admin routes to `Admin` role
 
 ---
 
-## Phase 11: QA, Polish & Deployment
+## Phase 11: QA, Polish & Deployment ⚠️ UPDATED
 
 **Owner:** Both Devs
 **Depends on:** All phases complete.
 
-**What changed:** End-to-end tests updated to cover the barangay clearance feedback path (11.1, 11.2) and the data review flow (11.4).
+**What changed in v4.0:** Added test cases 11.13–11.18 for PayMongo integration. Test 11.17 is a regression test to verify OTC still works after the PayMongo addition.
 
 ### Tasks
 
 | # | Task | Changed? |
 |---|---|---|
-| 11.1 | Full end-to-end flow: Register → Submit UAF (with Barangay checkbox) → Barangay Officer Issues Clearance → BPLO Data Review + Doc Verify → Treasury Assess → OTC Pay → Download Permit | ⚠️ Updated |
-| 11.2 | Full end-to-end flow: Register → Submit UAF (without Barangay checkbox) → BPLO Data Review + Doc Verify → Treasury Assess → OTC Pay → Download Permit | ⚠️ Updated |
-| 11.3 | Test: Barangay Officer rejects clearance → verify `doc_verifications` row = `'No'` → verify BPLO cannot approve → verify applicant receives rejection email | 🆕 New |
-| **11.4** | **Test: BPLO marks a data section as Discrepancy → verify Approve is blocked → BPLO returns application → applicant resubmits → BPLO re-reviews → all sections Verified → Approve succeeds** | **🆕 New** |
+| 11.1 | Full E2E: Register → Submit UAF (with Barangay checkbox) → Barangay Officer Issues → BPLO Data Review + Doc Verify → Treasury Assess → OTC Pay → Download Permit | ⚠️ Updated |
+| 11.2 | Full E2E: Register → Submit UAF (without Barangay checkbox) → BPLO Data Review + Doc Verify → Treasury Assess → OTC Pay → Download Permit | ⚠️ Updated |
+| 11.3 | Test: Barangay Officer rejects clearance → verify `doc_verifications` = 'No' → BPLO cannot approve → applicant receives rejection email | 🆕 Prior |
+| 11.4 | Test: BPLO marks section as Discrepancy → Approve blocked → BPLO returns → applicant resubmits → BPLO re-reviews → all Verified → Approve succeeds | 🆕 Prior |
 | 11.5 | Test Retirement flow end-to-end | — |
 | 11.6 | Cross-browser testing (Chrome, Firefox, Safari) | — |
 | 11.7 | Mobile responsiveness audit for Applicant portal | — |
@@ -492,9 +511,18 @@ graph TD
 | 11.10 | Configure Brevo SMTP with real credentials | — |
 | 11.11 | Production build and deployment | — |
 | 11.12 | Final DPA compliance review of audit logs | — |
+| **11.13** | **PayMongo Happy Path:** Applicant selects "Pay Online" → redirected to PayMongo checkout → completes payment → `payment.paid` webhook fires → application transitions to `Paid` → Permit and E-Resibo generated → `PAYMENT_RECORDED` email sent with `PM-` OR number | **🆕 New** |
+| **11.14** | **PayMongo Abandon:** Applicant selects "Pay Online" → abandons checkout → `payment.failed` webhook fires → application reverts to `ForPayment` → applicant can retry (online or OTC) | **🆕 New** |
+| **11.15** | **Webhook Idempotency:** PayMongo fires duplicate `payment.paid` webhook → second event is idempotent → no duplicate transaction row, no duplicate PDF generated, no duplicate email sent | **🆕 New** |
+| **11.16** | **Webhook Signature Rejection:** Webhook request with invalid or missing signature → rejected with 400 → logged → no state change | **🆕 New** |
+| **11.17** | **OTC Regression:** Full OTC payment flow (Cash and Manager Check) works end-to-end after PayMongo addition — no regressions in `treasury.controller.js`, `CashierPOS.jsx`, or `POST /api/treasury/payments/otc` | **🆕 New** |
+| **11.18** | **Invalid OTC During PaymentProcessing:** Application is in `PaymentProcessing` status — cashier attempts OTC recording — backend state machine rejects the transition with an appropriate error; application remains in `PaymentProcessing` | **🆕 New** |
 
 ### Definition of Done
-- [ ] All state machine transitions tested including barangay clearance guard
+- [ ] All state machine transitions tested including both OTC and online payment paths
+- [ ] Duplicate webhook events are fully idempotent
+- [ ] Invalid webhook signatures are rejected
+- [ ] OTC path is unaffected by PayMongo addition (regression clean)
 - [ ] BPLO data review blocks Verified transition when discrepancies exist
 - [ ] No RBAC bypass vulnerabilities found
 - [ ] Applicant portal works on mobile devices
@@ -510,17 +538,33 @@ graph TD
 | **1** | 1 week | Phase 0: Skeleton UI (collab) | Phase 0: Skeleton UI (collab) |
 | **2** | 1 week | Phase 1: DB Schema + RLS (collab) | Phase 1: DB Schema + Seed (collab) |
 | **3** | 1 week | Phase 2: Auth Backend + Frontend (collab) | Phase 2: Auth Backend + Frontend (collab) |
-| **4** | 1.5 weeks | ✅ Applicant Module done + **Phase 3C Patch** | Phase 4: BPLO Module (backend → frontend, with data review + guard) |
-| **5** | 1.5 weeks | Phase 5: Treasury Module (backend → frontend) | Phase 7: Retirement Module (backend → frontend) |
-| **6** | 1 week | Phase 6: Barangay Module (backend → frontend, **with doc_verifications auto-update**) | Phase 10: Admin Module (backend → frontend) |
-| **7** | 1 week | Phase 8: PDF Generation | Phase 9: Email Notifications (all **10** triggers) |
-| **8-9** | 2 weeks | QA: Applicant + Treasury + Barangay + PDF flows | QA: BPLO + Retirement + Admin + Email flows |
+| **4** | 1.5 weeks | ✅ Applicant Module done + Phase 3C Patch | Phase 4: BPLO Module (backend → frontend) |
+| **5** | 1.5 weeks | Phase 5: Treasury Module (OTC + **PayMongo**) | Phase 7: Retirement Module (backend → frontend) |
+| **6** | 1 week | Phase 6: Barangay Module (backend → frontend) | Phase 10: Admin Module (backend → frontend) |
+| **7** | 1 week | Phase 8: PDF Generation | Phase 9: Email Notifications (all 10 triggers + online payment wiring) |
+| **8-9** | 2 weeks | QA: Applicant + Treasury + Barangay + PDF + **PayMongo** flows | QA: BPLO + Retirement + Admin + Email flows |
 | | **Total: ~8-9 weeks** | | |
 
-> [!IMPORTANT]
-> **Phase 3C must be completed before Phase 4 is tested end-to-end.** The BPLO state machine guard (Phase 4) depends on the `doc_verifications` row being created correctly by the UAF submission — which is exactly what Phase 3C fixes. Running Phase 4 tests without Phase 3C in place will produce false positives.
+> **Phase 3C must be completed before Phase 4 is tested end-to-end.**
+>
+> **Webhook route must be mounted before `express.json()` in `app.js` — verify this during Phase 5 before any PayMongo testing.**
 
 ---
 
-*eBPLS Implementation Plan v3.0 — Municipality of Liliw*
-*Phases consolidated and ordered chronologically. No functional scope changes from v2.1.*
+## Phases NOT Affected — Do Not Touch
+
+| Phase | Reason |
+|---|---|
+| Phase 0 — Skeleton UI | Layout/routing — no payment involvement |
+| Phase 2 — Auth | Authentication unchanged |
+| Phase 3 — Applicant Module (UAF, drafts, upload) | UAF submission flow unchanged |
+| Phase 4 — BPLO Module | Verification flow unchanged |
+| Phase 6 — Barangay Module | Clearance flow unchanged |
+| Phase 7 — Retirement Module | Retirement uses OTC only — do not add online payment |
+| Phase 8 — PDF Generation | Document generation logic unchanged; it is only triggered — not modified |
+| Phase 10 — Admin Module | No admin UI changes for PayMongo |
+
+---
+
+*eBPLS Implementation Plan v4.0 — Municipality of Liliw*
+*Phases 1, 5, 9, and 11 updated for PayMongo online payment integration. No other phases changed.*
