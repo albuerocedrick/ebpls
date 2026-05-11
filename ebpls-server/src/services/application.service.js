@@ -237,6 +237,37 @@ const submitApplication = async (taxpayerId, payload) => {
     throw createError('Failed to create application record.', 500, ERROR_CODES.INTERNAL_ERROR);
   }
 
+  // 4b. Insert Line of Business activities into application_activities
+  if (payload.activities && payload.activities.length > 0) {
+    for (const activity of payload.activities) {
+      // Look up the activity_id by name from business_activities table
+      const { data: actData, error: actLookupErr } = await supabaseAdmin
+        .from('business_activities')
+        .select('id')
+        .eq('name', activity.name)
+        .single();
+
+      if (actLookupErr || !actData) {
+        console.warn(`[submitApp] Business activity "${activity.name}" not found in DB — skipping.`);
+        continue;
+      }
+
+      const { error: actInsertErr } = await supabaseAdmin
+        .from('application_activities')
+        .insert({
+          application_no: appNo,
+          activity_id: actData.id,
+          capitalization: activity.capitalization || 0,
+          gross_sales_prev_year: activity.gross_sales_prev_year || 0,
+        });
+
+      if (actInsertErr) {
+        console.warn(`[submitApp] Failed to insert activity "${activity.name}":`, actInsertErr.message);
+        // Non-fatal — continue with other activities
+      }
+    }
+  }
+
   // 5. Phase 3C — Barangay Clearance Hook (atomic via Postgres RPC)
   //    Must run AFTER the application record is committed so the
   //    application_no FK in doc_verifications is valid.
@@ -269,6 +300,66 @@ const submitApplication = async (taxpayerId, payload) => {
     console.log(`[submitApp] PATH B: Applicant will upload own clearance for ${appNo}. doc_verifications(Pending) created.`);
   }
 
+  // 6. Create doc_verifications rows for all uploaded standard documents.
+  //    Maps doc_type identifiers to requirement_types by name lookup.
+  if (payload.documents && payload.documents.length > 0) {
+    const DOC_TYPE_TO_REQUIREMENT = {
+      'DTI_SEC_CDA':        'DTI / SEC / CDA Registration',
+      'FIRE_SAFETY':        'Fire Safety Inspection Certificate',
+      'SANITARY_PERMIT':    'Sanitary Permit',
+      'ZONING_CLEARANCE':   'Zoning Clearance',
+      'LEASE_TCT':          'Lease Contract / TCT',
+      'BARANGAY_CLEARANCE': 'Barangay Business Clearance',
+      'CTC':                'Community Tax Certificate',
+    };
+
+    for (const doc of payload.documents) {
+      const requirementName = DOC_TYPE_TO_REQUIREMENT[doc.doc_type];
+      if (!requirementName) {
+        console.warn(`[submitApp] Unknown doc_type "${doc.doc_type}" — skipping doc_verifications insert.`);
+        continue;
+      }
+
+      // Look up the requirement_id by name
+      const { data: reqData, error: reqError } = await supabaseAdmin
+        .from('requirement_types')
+        .select('id')
+        .eq('name', requirementName)
+        .single();
+
+      if (reqError || !reqData) {
+        console.warn(`[submitApp] Requirement type "${requirementName}" not found in DB — skipping.`);
+        continue;
+      }
+
+      // Skip if this is the Barangay clearance (already handled by the RPC above)
+      if (reqData.id === requirementId && doc.doc_type === 'BARANGAY_CLEARANCE') {
+        // Update the existing row with the file_path instead
+        await supabaseAdmin
+          .from('doc_verifications')
+          .update({ file_path: doc.file_path })
+          .eq('application_no', appNo)
+          .eq('requirement_id', requirementId);
+        continue;
+      }
+
+      // Insert doc_verifications row with file_path
+      const { error: docInsertError } = await supabaseAdmin
+        .from('doc_verifications')
+        .upsert({
+          application_no: appNo,
+          requirement_id: reqData.id,
+          status: 'Pending',
+          file_path: doc.file_path,
+        }, { onConflict: 'application_no, requirement_id' });
+
+      if (docInsertError) {
+        console.warn(`[submitApp] Failed to insert doc_verifications for ${doc.doc_type}:`, docInsertError.message);
+        // Non-fatal — continue with other documents
+      }
+    }
+  }
+
   // 6. Delete the temporary draft now that submission is fully successful
   const { error: draftError } = await supabaseAdmin
     .from('application_drafts')
@@ -289,4 +380,4 @@ module.exports = {
   getDraft,
   upsertDraft,
   submitApplication,
-};
+};

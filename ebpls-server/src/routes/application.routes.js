@@ -64,4 +64,10 @@ router.get(
   applicationController.getStatus
 );
 
+router.get(
+  '/:app_no/edit',
+  authenticate,
+  applicationController.getApplicationForEdit
+);
+
 module.exports = router;

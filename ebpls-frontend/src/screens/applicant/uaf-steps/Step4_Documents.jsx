@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import useApplicationStore from '../../../store/applicationStore';
 import DocumentUploadPanel from '../../../components/shared/DocumentUploadPanel';
-import { FileText, AlertCircle, Building2, CheckCircle2, Upload } from 'lucide-react';
+import { FileText, AlertCircle, Building2, CheckCircle2, Upload, MessageSquare } from 'lucide-react';
 
 // Documents that every applicant must upload manually.
 // 'Barangay Business Clearance' is intentionally excluded here — it is
@@ -36,7 +36,7 @@ const STANDARD_DOCUMENTS = [
   },
 ];
 
-const Step4_Documents = () => {
+const Step4_Documents = ({ docFeedback }) => {
   const data = useApplicationStore((state) => state.formData.step4);
   const setFormField = useApplicationStore((state) => state.setFormField);
 
@@ -99,6 +99,32 @@ const Step4_Documents = () => {
           </p>
         </div>
       </div>
+
+      {/* BPLO Document Feedback — shown when resubmitting a returned application */}
+      {docFeedback && docFeedback.length > 0 && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <MessageSquare size={18} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-amber-900">Documents Needing Attention</p>
+              <p className="text-xs text-amber-700 mt-1 mb-2">The BPLO officer flagged the following documents. Please re-upload corrected versions.</p>
+              <ul className="space-y-1.5">
+                {docFeedback.map((item, i) => (
+                  <li key={i} className="text-xs bg-white/70 border border-amber-200 rounded px-3 py-2">
+                    <span className="font-semibold text-amber-900">{item.requirement}</span>
+                    {item.remarks && (
+                      <span className="text-amber-700 ml-1">— {item.remarks}</span>
+                    )}
+                    {!item.remarks && (
+                      <span className="text-amber-600 ml-1 italic">— Rejected, please re-upload</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Phase 3C — Barangay Business Clearance Toggle ── */}
       <div className="border-2 border-[hsl(var(--color-border,0,0%,85%))] rounded-xl overflow-hidden">
