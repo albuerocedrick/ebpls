@@ -27,22 +27,39 @@ const DraftPayloadSchema = z.object({
 // -----------------------------------------------------------------
 const UAFSubmissionPayloadSchema = z.object({
   // Application Data
-  type_id: z.number().int().positive("Application type ID is required"),
-  payment_mode_id: z.number().int().positive().optional(),
+  type_id: z.coerce.number().int().positive("Application type ID is required"),
+  payment_mode_id: z.coerce.number().int().positive().optional(),
 
   // Business Data
   business_name: z.string().min(1, "Business name is required"),
   trade_name: z.string().optional(),
-  org_type_id: z.number().int().positive("Organization type ID is required"),
+  org_type_id: z.coerce.number().int().positive("Organization type ID is required"),
   dti_sec_cda_reg_no: z.string().optional(),
   
   is_franchise: z.boolean().default(false),
   franchisor_name: z.string().optional(),
 
   // Barangay Clearance — Phase 3C
-  // TRUE  = applicant wants municipality to request clearance on their behalf.
-  // FALSE = applicant will upload their own existing barangay clearance document.
   request_barangay_clearance: z.boolean().default(false),
+
+  // Uploaded documents — array of { doc_type, file_path, file_name }
+  documents: z.array(
+    z.object({
+      doc_type: z.string().min(1),
+      file_path: z.string().min(1),
+      file_name: z.string().optional().default(''),
+    })
+  ).optional().default([]),
+
+  // Line of Business activities
+  activities: z.array(
+    z.object({
+      name: z.string().min(1),
+      capitalization: z.coerce.number().min(0).default(0),
+      gross_sales_prev_year: z.coerce.number().min(0).default(0),
+      units: z.coerce.number().int().min(1).default(1),
+    })
+  ).optional().default([]),
 
   // Address Data
   address_line1: z.string().optional(),
@@ -51,8 +68,8 @@ const UAFSubmissionPayloadSchema = z.object({
   province: z.string().default('Laguna'),
 
   // Geolocation Data
-  latitude: z.number().min(-90).max(90).optional(),
-  longitude: z.number().min(-180).max(180).optional(),
+  latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+  longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
 }).refine((data) => {
   // Enforce franchisor name requirement if it is a franchise
   if (data.is_franchise && (!data.franchisor_name || data.franchisor_name.trim() === '')) {

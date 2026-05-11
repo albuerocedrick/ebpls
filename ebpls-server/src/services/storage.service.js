@@ -52,6 +52,37 @@ const generatePresignedUploadUrl = async (taxpayerId, fileName) => {
   };
 };
 
+/**
+ * Generates a pre-signed URL allowing the client to VIEW/DOWNLOAD a file from Supabase Storage.
+ * Used by BPLO officers to view uploaded documents in the SplitScreenVerifier.
+ * 
+ * @param {string} filePath - The storage path (e.g., "taxpayer_id/timestamp_filename.pdf")
+ * @param {number} [expirySeconds=3600] - URL validity in seconds (default: 1 hour)
+ * @returns {Promise<string>} The signed download URL
+ */
+const generatePresignedDownloadUrl = async (filePath, expirySeconds = 3600) => {
+  if (!filePath) {
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .storage
+    .from(BUCKET_NAME)
+    .createSignedUrl(filePath, expirySeconds);
+
+  if (error) {
+    console.error(`[storage.service] Failed to create signed download URL for "${filePath}":`, error.message);
+    throw createError(
+      'Unable to generate secure file download URL.',
+      500,
+      ERROR_CODES.INTERNAL_ERROR
+    );
+  }
+
+  return data.signedUrl;
+};
+
 module.exports = {
-  generatePresignedUploadUrl
+  generatePresignedUploadUrl,
+  generatePresignedDownloadUrl,
 };

@@ -24,6 +24,41 @@ router.use(authorize(ROLES.BPLO_OFFICER, ROLES.ADMIN));
 router.get('/applications/pending', bploController.getPendingApplications);
 
 /**
+ * @route   PUT /api/bplo/applications/start-review/:app_no
+ * @desc    Transitions Pending → Under Review when officer opens the verifier.
+ * @access  BPLO_Officer, Admin
+ */
+router.put('/applications/start-review/:app_no', bploController.startReview);
+
+/**
+ * @route   PUT /api/bplo/applications/save-checklist/:app_no
+ * @desc    Saves checklist progress without approving.
+ * @access  BPLO_Officer, Admin
+ */
+router.put('/applications/save-checklist/:app_no', bploController.saveChecklist);
+
+/**
+ * @route   GET /api/bplo/applications/:app_no/document/:requirement_id
+ * @desc    Generate a signed download URL for a specific uploaded document.
+ * @access  BPLO_Officer, Admin
+ */
+router.get('/applications/:app_no/document/:requirement_id', bploController.getDocumentUrl);
+
+/**
+ * @route   GET /api/bplo/applications/:app_no
+ * @desc    Get detailed application info for verification view.
+ * @access  BPLO_Officer, Admin
+ */
+router.get('/applications/:app_no', bploController.getApplicationDetails);
+
+/**
+ * @route   PUT /api/bplo/applications/review/:app_no
+ * @desc    Upserts application data review sections.
+ * @access  BPLO_Officer, Admin
+ */
+router.put('/applications/review/:app_no', bploController.reviewApplication);
+
+/**
  * @route   PUT /api/bplo/applications/verify/:app_no
  * @desc    Updates checklist and marks an application as Verified.
  * @access  BPLO_Officer, Admin
