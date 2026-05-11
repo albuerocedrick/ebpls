@@ -169,6 +169,21 @@ const upsertDraft = async (taxpayerId, step, formData) => {
   }
 };
 
+/**
+ * Deletes the active application draft for a taxpayer.
+ */
+const deleteDraft = async (taxpayerId) => {
+  const { error } = await supabaseAdmin
+    .from('application_drafts')
+    .delete()
+    .eq('taxpayer_id', taxpayerId);
+
+  if (error) {
+    console.error(`[application.service] deleteDraft failed for taxpayerId ${taxpayerId}:`, error.message);
+    throw createError('Failed to delete application draft.', 500, ERROR_CODES.INTERNAL_ERROR);
+  }
+};
+
 // -----------------------------------------------------------------
 // FINAL SUBMISSION
 // -----------------------------------------------------------------
@@ -379,5 +394,6 @@ module.exports = {
   getBarangayClearanceLookupIds,
   getDraft,
   upsertDraft,
+  deleteDraft,
   submitApplication,
 };

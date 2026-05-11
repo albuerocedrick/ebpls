@@ -170,13 +170,13 @@ function useAuth() {
   // =========================================
   // logout
   // =========================================
-  const logout = useCallback(() => {
+  const logout = useCallback((redirectTo = ROUTES.LOGIN) => {
     clearSession();
     addToast({
       message: 'You have been signed out.',
       type: TOAST_TYPE.INFO,
     });
-    navigate(ROUTES.LOGIN, { replace: true });
+    navigate(redirectTo, { replace: true });
   }, [clearSession, addToast, navigate]);
 
   return { login, register, forgotPassword, logout, isLoading };

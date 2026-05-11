@@ -4,7 +4,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileClock, Play, Trash2, X } from 'lucide-react';
 import useApplicationStore from '../../store/applicationStore';
-import { ROUTES } from '../../utils/constants';
+import { ROUTES, API_ENDPOINTS } from '../../utils/constants';
+import apiClient from '../../utils/apiClient';
+import Modal from '../ui/Modal';
+import Button from '../ui/Button';
+import { AlertTriangle } from 'lucide-react';
 
 /**
  * A modal prompt that appears if a user logs in and the backend 
@@ -19,28 +23,36 @@ const DraftResumePrompt = ({ isOpen, onClose }) => {
   // Get draft metadata from Zustand store
   const draft_id = useApplicationStore((state) => state.draft_id);
   const current_step = useApplicationStore((state) => state.current_step);
-  const lastSavedAt = useApplicationStore((state) => state.lastSavedAt);
+   const lastSavedAt = useApplicationStore((state) => state.lastSavedAt);
   const resetForm = useApplicationStore((state) => state.resetForm);
+  
+  const [showConfirmDiscard, setShowConfirmDiscard] = React.useState(false);
+  const [isDiscarding, setIsDiscarding] = React.useState(false);
 
   if (!isOpen) return null;
 
-  const handleResume = () => {
+   const handleResume = () => {
     onClose();
-    // Navigate to the wizard; Zustand already holds the resumed state
     navigate(ROUTES?.APPLICANT_UAF || '/applicant/uaf');
   };
 
-  const handleDiscard = async () => {
-    if (window.confirm("Are you sure you want to discard your saved progress? This cannot be undone.")) {
-      // In Phase 3B: Add API call here to DELETE /api/applications/drafts/:draft_id
-      console.log(`[Phase 3B Mock] Deleting draft ${draft_id} from database...`);
-      
-      // Clear local store
+  const handleDiscardClick = () => {
+    setShowConfirmDiscard(true);
+  };
+
+  const confirmDiscard = async () => {
+    setIsDiscarding(true);
+    try {
+      await apiClient.delete(API_ENDPOINTS.APPLICATIONS_DRAFTS);
       resetForm();
+      setShowConfirmDiscard(false);
       onClose();
-      
-      // Navigate to a fresh wizard
       navigate(ROUTES?.APPLICANT_UAF || '/applicant/uaf');
+    } catch (error) {
+      console.error('[DraftResumePrompt] Failed to discard draft:', error.message);
+      alert('Failed to discard draft. Please try again.');
+    } finally {
+      setIsDiscarding(false);
     }
   };
 
@@ -49,35 +61,39 @@ const DraftResumePrompt = ({ isOpen, onClose }) => {
     ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(lastSavedAt))
     : 'a previous session';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      
-      {/* Modal Container */}
-      <div className="bg-[hsl(var(--color-surface,0,0%,100%))] w-full max-w-md rounded-xl border border-[hsl(var(--color-border,0,0%,90%))] shadow-[var(--shadow-md,0_4px_6px_-1px_rgba(0,0,0,0.1))] overflow-hidden animate-in zoom-in-95 duration-200">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[hsl(var(--color-border,0,0%,90%))] bg-[hsl(var(--color-surface-raised,0,0%,98%))]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-accent/10 text-accent rounded-lg">
-              <FileClock size={20} />
-            </div>
-            <h3 className="text-base font-bold text-[hsl(var(--color-text,0,0%,10%))]">Incomplete Draft Found</h3>
+   return (
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Incomplete Draft Found"
+        footer={
+          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={handleDiscardClick}
+              leftIcon={<Trash2 size={16} />}
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+            >
+              Discard Draft
+            </Button>
+            
+            <Button
+              variant="primary"
+              onClick={handleResume}
+              leftIcon={<Play size={16} fill="currentColor" />}
+            >
+              Resume Application
+            </Button>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-1.5 text-[hsl(var(--color-text-muted,0,0%,40%))] hover:bg-[hsl(var(--color-border,0,0%,90%))] rounded-md transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="p-5">
+        }
+      >
+        <div className="flex flex-col gap-4">
           <p className="text-sm text-[hsl(var(--color-text,0,0%,10%))] leading-relaxed">
             You have an unfinished business permit application from <span className="font-semibold">{formattedDate}</span>. 
           </p>
           
-          <div className="mt-4 p-4 bg-[hsl(var(--color-surface-raised,0,0%,96%))] border border-[hsl(var(--color-border,0,0%,90%))] rounded-lg">
+          <div className="p-4 bg-[hsl(var(--color-surface-raised,0,0%,96%))] border border-[hsl(var(--color-border,0,0%,90%))] rounded-lg">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[hsl(var(--color-text-muted,0,0%,40%))] uppercase">Progress</span>
               <span className="text-xs font-bold text-accent">Step {current_step} of 5</span>
@@ -90,32 +106,53 @@ const DraftResumePrompt = ({ isOpen, onClose }) => {
             </div>
           </div>
           
-          <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,40%))] mt-4">
+          <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,40%))]">
             Would you like to resume where you left off, or discard this draft and start a new application?
           </p>
         </div>
+      </Modal>
 
-        {/* Footer Actions */}
-        <div className="px-5 py-4 border-t border-[hsl(var(--color-border,0,0%,90%))] bg-[hsl(var(--color-surface-raised,0,0%,98%))] flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
-          <button
-            onClick={handleDiscard}
-            className="px-4 py-2.5 flex items-center justify-center gap-2 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors"
-          >
-            <Trash2 size={16} />
-            Discard Draft
-          </button>
-          
-          <button
-            onClick={handleResume}
-            className="px-4 py-2.5 flex items-center justify-center gap-2 text-sm font-semibold text-white bg-accent border border-transparent rounded-lg hover:bg-accent/90 shadow-sm shadow-accent/20 transition-colors"
-          >
-            <Play size={16} fill="currentColor" />
-            Resume Application
-          </button>
+      {/* Confirmation Modal for Discard */}
+      <Modal
+        isOpen={showConfirmDiscard}
+        onClose={() => setShowConfirmDiscard(false)}
+        title="Discard Draft?"
+        size="sm"
+        footer={
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => setShowConfirmDiscard(false)}
+              disabled={isDiscarding}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={confirmDiscard}
+              isLoading={isDiscarding}
+              leftIcon={<Trash2 size={16} />}
+            >
+              Discard
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex items-start gap-4">
+          <div className="p-2 bg-red-100 text-red-600 rounded-full shrink-0">
+            <AlertTriangle size={20} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-semibold text-[hsl(var(--color-text))]">
+              Are you sure you want to discard your saved progress?
+            </p>
+            <p className="text-xs text-[hsl(var(--color-text-muted))] leading-relaxed">
+              This action cannot be undone. All information you've entered in the current draft will be permanently deleted.
+            </p>
+          </div>
         </div>
-
-      </div>
-    </div>
+      </Modal>
+    </>
   );
 };
 

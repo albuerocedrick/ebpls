@@ -11,6 +11,7 @@ import useAutosave from '../../hooks/useAutosave';
 import { formatDateTime } from '../../utils/formatters';
 import { ROUTES, API_ENDPOINTS } from '../../utils/constants';
 import apiClient from '../../utils/apiClient';
+import Button from '../../components/ui/Button';
 
 import Step1_BasicInfo from './uaf-steps/Step1_BasicInfo';
 import Step2_Location from './uaf-steps/Step2_Location';
@@ -87,6 +88,7 @@ const UAFWizardScreen = () => {
   const [stepErrors, setStepErrors] = useState([]);
   const [feedback, setFeedback] = useState(null); // BPLO remarks for returned apps
   const [editLoading, setEditLoading] = useState(!!editAppNo);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const current_step = useApplicationStore((state) => state.current_step);
   const setStep      = useApplicationStore((state) => state.setStep);
@@ -162,6 +164,8 @@ const UAFWizardScreen = () => {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const payload = {
         type_id: Number(formData.step1.type_id),
@@ -207,6 +211,8 @@ const UAFWizardScreen = () => {
       }
     } catch (error) {
       alert(`Submission failed: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -374,32 +380,34 @@ const UAFWizardScreen = () => {
         </div>
 
         <div className="p-6 border-t border-[hsl(var(--color-border,0,0%,90%))] bg-[hsl(var(--color-surface-raised,0,0%,98%))] flex items-center justify-between gap-4">
-          <button
+          <Button
             onClick={handleBack}
             disabled={current_step === 1}
-            className="px-5 py-2.5 flex items-center gap-2 text-sm font-semibold rounded-lg border border-[hsl(var(--color-border,0,0%,80%))] bg-white text-[hsl(var(--color-text,0,0%,10%))] hover:bg-[hsl(var(--color-surface-raised,0,0%,96%))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            variant="secondary"
+            leftIcon={<ChevronLeft size={18} />}
           >
-            <ChevronLeft size={18} />
             Previous
-          </button>
-
+          </Button>
+ 
           {current_step === 5 ? (
-            <button
+            <Button
               onClick={handleSubmit}
-              disabled={!isAttestationAgreed}
-              className="px-6 py-2.5 flex items-center gap-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-colors"
+              disabled={!isAttestationAgreed || isSubmitting}
+              isLoading={isSubmitting}
+              variant="primary"
+              className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
+              rightIcon={<Check size={18} />}
             >
               Submit Application
-              <Check size={18} />
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               onClick={handleNext}
-              className="px-6 py-2.5 flex items-center gap-2 text-sm font-semibold rounded-lg bg-accent text-white hover:bg-accent/90 shadow-md shadow-accent/20 transition-colors"
+              variant="primary"
+              rightIcon={<ChevronRight size={18} />}
             >
               Next Step
-              <ChevronRight size={18} />
-            </button>
+            </Button>
           )}
         </div>
       </div>

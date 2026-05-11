@@ -26,6 +26,7 @@ import { Sidebar } from '../components/layout';
 import { ROUTES } from '../utils/constants';
 import useUIStore from '../store/UIStore';
 import useAuthStore from '../store/authStore';
+import useAuth from '../hooks/useAuth';
 
 // =========================================
 // Treasury Nav Config
@@ -55,12 +56,11 @@ const TREASURY_NAV = [
 
 const TreasuryNavbar = () => {
   const { isSidebarOpen, toggleSidebar } = useUIStore();
-  const clearSession = useAuthStore((s) => s.clearSession);
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    clearSession();
-    navigate(ROUTES.LOGIN, { replace: true });
+    logout();
   };
 
   return (

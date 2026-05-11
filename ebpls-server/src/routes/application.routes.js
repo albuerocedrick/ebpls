@@ -32,6 +32,12 @@ router.post(
   applicationController.saveDraft
 );
 
+router.delete(
+  '/drafts',
+  authenticate,
+  applicationController.deleteDraft
+);
+
 // -----------------------------------------------------------------
 // 2. SUBMISSION ROUTE
 // Strict RBAC: Only users with the 'Applicant' role can submit a UAF.

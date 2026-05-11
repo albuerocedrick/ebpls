@@ -65,6 +65,29 @@ const saveDraft = async (req, res, next) => {
   }
 };
 
+/**
+ * DELETE /api/applications/drafts
+ * Discards the active draft for the authenticated user.
+ */
+const deleteDraft = async (req, res, next) => {
+  try {
+    const taxpayerId = req.user.taxpayerId;
+
+    if (!taxpayerId) {
+      throw createError('Taxpayer profile not found.', 403, ERROR_CODES.FORBIDDEN);
+    }
+
+    await applicationService.deleteDraft(taxpayerId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Draft discarded successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // -----------------------------------------------------------------
 // 2. SUBMISSION ENDPOINTS
 // -----------------------------------------------------------------
@@ -349,6 +372,7 @@ const getApplicationForEdit = async (req, res, next) => {
 module.exports = {
   getDraft,
   saveDraft,
+  deleteDraft,
   submitUAF,
   requestUploadUrl,
   getStatus,

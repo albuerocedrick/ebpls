@@ -7,10 +7,12 @@ import BottomNav from '../components/layout/BottomNav';
 import DraftResumePrompt from '../components/shared/DraftResumePrompt';
 import useApplicationStore from '../store/applicationStore';
 import apiClient from '../utils/apiClient';
-import { API_ENDPOINTS } from '../utils/constants';
+import { API_ENDPOINTS, ROUTES } from '../utils/constants';
+import useAuth from '../hooks/useAuth';
 
 const ApplicantLayout = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   // Draft detection logic
   const draft_id = useApplicationStore((state) => state.draft_id);
@@ -34,17 +36,15 @@ const ApplicantLayout = () => {
       }
     };
 
-    // Only run if Zustand doesn't already have a draft loaded locally
+    // Only check the server once on mount if we don't have a draft in memory.
+    // This avoids re-triggering if the user discards the draft.
     if (!draft_id) {
       fetchExistingDraft();
-    } else {
-      setIsPromptOpen(true);
     }
-  }, [draft_id, loadDraft]);
+  }, []); // Run only once on mount
 
   const handleLogout = () => {
-    // In Phase 2, this clears authStore and tokens
-    navigate('/login');
+    logout(ROUTES.REGISTER);
   };
 
   return (
