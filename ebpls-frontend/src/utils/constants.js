@@ -97,10 +97,13 @@ export const API_ENDPOINTS = Object.freeze({
   APPLICATIONS_SUBMIT: '/api/applications/uaf',
   APPLICATIONS_UPLOAD: '/api/applications/upload',
   APPLICATIONS_STATUS: (appNo) => `/api/applications/${appNo}/status`,
+  APPLICATIONS_EDIT: (appNo) => `/api/applications/${appNo}/edit`,
   // BPLO
   BPLO_PENDING: '/api/bplo/applications/pending',
   BPLO_VERIFY: (appNo) => `/api/bplo/applications/verify/${appNo}`,
   BPLO_RETURN: (appNo) => `/api/bplo/applications/return/${appNo}`,
+  BPLO_REVIEW: (appNo) => `/api/bplo/applications/review/${appNo}`,
+  BPLO_DOCUMENT_URL: (appNo, requirementId) => `/api/bplo/applications/${appNo}/document/${requirementId}`,
   // Treasury
   TREASURY_ASSESS: '/api/treasury/assess',
   TREASURY_OTC_PAYMENT: '/api/treasury/payments/otc',

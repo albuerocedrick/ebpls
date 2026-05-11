@@ -155,7 +155,7 @@ const StatusTracker = () => {
                 <p className="text-sm text-red-700 mt-1">
                   {return_remarks || 'Please contact the BPLO office to review the missing or incorrect requirements for your application.'}
                 </p>
-                <Link to={ROUTES?.APPLICANT_UAF || '/applicant/uaf'} className="inline-block mt-3 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors shadow-sm">
+                <Link to={`${ROUTES?.APPLICANT_UAF || '/applicant/apply'}?edit=${appId}`} className="inline-block mt-3 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors shadow-sm">
                   Update Application
                 </Link>
               </div>
