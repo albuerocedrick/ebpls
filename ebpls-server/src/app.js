@@ -4,6 +4,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 
 // Route Imports
+const barangayRoutes = require('./routes/barangay.routes.js');
 const authRoutes = require("./routes/auth.routes");
 const applicationRoutes = require("./routes/application.routes"); // <-- Added Import
 const bploRoutes = require("./routes/bplo.routes");
@@ -23,6 +24,7 @@ app.use(cors()); // TODO: Configure origin explicitly in production
 
 // Request parsing
 app.use(express.json());
+app.use('/api/barangay', barangayRoutes);
 app.use(express.urlencoded({ extended: true }));
 
 // Logging

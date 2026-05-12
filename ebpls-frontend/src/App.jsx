@@ -36,6 +36,7 @@ import {
 } from './layouts';
 
 import ProtectedRoute  from './components/shared/ProtectedRoute';
+import { Toaster } from 'react-hot-toast';
 import ToastContainer  from './components/shared/ToastContainer';
 import { ROUTES, ROLES } from './utils/constants';
 
@@ -119,6 +120,8 @@ const NotFound = () => (
 
 function App() {
   return (
+    <>
+    <Toaster position="top-right" />
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
 
@@ -314,6 +317,7 @@ function App() {
       {/* Global Toasts */}
       <ToastContainer />
     </BrowserRouter>
+    </>
   );
 }
 
