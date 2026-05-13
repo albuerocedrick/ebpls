@@ -12,7 +12,8 @@ import {
   Banknote, 
   Receipt, 
   CheckCircle2,
-  HelpCircle
+  HelpCircle,
+  Loader2 // Added for Phase 5
 } from 'lucide-react';
 
 /**
@@ -52,6 +53,13 @@ const STATUS_CONFIG = {
     icon: Banknote,
     classes: 'bg-amber-50 text-amber-800 border-amber-300',
   },
+  // Added for Phase 5: Payment Processing
+  'PaymentProcessing': {
+    icon: Loader2,
+    classes: 'bg-violet-50 text-violet-700 border-violet-200',
+    label: 'Payment Processing',
+    animate: true
+  },
   'Paid': {
     icon: Receipt,
     classes: 'bg-teal-50 text-teal-700 border-teal-200',
@@ -77,6 +85,8 @@ const StatusBadge = ({ status, size = 'sm', className = '' }) => {
     lg: 'px-3 py-1.5 text-sm gap-2',
   };
 
+  const iconSize = size === 'sm' ? 12 : size === 'md' ? 14 : 16;
+
   return (
     <div 
       className={`
@@ -87,8 +97,12 @@ const StatusBadge = ({ status, size = 'sm', className = '' }) => {
       `}
       title={`Status: ${status}`}
     >
-      <Icon size={size === 'sm' ? 12 : size === 'md' ? 14 : 16} strokeWidth={2.5} />
-      <span>{status || 'Unknown'}</span>
+      <Icon 
+        size={iconSize} 
+        strokeWidth={2.5} 
+        className={config.animate ? 'animate-spin' : ''} 
+      />
+      <span>{config.label || status || 'Unknown'}</span>
     </div>
   );
 };

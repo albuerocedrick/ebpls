@@ -9,9 +9,7 @@
 
 // -----------------------------------------------------------------
 // RBAC ROLES
-// Source: supabase/migrations/001_roles.sql (seeded role_name values)
-// These are the exact strings stored in public.roles.role_name.
-// Any change here must be reflected in the database seed.
+// Source: supabase/migrations/001_roles.sql
 // -----------------------------------------------------------------
 const ROLES = Object.freeze({
   APPLICANT:         'Applicant',
@@ -23,43 +21,47 @@ const ROLES = Object.freeze({
 
 // -----------------------------------------------------------------
 // APPLICATION STATE MACHINE
-// Source: supabase/migrations/005_applications.sql (status enum)
-// Enforces the linear workflow: no module may skip a step.
-// State transition validation logic lives in src/services/application.service.js.
+// Source: supabase/migrations/005_applications.sql + 018_paymongo_payment.sql
 // -----------------------------------------------------------------
 const STATUSES = Object.freeze({
-  DRAFT:          'Draft',
-  PENDING:        'Pending',
-  UNDER_REVIEW:   'Under Review',
-  VERIFIED:       'Verified',
-  FOR_ASSESSMENT: 'For Assessment',
-  ASSESSED:       'Assessed',
-  FOR_PAYMENT:    'For Payment',
-  PAID:           'Paid',
-  COMPLETED:      'Completed',
-  RETURNED:       'Returned',
+  DRAFT:              'Draft',
+  PENDING:            'Pending',
+  UNDER_REVIEW:       'Under Review',
+  VERIFIED:           'Verified',
+  FOR_ASSESSMENT:     'For Assessment',
+  ASSESSED:           'Assessed',
+  FOR_PAYMENT:        'For Payment',
+  PAYMENT_PROCESSING: 'PaymentProcessing', // Added for Phase 5 Online Payments
+  PAID:               'Paid',
+  COMPLETED:          'Completed',
+  RETURNED:           'Returned',
 });
 
-// The ordered list of valid forward transitions (no skipping).
-// Each status maps to the only status it can advance to.
+// -----------------------------------------------------------------
+// TRANSITION LOGIC
+// Updated: Uses arrays to support multiple valid next states (branching).
+// -----------------------------------------------------------------
 const VALID_TRANSITIONS = Object.freeze({
-  [STATUSES.DRAFT]:          STATUSES.PENDING,
-  [STATUSES.PENDING]:        STATUSES.UNDER_REVIEW,
-  [STATUSES.UNDER_REVIEW]:   STATUSES.VERIFIED,
-  [STATUSES.VERIFIED]:       STATUSES.FOR_ASSESSMENT,
-  [STATUSES.FOR_ASSESSMENT]: STATUSES.ASSESSED,
-  [STATUSES.ASSESSED]:       STATUSES.FOR_PAYMENT,
-  [STATUSES.FOR_PAYMENT]:    STATUSES.PAID,
-  [STATUSES.PAID]:           STATUSES.COMPLETED,
-  // RETURNED is a backward branch — BPLO can return from UNDER_REVIEW only.
-  // Handled explicitly in the BPLO controller.
+  [STATUSES.DRAFT]:          [STATUSES.PENDING],
+  [STATUSES.PENDING]:        [STATUSES.UNDER_REVIEW],
+  [STATUSES.UNDER_REVIEW]:   [STATUSES.VERIFIED, STATUSES.RETURNED],
+  [STATUSES.VERIFIED]:       [STATUSES.FOR_ASSESSMENT],
+  [STATUSES.FOR_ASSESSMENT]: [STATUSES.ASSESSED],
+  [STATUSES.ASSESSED]:       [STATUSES.FOR_PAYMENT],
+  
+  // From "For Payment", user can pay OTC (Paid) or Online (PaymentProcessing)
+  [STATUSES.FOR_PAYMENT]:    [STATUSES.PAID, STATUSES.PAYMENT_PROCESSING],
+  
+  // From "PaymentProcessing", can succeed (Paid) or fail/expire (back to For Payment)
+  [STATUSES.PAYMENT_PROCESSING]: [STATUSES.PAID, STATUSES.FOR_PAYMENT],
+  
+  [STATUSES.PAID]:           [STATUSES.COMPLETED],
+  [STATUSES.RETURNED]:       [STATUSES.PENDING],
 });
 
 // -----------------------------------------------------------------
 // AUDIT ACTIONS
-// Source: supabase/migrations/011_audit_logs.sql (documentation block)
-// These strings are written verbatim to public.audit_logs.action.
-// Any new action MUST be added here AND documented in 011_audit_logs.sql.
+// Source: supabase/migrations/011_audit_logs.sql
 // -----------------------------------------------------------------
 const AUDIT_ACTIONS = Object.freeze({
   // Auth
@@ -73,11 +75,20 @@ const AUDIT_ACTIONS = Object.freeze({
   APPLICATION_SUBMITTED:      'APPLICATION_SUBMITTED',
   APPLICATION_RETURNED:       'APPLICATION_RETURNED',
   APPLICATION_VERIFIED:       'APPLICATION_VERIFIED',
+  APPLICATION_STATUS_UPDATED: 'APPLICATION_STATUS_UPDATED',
 
-  // Treasury
+  // Treasury (Enhanced for Phase 5)
   ASSESSMENT_CREATED:         'ASSESSMENT_CREATED',
   ASSESSMENT_LINE_OVERRIDDEN: 'ASSESSMENT_LINE_OVERRIDDEN',
   PAYMENT_RECORDED:           'PAYMENT_RECORDED',
+  FEE_ASSESSED:               'FEE_ASSESSED',
+  FEE_OVERRIDE:               'FEE_OVERRIDE',
+  OTC_PAYMENT_RECORDED:       'OTC_PAYMENT_RECORDED',
+  
+  // Online Payment Actions
+  ONLINE_PAYMENT_INITIATED:   'ONLINE_PAYMENT_INITIATED',
+  ONLINE_PAYMENT_CONFIRMED:   'ONLINE_PAYMENT_CONFIRMED',
+  ONLINE_PAYMENT_FAILED:      'ONLINE_PAYMENT_FAILED',
 
   // Documents
   PERMIT_GENERATED:           'PERMIT_GENERATED',
@@ -96,8 +107,7 @@ const AUDIT_ACTIONS = Object.freeze({
 });
 
 // -----------------------------------------------------------------
-// HTTP ERROR CODES (API-level codes for consistent error responses)
-// Used in error.middleware.js and throughout controllers.
+// HTTP ERROR CODES
 // -----------------------------------------------------------------
 const ERROR_CODES = Object.freeze({
   VALIDATION_ERROR:    'VALIDATION_ERROR',
@@ -111,7 +121,7 @@ const ERROR_CODES = Object.freeze({
 
 // -----------------------------------------------------------------
 // EMAIL TRIGGERS
-// Source: supabase/migrations/012_email_notifications.sql (email_trigger_event enum)
+// Source: supabase/migrations/012_email_notifications.sql
 // -----------------------------------------------------------------
 const EMAIL_TRIGGERS = Object.freeze({
   ACCOUNT_CREATED:            'ACCOUNT_CREATED',
@@ -128,18 +138,15 @@ const EMAIL_TRIGGERS = Object.freeze({
 
 // -----------------------------------------------------------------
 // DOC VERIFICATION STATUS
-// Source: supabase/migrations/006_verifications.sql +
-//         015_design_gaps_fix.sql + 016_align_doc_status.sql
-// These values MUST match the CHECK constraint on doc_verifications.status.
 // -----------------------------------------------------------------
 const DOC_VERIFICATION_STATUS = Object.freeze({
   PENDING:           'Pending',
-  VERIFIED:          'Verified',    // Legacy value (BPLO explicit approval)
-  YES:               'Yes',          // Shorthand used by BPLO checklist UI
-  NO:                'No',           // Shorthand: document rejected/not submitted
-  RETURNED:          'Returned',     // Document sent back for resubmission
-  NOT_NEEDED:        'Not Needed',   // Requirement waived / not applicable
-  AWAITING_ISSUANCE: 'Awaiting Issuance', // Barangay clearance requested, pending officer action
+  VERIFIED:          'Verified',
+  YES:               'Yes',
+  NO:                'No',
+  RETURNED:          'Returned',
+  NOT_NEEDED:        'Not Needed',
+  AWAITING_ISSUANCE: 'Awaiting Issuance',
 });
 
 module.exports = {

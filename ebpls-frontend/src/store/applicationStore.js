@@ -1,5 +1,4 @@
 // src/store/applicationStore.js
-
 import { create } from 'zustand';
 
 /**
@@ -44,6 +43,28 @@ const initialFormState = {
     // Attestation and final review confirmation
     attestation_agreed: false,
   }
+};
+
+/**
+ * STATUS_METADATA: Centralized UI config for application statuses.
+ * Added 'PaymentProcessing' for Phase 5.
+ */
+export const STATUS_METADATA = {
+  'Draft': { label: 'Draft', color: 'gray' },
+  'Pending': { label: 'Pending', color: 'yellow' },
+  'Under Review': { label: 'Under Review', color: 'blue' },
+  'Returned': { label: 'Returned', color: 'red' },
+  'Verified': { label: 'Verified', color: 'emerald' },
+  'For Assessment': { label: 'For Assessment', color: 'cyan' },
+  'Assessed': { label: 'Assessed', color: 'indigo' },
+  'For Payment': { label: 'For Payment', color: 'orange' },
+  'PaymentProcessing': { 
+    label: 'Payment Processing', 
+    color: 'purple',
+    isAnimated: true 
+  },
+  'Paid': { label: 'Paid', color: 'emerald' },
+  'Completed': { label: 'Completed', color: 'emerald' }
 };
 
 const useApplicationStore = create((set, get) => ({

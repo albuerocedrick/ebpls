@@ -69,6 +69,11 @@ const STATUS_STYLES = {
     text: 'text-[hsl(var(--color-status-completed))]',
     ring: 'ring-[hsl(var(--color-status-completed))]',
   },
+  [APP_STATUS.PAYMENT_PROCESSING]: {
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-500',
+    ring: 'ring-amber-500/30',
+  },
 };
 
 // Fallback for unknown statuses
@@ -120,7 +125,7 @@ const Badge = ({
         .filter(Boolean)
         .join(' ')}
     >
-      {label || status || 'Unknown'}
+      {label || (status === APP_STATUS.PAYMENT_PROCESSING ? 'Payment Processing' : status) || 'Unknown'}
     </span>
   );
 };

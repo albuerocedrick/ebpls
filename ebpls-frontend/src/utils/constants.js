@@ -11,36 +11,40 @@
 // RBAC Role Types
 // =========================================
 export const ROLES = Object.freeze({
-  APPLICANT:        'Applicant',
-  BPLO_OFFICER:     'BPLO_Officer',
-  TREASURY:         'Treasury_Officer',
-  BARANGAY_OFFICER: 'Barangay_Officer',
-  ADMIN:            'Admin',
+  APPLICANT:         'Applicant',
+  BPLO_OFFICER:      'BPLO_Officer',
+  TREASURY_OFFICER:  'Treasury_Officer', // Canonical key matching backend
+  TREASURY:          'Treasury_Officer', // Alias for frontend compatibility
+  BARANGAY_OFFICER:  'Barangay_Officer',
+  ADMIN:             'Admin',
 });
 
 
 // =========================================
 // Application State Machine — Valid Statuses
 // Mirrors the state machine defined in the architecture.
-// No module may reference a status string not in this list.
 // =========================================
-export const APP_STATUS = Object.freeze({
-  DRAFT: 'Draft',
-  PENDING: 'Pending',
-  UNDER_REVIEW: 'Under Review',
-  RETURNED: 'Returned',
-  VERIFIED: 'Verified',
-  FOR_ASSESSMENT: 'For Assessment',
-  ASSESSED: 'Assessed',
-  FOR_PAYMENT: 'For Payment',
-  PAID: 'Paid',
-  COMPLETED: 'Completed',
+export const STATUSES = Object.freeze({
+  DRAFT:              'Draft',
+  PENDING:            'Pending',
+  UNDER_REVIEW:       'Under Review',
+  RETURNED:           'Returned',
+  VERIFIED:           'Verified',
+  FOR_ASSESSMENT:     'For Assessment',
+  ASSESSED:           'Assessed',
+  FOR_PAYMENT:        'For Payment',
+  PAYMENT_PROCESSING: 'PaymentProcessing',
+  PAID:               'Paid',
+  COMPLETED:          'Completed',
   // Retirement sub-flow
-  RETIREMENT_PENDING: 'Retirement Pending',
+  RETIREMENT_PENDING:  'Retirement Pending',
   RETIREMENT_ASSESSED: 'Retirement Assessed',
-  RETIREMENT_PAID: 'Retirement Paid',
-  RETIRED: 'Retired',
+  RETIREMENT_PAID:     'Retirement Paid',
+  RETIRED:             'Retired',
 });
+
+// Alias for compatibility with existing components
+export const APP_STATUS = STATUSES;
 
 // =========================================
 // Route Paths
@@ -63,23 +67,28 @@ export const ROUTES = Object.freeze({
   // Treasury
   TREASURY_ASSESSMENT: '/treasury/assess',
   TREASURY_CASHIER: '/treasury/cashier',
+  TREASURY_QUEUE: '/treasury/queue',
   // Barangay
   BARANGAY_QUEUE: '/barangay/queue',
   // Admin
   ADMIN_MASTER_DATA: '/admin/master-data',
   ADMIN_DOCUMENT_BUILDER: '/admin/document-builder',
   ADMIN_AUDIT_LOGS: '/admin/audit-logs',
+  // Payment Callbacks
+  PAYMENT_SUCCESS: '/payment/success',
+  PAYMENT_CANCEL: '/payment/cancel',
 });
 
 // =========================================
 // Role → Dashboard Route Map
 // =========================================
 export const ROLE_DASHBOARDS = Object.freeze({
-  [ROLES.APPLICANT]:       ROUTES.APPLICANT_DASHBOARD,
-  [ROLES.BPLO_OFFICER]:    ROUTES.BPLO_DASHBOARD,
-  [ROLES.TREASURY]:        ROUTES.TREASURY_ASSESSMENT,
+  [ROLES.APPLICANT]:        ROUTES.APPLICANT_DASHBOARD,
+  [ROLES.BPLO_OFFICER]:     ROUTES.BPLO_DASHBOARD,
+  [ROLES.TREASURY_OFFICER]: ROUTES.TREASURY_QUEUE,
+  [ROLES.TREASURY]:         ROUTES.TREASURY_QUEUE,
   [ROLES.BARANGAY_OFFICER]: ROUTES.BARANGAY_QUEUE,
-  [ROLES.ADMIN]:           ROUTES.ADMIN_MASTER_DATA,
+  [ROLES.ADMIN]:            ROUTES.ADMIN_MASTER_DATA,
 });
 
 // =========================================
@@ -115,10 +124,56 @@ export const API_ENDPOINTS = Object.freeze({
 });
 
 // =========================================
-// OTC Payment Modes — Matches DB enum
-// STRICT: Only Cash or Manager Check. No online payments.
+// State Transitions & Error Codes (Sync with Backend)
 // =========================================
+export const VALID_TRANSITIONS = Object.freeze({
+  [STATUSES.DRAFT]:          [STATUSES.PENDING],
+  [STATUSES.PENDING]:        [STATUSES.UNDER_REVIEW],
+  [STATUSES.UNDER_REVIEW]:   [STATUSES.VERIFIED, STATUSES.RETURNED],
+  [STATUSES.VERIFIED]:       [STATUSES.FOR_ASSESSMENT],
+  [STATUSES.FOR_ASSESSMENT]: [STATUSES.ASSESSED],
+  [STATUSES.ASSESSED]:       [STATUSES.FOR_PAYMENT],
+  [STATUSES.FOR_PAYMENT]:    [STATUSES.PAID, STATUSES.PAYMENT_PROCESSING],
+  [STATUSES.PAYMENT_PROCESSING]: [STATUSES.PAID, STATUSES.FOR_PAYMENT],
+  [STATUSES.PAID]:           [STATUSES.COMPLETED],
+  [STATUSES.RETURNED]:       [STATUSES.PENDING],
+});
+
+export const ERROR_CODES = Object.freeze({
+  VALIDATION_ERROR:    'VALIDATION_ERROR',
+  UNAUTHORIZED:        'UNAUTHORIZED',
+  FORBIDDEN:           'FORBIDDEN',
+  NOT_FOUND:           'NOT_FOUND',
+  CONFLICT:            'CONFLICT',
+  INTERNAL_ERROR:      'INTERNAL_ERROR',
+  INVALID_TRANSITION:  'INVALID_TRANSITION',
+});
+
 export const PAYMENT_MODES = Object.freeze({
   CASH: 'Cash',
   MANAGERS_CHECK: 'Manager Check',
+  ONLINE: 'Online',
+});
+
+export const EMAIL_TRIGGERS = Object.freeze({
+  ACCOUNT_CREATED:            'ACCOUNT_CREATED',
+  PASSWORD_RESET:             'PASSWORD_RESET',
+  APPLICATION_SUBMITTED:      'APPLICATION_SUBMITTED',
+  BARANGAY_CLEARANCE_REJECTED: 'BARANGAY_CLEARANCE_REJECTED',
+  APPLICATION_RETURNED:       'APPLICATION_RETURNED',
+  APPLICATION_VERIFIED:       'APPLICATION_VERIFIED',
+  TOP_GENERATED:              'TOP_GENERATED',
+  PAYMENT_RECORDED:           'PAYMENT_RECORDED',
+  PERMIT_READY:               'PERMIT_READY',
+  RETIREMENT_COMPLETE:        'RETIREMENT_COMPLETE',
+});
+
+export const DOC_VERIFICATION_STATUS = Object.freeze({
+  PENDING:           'Pending',
+  VERIFIED:          'Verified',
+  YES:               'Yes',
+  NO:                'No',
+  RETURNED:          'Returned',
+  NOT_NEEDED:        'Not Needed',
+  AWAITING_ISSUANCE: 'Awaiting Issuance',
 });

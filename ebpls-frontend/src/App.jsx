@@ -2,25 +2,10 @@
  * App.jsx
  * Main router configuration. Maps every role's routes to its layout wrapper.
  *
- * Route Groups:
- *   /                    → AuthLayout  (LandingPage — public entry)
- *   /login, /register    → AuthLayout
- *   /applicant/*         → ApplicantLayout (mobile-first)
- *   /bplo/*              → BPLOLayout      (desktop dashboard)
- *   /treasury/*          → TreasuryLayout  (dark POS)
- *   /barangay/*          → BarangayLayout  (desktop)
- *   /admin/*             → AdminLayout     (utilitarian)
- *   *                    → NotFound        (catch-all)
- *
- * @policy  PLAN BEFORE CODE: All routes are defined once here.
- *          No component may use `useNavigate` to hard-code a path string —
- *          always import from utils/constants ROUTES.
- * @policy  React.lazy + Suspense for all screen-level components.
- *          This enables route-level code splitting with zero configuration.
- * @policy  No business logic, no API calls, no Array.sort() / JSON.parse()
- *          in this file. Pure routing and layout composition only.
- * @policy  Suspense fallback uses a minimal centered spinner — NOT a full
- *          skeleton layout (avoids layout shift on fast connections).
+ * Updated for Phase 5 (Treasury Module):
+ *   - Added AssessmentQueue (List View)
+ *   - Configured AssessmentGrid with :appNo parameter
+ *   - Aligned ROLES with constants.js
  */
 
 import React, { Suspense, lazy } from 'react';
@@ -42,8 +27,6 @@ import { ROUTES, ROLES } from './utils/constants';
 
 // =========================================
 // Route-Level Code Splitting (React.lazy)
-// Each screen is a separate bundle chunk.
-// Import path must match eBPLS_File_Structure.md exactly.
 // =========================================
 
 // Public
@@ -63,7 +46,8 @@ const StatusTracker       = lazy(() => import('./screens/applicant/StatusTracker
 const BPLODashboard         = lazy(() => import('./screens/bplo/Dashboard'));
 const SplitScreenVerifier   = lazy(() => import('./screens/bplo/SplitScreenVerifier'));
 
-// Treasury
+// Treasury (Phase 5)
+const AssessmentQueue = lazy(() => import('./screens/treasury/AssessmentQueue')); // Added Queue List
 const AssessmentGrid  = lazy(() => import('./screens/treasury/AssessmentGrid'));
 const CashierPOS      = lazy(() => import('./screens/treasury/CashierPOS'));
 
@@ -75,10 +59,12 @@ const MasterData        = lazy(() => import('./screens/admin/MasterData'));
 const DocumentBuilder   = lazy(() => import('./screens/admin/DocumentBuilder'));
 const AuditLogs         = lazy(() => import('./screens/admin/AuditLogs'));
 
+// Payment
+const PaymentSuccess    = lazy(() => import('./screens/payment/PaymentSuccess'));
+const PaymentCancel     = lazy(() => import('./screens/payment/PaymentCancel'));
+
 // =========================================
 // Suspense Fallback
-// Minimal centered spinner — avoids skeleton
-// layout shift on fast connections.
 // =========================================
 
 const PageLoader = () => (
@@ -151,28 +137,11 @@ function App() {
             <Route path="/applicant" element={<ApplicantLayout />}>
               <Route
                 index
-                element={
-                  <Navigate
-                    to={ROUTES.APPLICANT_DASHBOARD}
-                    replace
-                  />
-                }
+                element={<Navigate to={ROUTES.APPLICANT_DASHBOARD} replace />}
               />
-
-              <Route
-                path="dashboard"
-                element={<ApplicantDashboard />}
-              />
-
-              <Route
-                path="apply"
-                element={<UAFWizardScreen />}
-              />
-
-              <Route
-                path="status"
-                element={<StatusTracker />}
-              />
+              <Route path="dashboard" element={<ApplicantDashboard />} />
+              <Route path="apply" element={<UAFWizardScreen />} />
+              <Route path="status" element={<StatusTracker />} />
             </Route>
           </Route>
 
@@ -187,28 +156,11 @@ function App() {
             <Route path="/bplo" element={<BPLOLayout />}>
               <Route
                 index
-                element={
-                  <Navigate
-                    to={ROUTES.BPLO_DASHBOARD}
-                    replace
-                  />
-                }
+                element={<Navigate to={ROUTES.BPLO_DASHBOARD} replace />}
               />
-
-              <Route
-                path="dashboard"
-                element={<BPLODashboard />}
-              />
-
-              <Route
-                path="verify/:appNo"
-                element={<SplitScreenVerifier />}
-              />
-
-              <Route
-                path="verify"
-                element={<SplitScreenVerifier />}
-              />
+              <Route path="dashboard" element={<BPLODashboard />} />
+              <Route path="verify/:appNo" element={<SplitScreenVerifier />} />
+              <Route path="verify" element={<SplitScreenVerifier />} />
             </Route>
           </Route>
 
@@ -216,21 +168,29 @@ function App() {
           <Route
             element={
               <ProtectedRoute
-                allowedRoles={[ROLES.TREASURY, ROLES.ADMIN]}
+                allowedRoles={[ROLES.TREASURY_OFFICER, ROLES.ADMIN]}
               />
             }
           >
             <Route path="/treasury" element={<TreasuryLayout />}>
               <Route
                 index
-                element={
-                  <Navigate
-                    to={ROUTES.TREASURY_ASSESSMENT}
-                    replace
-                  />
-                }
+                element={<Navigate to={ROUTES.TREASURY_QUEUE} replace />}
               />
 
+              {/* Added: Treasury Queue (Application List) */}
+              <Route
+                path="queue"
+                element={<AssessmentQueue />}
+              />
+
+              {/* Updated: Assessment Grid Detail with Param */}
+              <Route
+                path="assess/:appNo"
+                element={<AssessmentGrid />}
+              />
+
+              {/* Updated: Standard path (fallback) */}
               <Route
                 path="assess"
                 element={<AssessmentGrid />}
@@ -247,28 +207,16 @@ function App() {
           <Route
             element={
               <ProtectedRoute
-                allowedRoles={[
-                  ROLES.BARANGAY_OFFICER,
-                  ROLES.ADMIN,
-                ]}
+                allowedRoles={[ROLES.BARANGAY_OFFICER, ROLES.ADMIN]}
               />
             }
           >
             <Route path="/barangay" element={<BarangayLayout />}>
               <Route
                 index
-                element={
-                  <Navigate
-                    to={ROUTES.BARANGAY_QUEUE}
-                    replace
-                  />
-                }
+                element={<Navigate to={ROUTES.BARANGAY_QUEUE} replace />}
               />
-
-              <Route
-                path="queue"
-                element={<ClearanceQueue />}
-              />
+              <Route path="queue" element={<ClearanceQueue />} />
             </Route>
           </Route>
 
@@ -283,28 +231,25 @@ function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route
                 index
-                element={
-                  <Navigate
-                    to={ROUTES.ADMIN_MASTER_DATA}
-                    replace
-                  />
-                }
+                element={<Navigate to={ROUTES.ADMIN_MASTER_DATA} replace />}
               />
+              <Route path="master-data" element={<MasterData />} />
+              <Route path="document-builder" element={<DocumentBuilder />} />
+              <Route path="audit-logs" element={<AuditLogs />} />
+            </Route>
+          </Route>
 
-              <Route
-                path="master-data"
-                element={<MasterData />}
+          {/* ── PAYMENT CALLBACKS ───────────────── */}
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoles={[ROLES.APPLICANT, ROLES.ADMIN]}
               />
-
-              <Route
-                path="document-builder"
-                element={<DocumentBuilder />}
-              />
-
-              <Route
-                path="audit-logs"
-                element={<AuditLogs />}
-              />
+            }
+          >
+            <Route path="/payment">
+              <Route path="success" element={<PaymentSuccess />} />
+              <Route path="cancel" element={<PaymentCancel />} />
             </Route>
           </Route>
 
@@ -314,7 +259,6 @@ function App() {
         </Routes>
       </Suspense>
 
-      {/* Global Toasts */}
       <ToastContainer />
     </BrowserRouter>
     </>

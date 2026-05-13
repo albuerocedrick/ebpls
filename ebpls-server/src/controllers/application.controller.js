@@ -175,6 +175,10 @@ const getStatus = async (req, res, next) => {
         businesses!inner (
           taxpayer_id,
           business_name
+        ),
+        assessments (
+          id,
+          total_amount
         )
       `)
       .eq('application_no', app_no)
@@ -194,7 +198,8 @@ const getStatus = async (req, res, next) => {
         return_remarks: data.return_remarks,
         businesses: {
           business_name: data.businesses.business_name
-        }
+        },
+        assessments: data.assessments
       },
     });
   } catch (error) {
@@ -223,7 +228,7 @@ const getApplicationsList = async (req, res, next) => {
           taxpayer_id
         )
       `)
-      .eq('businesses.taxpayer_id', taxpayerId)
+        .eq('businesses.taxpayer_id', taxpayerId)
       .order('created_at', { ascending: false });
 
     if (error) {

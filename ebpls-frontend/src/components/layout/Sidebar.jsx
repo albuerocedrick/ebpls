@@ -27,22 +27,26 @@ import useUIStore from '../../store/UIStore';
  * @param {string} props.to        - React Router path
  * @param {React.ReactElement} props.icon   - Lucide icon element
  * @param {string} props.label
- * @param {Function} [props.onNavigate] - Called after navigation (mobile: close sidebar)
+ * @param {boolean} [props.end]    - Match exactly
+ * @param {Function} [props.isActive] - Custom active logic
+ * @param {Function} [props.onNavigate] - Called after navigation
  */
-const NavItem = ({ to, icon, label, onNavigate }) => (
+const NavItem = ({ to, icon, label, end = false, isActive: customIsActive, onNavigate }) => (
   <NavLink
     to={to}
+    end={end}
     onClick={onNavigate}
-    className={({ isActive }) =>
-      [
+    className={(navLinkProps) => {
+      const active = customIsActive ? customIsActive(navLinkProps) : navLinkProps.isActive;
+      return [
         'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium',
         'transition-[color,background-color,box-shadow] duration-200 ease-in-out',
         'group',
-        isActive
+        active
           ? 'bg-[hsl(var(--color-accent-subtle))] text-accent'
           : 'text-[hsl(var(--color-text-muted))] hover:bg-surface-tint hover:text-[hsl(var(--color-text))]',
-      ].join(' ')
-    }
+      ].join(' ');
+    }}
   >
     <span
       className="shrink-0 transition-transform duration-200 group-hover:scale-110"
@@ -127,6 +131,8 @@ const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
                   to={item.to}
                   icon={item.icon}
                   label={item.label}
+                  end={item.end}
+                  isActive={item.isActive}
                   onNavigate={() => {
                     // Close sidebar on mobile after navigation
                     if (window.innerWidth < 1024) closeSidebar();

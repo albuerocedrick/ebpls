@@ -7,7 +7,7 @@
 
 const { supabaseAdmin } = require('../config/supabase');
 const { createError }   = require('../middlewares/error.middleware');
-const { ERROR_CODES, STATUSES, VALID_TRANSITIONS, DOC_VERIFICATION_STATUS } = require('../utils/constants');
+const { ERROR_CODES, STATUSES, VALID_TRANSITIONS } = require('../utils/constants');
 
 // -----------------------------------------------------------------
 // STATE MACHINE HELPERS
@@ -15,6 +15,7 @@ const { ERROR_CODES, STATUSES, VALID_TRANSITIONS, DOC_VERIFICATION_STATUS } = re
 
 /**
  * Enforces strict linear progression of the application state machine.
+ * UPDATED: Supports array-based transitions for branching (Phase 5).
  * 
  * @param {string} currentStatus - The current status of the application.
  * @param {string} targetStatus  - The requested new status.
@@ -32,9 +33,10 @@ const validateStateTransition = (currentStatus, targetStatus) => {
   }
 
   // Standard forward progression check
-  const allowedNextStatus = VALID_TRANSITIONS[currentStatus];
+  const allowedNextStatuses = VALID_TRANSITIONS[currentStatus];
   
-  if (allowedNextStatus !== targetStatus) {
+  // Check if the target exists in the allowed list for the current status
+  if (!allowedNextStatuses || !allowedNextStatuses.includes(targetStatus)) {
     console.warn(`[State Machine] Illegal transition attempt: ${currentStatus} -> ${targetStatus}`);
     throw createError(
       `Invalid state transition. Cannot move from ${currentStatus} to ${targetStatus}.`,
@@ -44,6 +46,43 @@ const validateStateTransition = (currentStatus, targetStatus) => {
   }
 
   return true;
+};
+
+/**
+ * Updates an application's status in the database with state machine enforcement.
+ * Added for Phase 5 transitions (e.g., PaymentProcessing, Paid).
+ */
+const updateApplicationStatus = async (applicationNo, newStatus, userId = null) => {
+  // 1. Fetch current status
+  const { data: app, error: fetchErr } = await supabaseAdmin
+    .from('applications')
+    .select('status')
+    .eq('application_no', applicationNo)
+    .single();
+
+  if (fetchErr || !app) {
+    throw createError('Application not found.', 404, ERROR_CODES.NOT_FOUND);
+  }
+
+  // 2. Validate transition
+  validateStateTransition(app.status, newStatus);
+
+  // 3. Perform update
+  const { error: updateErr } = await supabaseAdmin
+    .from('applications')
+    .update({ 
+      status: newStatus,
+      last_updated_by: userId,
+      updated_at: new Date().toISOString()
+    })
+    .eq('application_no', applicationNo);
+
+  if (updateErr) {
+    console.error(`[application.service] Status update failed:`, updateErr.message);
+    throw createError('Failed to update application status.', 500, ERROR_CODES.INTERNAL_ERROR);
+  }
+
+  return { applicationNo, oldStatus: app.status, newStatus };
 };
 
 // -----------------------------------------------------------------
@@ -297,7 +336,6 @@ const submitApplication = async (taxpayerId, payload) => {
 
   if (hookError) {
     // ROLLBACK manually: remove the application and business to prevent partial state.
-    // The RPC failed before writing anything, so only the main rows need cleanup.
     console.error(`[submitApp] Barangay clearance hook RPC failed for ${appNo}. Rolling back:`, hookError.message);
     await supabaseAdmin.from('applications').delete().eq('application_no', appNo);
     await supabaseAdmin.from('businesses').delete().eq('business_id', businessData.business_id);
@@ -308,15 +346,7 @@ const submitApplication = async (taxpayerId, payload) => {
     );
   }
 
-  // Log the clearance path taken for traceability.
-  if (payload.request_barangay_clearance) {
-    console.log(`[submitApp] PATH A: Barangay clearance requested for ${appNo}. brgy_clearances(Pending) + doc_verifications(Awaiting Issuance) created.`);
-  } else {
-    console.log(`[submitApp] PATH B: Applicant will upload own clearance for ${appNo}. doc_verifications(Pending) created.`);
-  }
-
   // 6. Create doc_verifications rows for all uploaded standard documents.
-  //    Maps doc_type identifiers to requirement_types by name lookup.
   if (payload.documents && payload.documents.length > 0) {
     const DOC_TYPE_TO_REQUIREMENT = {
       'DTI_SEC_CDA':        'DTI / SEC / CDA Registration',
@@ -370,27 +400,19 @@ const submitApplication = async (taxpayerId, payload) => {
 
       if (docInsertError) {
         console.warn(`[submitApp] Failed to insert doc_verifications for ${doc.doc_type}:`, docInsertError.message);
-        // Non-fatal — continue with other documents
       }
     }
   }
 
-  // 6. Delete the temporary draft now that submission is fully successful
-  const { error: draftError } = await supabaseAdmin
-    .from('application_drafts')
-    .delete()
-    .eq('taxpayer_id', taxpayerId);
-
-  if (draftError) {
-    // Non-fatal error. The submission succeeded, but cleanup failed. Log it.
-    console.warn(`[submitApp] Draft cleanup failed for taxpayer ${taxpayerId}. Orphaned draft remains.`);
-  }
+  // Final step: Delete the draft
+  await deleteDraft(taxpayerId);
 
   return appNo;
 };
 
 module.exports = {
   validateStateTransition,
+  updateApplicationStatus, // New Export
   getBarangayClearanceLookupIds,
   getDraft,
   upsertDraft,
