@@ -50,6 +50,11 @@ const SplitScreenVerifier   = lazy(() => import('./screens/bplo/SplitScreenVerif
 const AssessmentQueue = lazy(() => import('./screens/treasury/AssessmentQueue')); // Added Queue List
 const AssessmentGrid  = lazy(() => import('./screens/treasury/AssessmentGrid'));
 const CashierPOS      = lazy(() => import('./screens/treasury/CashierPOS'));
+const RetirementAssess = lazy(() => import('./screens/treasury/RetirementAssess'));
+
+// Retirement (Phase 7)
+const RetirementForm  = lazy(() => import('./screens/applicant/RetirementForm'));
+const RetirementQueue = lazy(() => import('./screens/bplo/RetirementQueue'));
 
 // Barangay
 const ClearanceQueue  = lazy(() => import('./screens/barangay/ClearanceQueue'));
@@ -142,6 +147,7 @@ function App() {
               <Route path="dashboard" element={<ApplicantDashboard />} />
               <Route path="apply" element={<UAFWizardScreen />} />
               <Route path="status" element={<StatusTracker />} />
+              <Route path="retire" element={<RetirementForm />} />
             </Route>
           </Route>
 
@@ -161,6 +167,7 @@ function App() {
               <Route path="dashboard" element={<BPLODashboard />} />
               <Route path="verify/:appNo" element={<SplitScreenVerifier />} />
               <Route path="verify" element={<SplitScreenVerifier />} />
+              <Route path="retirements" element={<RetirementQueue />} />
             </Route>
           </Route>
 
@@ -199,6 +206,10 @@ function App() {
               <Route
                 path="cashier"
                 element={<CashierPOS />}
+              />
+              <Route
+                path="retirements"
+                element={<RetirementAssess />}
               />
             </Route>
           </Route>

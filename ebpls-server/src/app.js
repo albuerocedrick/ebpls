@@ -21,6 +21,9 @@ const treasuryRoutes = require('./routes/treasury.routes');
 const treasuryOnlineRoutes = require('./routes/treasury.online.routes');
 const webhookRoutes = require('./routes/webhook.routes');
 
+// Phase 7 Route Import
+const retirementRoutes = require('./routes/retirement.routes');
+
 // Middleware imports
 const { errorHandler } = require("./middlewares/error.middleware");
 
@@ -61,6 +64,9 @@ app.use("/api/barangay", barangayRoutes);
 // Phase 5: Treasury & Online Payments
 app.use("/api/treasury", treasuryOnlineRoutes);
 app.use("/api/treasury", treasuryRoutes);
+
+// Phase 7: Business Retirement
+app.use("/api/retirement", retirementRoutes);
 
 // Health check route
 app.get("/health", (req, res) => {

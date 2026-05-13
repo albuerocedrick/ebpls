@@ -21,7 +21,7 @@
 
 import React from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { Calculator, Banknote, LogOut, ClipboardList } from 'lucide-react';
+import { Calculator, Banknote, LogOut, ClipboardList, XCircle } from 'lucide-react';
 import { Sidebar } from '../components/layout';
 import { ROUTES } from '../utils/constants';
 import useUIStore from '../store/UIStore';
@@ -39,8 +39,11 @@ const TREASURY_NAV = [
         to: ROUTES.TREASURY_QUEUE,
         icon: <ClipboardList size={18} />,
         label: 'Assessment Queue',
-        // Keep active for all treasury sub-routes (assess, cashier, etc.)
-        isActive: () => window.location.pathname.startsWith('/treasury'),
+      },
+      {
+        to: '/treasury/retirements',
+        icon: <XCircle size={18} />,
+        label: 'Retirements',
       },
     ],
   },

@@ -61,9 +61,11 @@ export const ROUTES = Object.freeze({
   APPLICANT_DASHBOARD: '/applicant/dashboard',
   APPLICANT_UAF: '/applicant/apply',
   APPLICANT_STATUS: '/applicant/status',
+  APPLICANT_RETIRE: '/applicant/retire',
   // BPLO
   BPLO_DASHBOARD: '/bplo/dashboard',
   BPLO_VERIFIER: '/bplo/verify/:appNo',
+  BPLO_RETIREMENTS: '/bplo/retirements',
   // Treasury
   TREASURY_ASSESSMENT: '/treasury/assess',
   TREASURY_CASHIER: '/treasury/cashier',
@@ -116,6 +118,15 @@ export const API_ENDPOINTS = Object.freeze({
   // Treasury
   TREASURY_ASSESS: '/api/treasury/assess',
   TREASURY_OTC_PAYMENT: '/api/treasury/payments/otc',
+  // Retirement
+  RETIREMENT_SUBMIT: '/api/retirement/submit',
+  RETIREMENT_MY: '/api/retirement/my',
+  RETIREMENT_QUEUE: '/api/retirement/queue',
+  RETIREMENT_ACKNOWLEDGE: (id) => `/api/retirement/${id}/acknowledge`,
+  RETIREMENT_ASSESS: (id) => `/api/retirement/${id}/assess`,
+  RETIREMENT_PAYMENT: (id) => `/api/retirement/${id}/record-payment`,
+  RETIREMENT_COMPLETE: (id) => `/api/retirement/${id}/complete`,
+  RETIREMENT_DETAIL: (id) => `/api/retirement/${id}`,
   // Documents
   DOCUMENTS_PERMIT: (appNo) => `/api/documents/permit/${appNo}`,
   DOCUMENTS_ERESIBO: (transactionId) => `/api/documents/eresibo/${transactionId}`,

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FilePlus, ClipboardList, Play, Building2, ChevronRight, FileText, Loader2, AlertCircle } from 'lucide-react';
+import { FilePlus, ClipboardList, Play, Building2, ChevronRight, FileText, Loader2, AlertCircle, XCircle } from 'lucide-react';
 import StatusBadge from '../../components/shared/StatusBadge';
 import useApplicationStore from '../../store/applicationStore';
 import useAuthStore from '../../store/authStore';
@@ -21,6 +21,10 @@ const ApplicantDashboard = () => {
   const [applications, setApplications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Local State for Retirements List
+  const [retirements, setRetirements] = useState([]);
+  const [isLoadingRetirements, setIsLoadingRetirements] = useState(true);
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -45,6 +49,25 @@ const ApplicantDashboard = () => {
     fetchApplications();
   }, []);
 
+  // Fetch retirements
+  useEffect(() => {
+    const fetchRetirements = async () => {
+      try {
+        setIsLoadingRetirements(true);
+        const response = await apiClient.get('/api/retirement/my');
+        if (response && response.success) {
+          setRetirements(response.data || []);
+        }
+      } catch (err) {
+        // Silent fail — retirements section is supplementary
+        console.warn('[Dashboard] Failed to fetch retirements:', err);
+      } finally {
+        setIsLoadingRetirements(false);
+      }
+    };
+    fetchRetirements();
+  }, []);
+
   return (
     <div className="flex flex-col gap-6">
       
@@ -59,7 +82,7 @@ const ApplicantDashboard = () => {
       </div>
 
       {/* Quick Actions Grid */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {draft_id ? (
           <Link 
             to={ROUTES?.APPLICANT_UAF || '/applicant/uaf'}
@@ -99,6 +122,19 @@ const ApplicantDashboard = () => {
           <div className="text-center">
             <p className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))]">Track Status</p>
             <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,40%))] mt-0.5">View active permits</p>
+          </div>
+        </Link>
+
+        <Link 
+          to={ROUTES?.APPLICANT_RETIRE || '/applicant/retire'}
+          className="flex flex-col items-center justify-center gap-3 p-5 bg-[hsl(var(--color-surface,0,0%,100%))] border border-[hsl(var(--color-border,0,0%,90%))] rounded-xl shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))] hover:shadow-[var(--shadow-md,0_4px_6px_-1px_rgba(0,0,0,0.1))] hover:border-red-300 transition-all group"
+        >
+          <div className="w-12 h-12 rounded-full bg-[hsl(var(--color-surface-raised,0,0%,96%))] text-[hsl(var(--color-text,0,0%,10%))] flex items-center justify-center group-hover:bg-red-50 group-hover:text-red-600 transition-colors">
+            <XCircle size={24} />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))]">Retire Business</p>
+            <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,40%))] mt-0.5">Close a business</p>
           </div>
         </Link>
       </div>
@@ -170,6 +206,55 @@ const ApplicantDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* My Retirements Section */}
+      {!isLoadingRetirements && retirements.length > 0 && (
+        <div className="border border-[hsl(var(--color-border,0,0%,90%))] rounded-xl bg-[hsl(var(--color-surface,0,0%,100%))] overflow-hidden shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))]">
+          <div className="bg-red-50 px-4 py-3 border-b border-red-100 flex items-center gap-2">
+            <XCircle size={18} className="text-red-500" />
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))]">My Retirements</h2>
+          </div>
+
+          <ul className="divide-y divide-[hsl(var(--color-border,0,0%,90%))]">
+            {retirements.map((ret) => (
+              <li key={ret.id} className="flex items-center justify-between p-4">
+                <div className="flex items-start gap-3 overflow-hidden pr-4">
+                  <div className="mt-1 p-2 bg-red-50 rounded-md shrink-0">
+                    <Building2 size={16} className="text-red-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))] truncate">
+                      {ret.businesses?.business_name || 'Unknown Business'}
+                    </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1">
+                      <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,40%))]">
+                        Reason: {ret.reason?.substring(0, 40)}{ret.reason?.length > 40 ? '...' : ''}
+                      </p>
+                      <span className="hidden sm:inline text-[hsl(var(--color-border,0,0%,80%))]">•</span>
+                      <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,50%))]">
+                        {ret.created_at
+                          ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' }).format(new Date(ret.created_at))
+                          : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="shrink-0">
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                    ret.status === 'Completed' ? 'bg-gray-100 text-gray-600' :
+                    ret.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                    ret.status === 'Assessed' ? 'bg-blue-100 text-blue-700' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {ret.status}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
     </div>
   );

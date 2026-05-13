@@ -15,7 +15,7 @@
 
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { LayoutDashboard, FileSearch } from 'lucide-react';
+import { LayoutDashboard, FileSearch, XCircle } from 'lucide-react';
 import { Navbar, Sidebar } from '../components/layout';
 import { ROUTES } from '../utils/constants';
 import useUIStore from '../store/UIStore';
@@ -36,6 +36,11 @@ const BPLO_NAV = [
         to: ROUTES.BPLO_VERIFIER.replace('/:appNo', ''),
         icon: <FileSearch size={18} />,
         label: 'Verify Applications',
+      },
+      {
+        to: ROUTES.BPLO_RETIREMENTS,
+        icon: <XCircle size={18} />,
+        label: 'Retirements',
       },
     ],
   },
