@@ -43,16 +43,17 @@ const authenticate = async (req, res, next) => {
     // ---------------------------------------------------------------
     // STEP 1: Extract the Bearer token from the Authorization header.
     // Expected format: "Authorization: Bearer <token>"
+    // Fallback: Accept ?token= query param for PDF downloads in new tabs.
     // ---------------------------------------------------------------
     const authHeader = req.headers['authorization'];
+    let token = null;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json(
-        errorResponse(ERROR_CODES.UNAUTHORIZED, 'Authentication required.')
-      );
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.query && req.query.token) {
+      // Fallback for PDF download links opened in new browser tabs
+      token = req.query.token;
     }
-
-    const token = authHeader.split(' ')[1];
 
     if (!token) {
       return res.status(401).json(

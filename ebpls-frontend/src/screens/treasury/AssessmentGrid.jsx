@@ -8,6 +8,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Calculator, Save, AlertCircle, Loader2, ArrowLeft, Printer, ArrowRight } from 'lucide-react';
 import apiClient from '../../utils/apiClient';
+import { API_BASE_URL } from '../../utils/constants';
+import useAuthStore from '../../store/authStore';
 import Badge from '../../components/ui/Badge'; // Aligned with your UI kit
 import Button from '../../components/ui/Button'; // Aligned with your UI kit
 import { STATUSES, ERROR_CODES } from '../../utils/constants';
@@ -223,7 +225,7 @@ const AssessmentGrid = () => {
               fullWidth
               className="!bg-white/5 !text-white !border-white/10 hover:!bg-white/10"
               leftIcon={<Printer size={18} />}
-              onClick={() => window.open(`/api/documents/top/${appNo}`, '_blank')}
+              onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/top/${appNo}?token=${token}`, '_blank'); }}
             >
               Print Tax Order of Payment
             </Button>

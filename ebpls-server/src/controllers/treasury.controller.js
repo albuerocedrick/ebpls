@@ -239,8 +239,8 @@ const recordOTCPayment = async (req, res, next) => {
 
     // 4. State Transition: For Payment -> Paid -> Completed
     await applicationService.updateApplicationStatus(application_no, STATUSES.PAID, req.user.userId);
-    // In Phase 8, this transition to Completed will be triggered after PDF generation success.
-    // For now, we transition to Paid.
+    // Auto-complete: Paid -> Completed (permit is issued upon payment)
+    await applicationService.updateApplicationStatus(application_no, STATUSES.COMPLETED, req.user.userId);
     
     // 5. Audit
     await logAction({

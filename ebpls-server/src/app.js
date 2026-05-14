@@ -24,6 +24,9 @@ const webhookRoutes = require('./routes/webhook.routes');
 // Phase 7 Route Import
 const retirementRoutes = require('./routes/retirement.routes');
 
+// Phase 8 Route Import
+const documentRoutes = require('./routes/document.routes');
+
 // Middleware imports
 const { errorHandler } = require("./middlewares/error.middleware");
 
@@ -67,6 +70,9 @@ app.use("/api/treasury", treasuryRoutes);
 
 // Phase 7: Business Retirement
 app.use("/api/retirement", retirementRoutes);
+
+// Phase 8: Document Generation (PDF)
+app.use("/api/documents", documentRoutes);
 
 // Health check route
 app.get("/health", (req, res) => {

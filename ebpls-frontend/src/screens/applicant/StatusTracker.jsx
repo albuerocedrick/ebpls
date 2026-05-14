@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { 
   CheckCircle2, 
@@ -15,8 +15,9 @@ import {
   Banknote
 } from 'lucide-react';
 import StatusBadge from '../../components/shared/StatusBadge';
-import { ROUTES, STATUSES } from '../../utils/constants';
+import { ROUTES, STATUSES, API_BASE_URL } from '../../utils/constants';
 import apiClient from '../../utils/apiClient';
+import useAuthStore from '../../store/authStore';
 import Button from '../../components/ui/Button';
 import useApplicationStatus from '../../hooks/useApplicationStatus'; // Import the Hook
 
@@ -66,6 +67,71 @@ const StatusTracker = () => {
       hour: 'numeric', minute: '2-digit' 
     }).format(new Date(isoString));
   };
+
+  // State for application list (when no appId is provided)
+  const [appList, setAppList] = useState([]);
+  const [isListLoading, setIsListLoading] = useState(!appId);
+
+  useEffect(() => {
+    if (!appId) {
+      const fetchList = async () => {
+        try {
+          setIsListLoading(true);
+          const res = await apiClient.get('/api/applications/list');
+          setAppList(res?.data || []);
+        } catch { setAppList([]); }
+        finally { setIsListLoading(false); }
+      };
+      fetchList();
+    }
+  }, [appId]);
+
+  if (!appId) {
+    return (
+      <div className="flex flex-col gap-6 max-w-3xl mx-auto">
+        <div>
+          <Link to={ROUTES.APPLICANT_DASHBOARD} className="inline-flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-accent transition-colors mb-4">
+            <ArrowLeft size={16} /> Back to Dashboard
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">Track Application</h1>
+          <p className="text-sm text-gray-500 mt-1">Select an application to view its progress.</p>
+        </div>
+
+        {isListLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={24} className="animate-spin text-accent" />
+          </div>
+        ) : appList.length === 0 ? (
+          <div className="p-8 bg-gray-50 border border-gray-200 rounded-xl text-center">
+            <FileText size={32} className="text-gray-300 mx-auto mb-3" />
+            <p className="text-sm font-medium text-gray-600">No applications found</p>
+            <p className="text-xs text-gray-400 mt-1">Submit an application first to track its status.</p>
+          </div>
+        ) : (
+          <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
+            {appList.map((app) => (
+              <Link
+                key={app.application_no}
+                to={`${ROUTES.APPLICANT_STATUS}?id=${app.application_no}`}
+                className="flex items-center justify-between p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gray-100 rounded-lg">
+                    <FileText size={16} className="text-gray-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{app.businesses?.business_name || 'Business'}</p>
+                    <p className="text-xs text-gray-400 font-mono">{app.application_no}</p>
+                  </div>
+                </div>
+                <StatusBadge status={app.status} size="sm" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -203,7 +269,7 @@ const StatusTracker = () => {
             <div className="bg-white/10 border border-white/20 p-4 rounded-xl flex flex-col">
               <div className="flex items-center gap-3 mb-2"><Banknote size={20} className="text-blue-200" /><h4 className="font-bold">Over-the-Counter</h4></div>
               <p className="text-xs text-blue-100 flex-1">Pay at the Municipal Treasury using your TOP.</p>
-              <Button variant="secondary" fullWidth className="mt-4 !bg-white !text-blue-600" onClick={() => window.open(`/api/documents/top/${appId}`, '_blank')}>Download TOP</Button>
+              <Button variant="secondary" fullWidth className="mt-4 !bg-white !text-blue-600" onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/top/${appId}?token=${token}`, '_blank'); }}>Download TOP</Button>
             </div>
 
             <div className="bg-white/10 border border-white/20 p-4 rounded-xl flex flex-col">
@@ -238,8 +304,8 @@ const StatusTracker = () => {
         </div>
       )}
 
-      {/* COMPLETED SECTION */}
-      {currentStatus === STATUSES.COMPLETED && (
+      {/* PAID / COMPLETED SECTION — Download buttons */}
+      {(currentStatus === STATUSES.PAID || currentStatus === STATUSES.COMPLETED) && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-emerald-200 flex items-center gap-3">
             <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg"><Award size={20} /></div>
@@ -249,8 +315,8 @@ const StatusTracker = () => {
             </div>
           </div>
           <div className="p-5 flex flex-col sm:flex-row gap-3">
-            <a href={`/api/documents/permit/${appId}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"><Award size={18} /> Business Permit <Download size={16} className="ml-auto opacity-70" /></a>
-            <a href={`/api/documents/eresibo/${appId}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white text-emerald-800 text-sm font-semibold rounded-lg border border-emerald-300 hover:bg-emerald-50 transition-colors"><Receipt size={18} /> E-Resibo (Receipt) <Download size={16} className="ml-auto opacity-70" /></a>
+            <button onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/permit/${appId}?token=${token}`, '_blank'); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm cursor-pointer"><Award size={18} /> Business Permit <Download size={16} className="ml-auto opacity-70" /></button>
+            <button onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/eresibo/${appId}?token=${token}`, '_blank'); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white text-emerald-800 text-sm font-semibold rounded-lg border border-emerald-300 hover:bg-emerald-50 transition-colors cursor-pointer"><Receipt size={18} /> E-Resibo (Receipt) <Download size={16} className="ml-auto opacity-70" /></button>
           </div>
         </div>
       )}

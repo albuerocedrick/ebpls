@@ -142,8 +142,9 @@ async function processSuccessfulPayment(paymentData, eventAttributes, metaAppNo,
     })
     .eq('transaction_id', transaction.transaction_id);
 
-  // Transition: PaymentProcessing -> Paid
+  // Transition: PaymentProcessing -> Paid -> Completed
   await applicationService.updateApplicationStatus(appNo, STATUSES.PAID, null);
+  await applicationService.updateApplicationStatus(appNo, STATUSES.COMPLETED, null);
 
   // Audit
   await auditService.logAction({
