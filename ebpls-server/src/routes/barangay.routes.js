@@ -2,7 +2,8 @@ const express = require('express');
 const { 
     getPendingClearances, 
     issueClearance, 
-    rejectClearance 
+    rejectClearance,
+    getDocumentUrl
 } = require('../controllers/barangay.controller');
 
 // CORRECTED IMPORTS: Using the exact names from your middleware files
@@ -26,5 +27,8 @@ router.put('/clearances/:id/issue', issueClearance);
 
 // PUT /api/barangay/clearances/:id/reject
 router.put('/clearances/:id/reject', rejectClearance);
+
+// GET /api/barangay/applications/:app_no/documents/:requirement_id/url
+router.get('/applications/:app_no/documents/:requirement_id/url', getDocumentUrl);
 
 module.exports = router;

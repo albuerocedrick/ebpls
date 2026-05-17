@@ -10,6 +10,7 @@ const storageService     = require('../services/storage.service');
 const validators         = require('../utils/validators');
 const { createError }    = require('../middlewares/error.middleware');
 const { ERROR_CODES }    = require('../utils/constants');
+const { dispatchEmail, EMAIL_TRIGGERS } = require('../services/email.service');
 
 // -----------------------------------------------------------------
 // 1. DRAFT ENDPOINTS
@@ -106,16 +107,40 @@ const submitUAF = async (req, res, next) => {
     // Core business logic (pseudo-atomic insert sequence)
     const applicationNo = await applicationService.submitApplication(taxpayerId, validatedData);
 
-    // TODO (Phase 9): Trigger 'APPLICATION_SUBMITTED' Email Notification here.
-    console.log(`[application.controller] Application ${applicationNo} submitted successfully.`);
-
-    return res.status(201).json({
+    // Return the response immediately — email is non-blocking (fire-and-forget below)
+    res.status(201).json({
       success: true,
       message: 'Application submitted successfully.',
       data: {
         application_no: applicationNo,
       },
     });
+
+    // Phase 9: Wire APPLICATION_SUBMITTED email trigger (fire-and-forget, after response)
+    // Fetch the applicant's name for the email greeting — taxpayerId is already on req.user.
+    // ASSUMPTION: taxpayer row always exists at this point (created during registration).
+    const { supabaseAdmin } = require('../config/supabase');
+    const { data: taxpayer } = await supabaseAdmin
+      .from('taxpayers')
+      .select('first_name, last_name')
+      .eq('taxpayer_id', taxpayerId)
+      .single();
+
+    const fullName = taxpayer
+      ? `${taxpayer.first_name} ${taxpayer.last_name}`
+      : 'Applicant';
+
+    dispatchEmail({
+      triggerEvent:   EMAIL_TRIGGERS.APPLICATION_SUBMITTED,
+      recipientEmail: req.user.email,
+      applicationNo,
+      payload: {
+        name:           fullName,
+        applicationNo,
+        businessName:   validatedData.business_name,
+      },
+    });
+
   } catch (error) {
     next(error);
   }
@@ -310,16 +335,36 @@ const getApplicationForEdit = async (req, res, next) => {
       .select('section, status, remarks')
       .eq('application_no', app_no);
 
-    // 4. Fetch doc verification remarks
-    const { data: docReviews } = await supabaseAdmin
+    // 4. Fetch doc verification remarks AND existing file paths
+    const { data: docRows } = await supabaseAdmin
       .from('doc_verifications')
       .select(`
         requirement_id,
         status,
         remarks,
+        file_path,
         requirement_types ( name )
       `)
       .eq('application_no', app_no);
+
+    // 5. Determine Barangay Clearance request status
+    // If 'Barangay Business Clearance' exists but has no file_path, it means it was requested via municipality.
+    const brgyReq = (docRows || []).find(d => d.requirement_types?.name === 'Barangay Business Clearance');
+    const isBrgyRequested = brgyReq ? !brgyReq.file_path : false;
+
+    // 6. Map requirement names back to doc_types for the wizard
+    const REQ_NAME_TO_TYPE = {
+      'DTI / SEC / CDA Registration':           'DTI_SEC_CDA',
+      'Fire Safety Inspection Certificate':     'FIRE_SAFETY',
+      'Sanitary Permit':                         'SANITARY_PERMIT',
+      'Zoning Clearance':                        'ZONING_CLEARANCE',
+      'Lease Contract / TCT':                    'LEASE_TCT',
+      'Barangay Business Clearance':             'BARANGAY_CLEARANCE',
+      'Community Tax Certificate':               'CTC',
+      "Owner's Valid ID (Front)":               'VALID_ID_FRONT',
+      "Owner's Valid ID (Back)":                'VALID_ID_BACK',
+      "Sketch of Location":                     'SKETCH_LOCATION',
+    };
 
     const biz = app.businesses;
 
@@ -354,12 +399,22 @@ const getApplicationForEdit = async (req, res, next) => {
             units: 1,
           })),
         },
+        step4: {
+          request_barangay_clearance: isBrgyRequested,
+          documents: (docRows || [])
+            .filter(d => d.file_path)
+            .map(d => ({
+              doc_type: REQ_NAME_TO_TYPE[d.requirement_types?.name] || `REQ_${d.requirement_id}`,
+              file_path: d.file_path,
+              file_name: d.file_path.split('/').pop() // approximation
+            }))
+        },
         // BPLO feedback — so applicant knows what to fix
         feedback: {
           data_reviews: (dataReviews || [])
             .filter((r) => r.status === 'Discrepancy')
             .map((r) => ({ section: r.section, remarks: r.remarks })),
-          doc_reviews: (docReviews || [])
+          doc_reviews: (docRows || [])
             .filter((d) => d.status === 'No' || d.status === 'Returned')
             .map((d) => ({
               requirement: d.requirement_types?.name || `Requirement ${d.requirement_id}`,
@@ -368,6 +423,53 @@ const getApplicationForEdit = async (req, res, next) => {
             })),
         },
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getActiveBarangays = async (req, res, next) => {
+  try {
+    const { supabaseAdmin } = require('../config/supabase');
+    const { data, error } = await supabaseAdmin
+      .from('barangays')
+      .select('name')
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('[getActiveBarangays] Database error:', error.message);
+      throw createError('Failed to fetch barangays.', 500, ERROR_CODES.INTERNAL_ERROR);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: data.map(b => b.name),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getUafLookups = async (req, res, next) => {
+  try {
+    const { supabaseAdmin } = require('../config/supabase');
+    
+    // Fetch active barangays
+    const { data: barangays } = await supabaseAdmin.from('barangays').select('name').eq('is_active', true).order('name', { ascending: true });
+    // Fetch active business activities
+    const { data: activities } = await supabaseAdmin.from('business_activities').select('name').eq('is_active', true).order('name', { ascending: true });
+    // Fetch organization types
+    const { data: orgTypes } = await supabaseAdmin.from('organization_types').select('id, name').order('name', { ascending: true });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        barangays: barangays?.map(b => b.name) || [],
+        business_activities: activities?.map(a => a.name) || [],
+        organization_types: orgTypes || [],
+      }
     });
   } catch (error) {
     next(error);
@@ -383,4 +485,6 @@ module.exports = {
   getStatus,
   getApplicationsList,
   getApplicationForEdit,
+  getActiveBarangays,
+  getUafLookups,
 };

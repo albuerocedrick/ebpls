@@ -9,6 +9,17 @@
 
 // =========================================
 // RBAC Role Types
+/**
+ * constants.js
+ * Single source of truth for all system-level enumerations.
+ * All objects are frozen to prevent accidental mutation.
+ *
+ * @policy No component should use a raw string for roles, routes, or statuses.
+ *         Always reference from this file.
+ */
+
+// =========================================
+// RBAC Role Types
 // =========================================
 export const ROLES = Object.freeze({
   APPLICANT:         'Applicant',
@@ -19,6 +30,45 @@ export const ROLES = Object.freeze({
   ADMIN:             'Admin',
 });
 
+// =========================================
+// Liliw Barangay Master List
+// Official DILG List of Barangays, Liliw, Laguna
+// =========================================
+export const BARANGAYS_LILIW = Object.freeze([
+  'Bagong Anyo (Poblacion)',
+  'Bayate',
+  'Bongkol',
+  'Bubukal',
+  'Cabuyao',
+  'Calumpang',
+  'Culoy',
+  'Dagatan',
+  'Daniw',
+  'Dita',
+  'Ibabang Palina',
+  'Ibabang San Roque',
+  'Ibabang Sungi',
+  'Ibabang Taykin',
+  'Ilayang Palina',
+  'Ilayang San Roque',
+  'Ilayang Sungi',
+  'Ilayang Taykin',
+  'Kanlurang Bukal',
+  'Laguan',
+  'Luquin',
+  'Malabo-Kalantukan',
+  'Masikap (Poblacion)',
+  'Maslun (Poblacion)',
+  'Mojon',
+  'Novaliches',
+  'Oples',
+  'Pag-asa (Poblacion)',
+  'Palayan',
+  'Rizal (Poblacion)',
+  'San Isidro',
+  'Silangang Bukal',
+  'Tuy-Baanan'
+]);
 
 // =========================================
 // Application State Machine — Valid Statuses
@@ -57,6 +107,8 @@ export const ROUTES = Object.freeze({
   LOGIN: '/login',
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
+  VERIFY_SUCCESS: '/verify-success',
   // Applicant
   APPLICANT_DASHBOARD: '/applicant/dashboard',
   APPLICANT_UAF: '/applicant/apply',
@@ -73,9 +125,13 @@ export const ROUTES = Object.freeze({
   // Barangay
   BARANGAY_QUEUE: '/barangay/queue',
   // Admin
+  ADMIN_DASHBOARD: '/admin/dashboard',
+  ADMIN_APPLICATIONS: '/admin/applications',
+  ADMIN_USERS: '/admin/users',
   ADMIN_MASTER_DATA: '/admin/master-data',
   ADMIN_DOCUMENT_BUILDER: '/admin/document-builder',
   ADMIN_AUDIT_LOGS: '/admin/audit-logs',
+  ADMIN_EMAIL_LOGS: '/admin/email-logs',
   // Payment Callbacks
   PAYMENT_SUCCESS: '/payment/success',
   PAYMENT_CANCEL: '/payment/cancel',
@@ -90,7 +146,7 @@ export const ROLE_DASHBOARDS = Object.freeze({
   [ROLES.TREASURY_OFFICER]: ROUTES.TREASURY_QUEUE,
   [ROLES.TREASURY]:         ROUTES.TREASURY_QUEUE,
   [ROLES.BARANGAY_OFFICER]: ROUTES.BARANGAY_QUEUE,
-  [ROLES.ADMIN]:            ROUTES.ADMIN_MASTER_DATA,
+  [ROLES.ADMIN]:            ROUTES.ADMIN_DASHBOARD,
 });
 
 // =========================================
@@ -109,6 +165,8 @@ export const API_ENDPOINTS = Object.freeze({
   APPLICATIONS_UPLOAD: '/api/applications/upload',
   APPLICATIONS_STATUS: (appNo) => `/api/applications/${appNo}/status`,
   APPLICATIONS_EDIT: (appNo) => `/api/applications/${appNo}/edit`,
+  APPLICATIONS_BARANGAYS: '/api/applications/barangays',
+  APPLICATIONS_LOOKUPS: '/api/applications/lookups',
   // BPLO
   BPLO_PENDING: '/api/bplo/applications/pending',
   BPLO_VERIFY: (appNo) => `/api/bplo/applications/verify/${appNo}`,
@@ -132,6 +190,13 @@ export const API_ENDPOINTS = Object.freeze({
   DOCUMENTS_ERESIBO: (transactionId) => `/api/documents/eresibo/${transactionId}`,
   DOCUMENTS_TOP: (appNo) => `/api/documents/top/${appNo}`,
   DOCUMENTS_BARANGAY: (id) => `/api/documents/barangay-clearance/${id}`,
+  // Barangay endpoints
+  BARANGAY_DOCUMENT_URL: (appNo, reqId) => `/api/barangay/applications/${appNo}/documents/${reqId}/url`,
+  // Admin
+  ADMIN_HEALTH: '/api/admin/health',
+  ADMIN_APPLICATIONS: '/api/admin/applications',
+  ADMIN_EMAIL_LOGS: '/api/admin/email-logs',
+  ADMIN_AUDIT_LOGS: '/api/admin/audit-logs',
 });
 
 // =========================================

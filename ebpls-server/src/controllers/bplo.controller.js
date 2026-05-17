@@ -11,6 +11,46 @@ const { successResponse, getClientIp } = require('../utils/helpers');
 const { ERROR_CODES, STATUSES, DOC_VERIFICATION_STATUS } = require('../utils/constants');
 const { logAction, AUDIT_ACTIONS } = require('../services/audit.service');
 const { generatePresignedDownloadUrl } = require('../services/storage.service');
+const { dispatchEmail, EMAIL_TRIGGERS } = require('../services/email.service');
+
+// -----------------------------------------------------------------
+// SHARED HELPER: Resolve applicant contact info for email dispatch.
+// Follows the application → businesses → taxpayers → users chain.
+// Returns null if any join fails — email dispatch will be skipped safely.
+// -----------------------------------------------------------------
+const _resolveApplicantForEmail = async (applicationNo) => {
+  const { data, error } = await supabaseAdmin
+    .from('applications')
+    .select(`
+      application_no,
+      businesses (
+        business_name,
+        taxpayers (
+          first_name,
+          last_name,
+          users ( email )
+        )
+      )
+    `)
+    .eq('application_no', applicationNo)
+    .single();
+
+  if (error || !data) {
+    console.warn(`[bplo.controller] Could not resolve applicant for email on app ${applicationNo}:`, error?.message);
+    return null;
+  }
+
+  const taxpayer = data.businesses?.taxpayers;
+  const user     = taxpayer?.users;
+
+  if (!taxpayer || !user?.email) return null;
+
+  return {
+    email:        user.email,
+    name:         `${taxpayer.first_name} ${taxpayer.last_name}`,
+    businessName: data.businesses?.business_name || 'your business',
+  };
+};
 
 const verifySchema = z.object({
   checklist: z.array(
@@ -568,9 +608,25 @@ const verifyApplication = async (req, res, next) => {
       ipAddress: getClientIp(req),
     });
 
-    return res.status(200).json(
+    // Return response immediately — email is fire-and-forget below.
+    res.status(200).json(
       successResponse('Application verified successfully.', updated)
     );
+
+    // Phase 9: Wire APPLICATION_VERIFIED email trigger.
+    const applicant = await _resolveApplicantForEmail(applicationNo);
+    if (applicant) {
+      dispatchEmail({
+        triggerEvent:   EMAIL_TRIGGERS.APPLICATION_VERIFIED,
+        recipientEmail: applicant.email,
+        applicationNo,
+        payload: {
+          name:         applicant.name,
+          applicationNo,
+          businessName: applicant.businessName,
+        },
+      });
+    }
   } catch (err) {
     return next(err);
   }
@@ -633,9 +689,26 @@ const returnApplication = async (req, res, next) => {
       ipAddress: getClientIp(req),
     });
 
-    return res.status(200).json(
+    // Return response immediately — email is fire-and-forget below.
+    res.status(200).json(
       successResponse('Application returned successfully.', updated)
     );
+
+    // Phase 9: Wire APPLICATION_RETURNED email trigger.
+    const applicant = await _resolveApplicantForEmail(applicationNo);
+    if (applicant) {
+      dispatchEmail({
+        triggerEvent:   EMAIL_TRIGGERS.APPLICATION_RETURNED,
+        recipientEmail: applicant.email,
+        applicationNo,
+        payload: {
+          name:         applicant.name,
+          applicationNo,
+          businessName: applicant.businessName,
+          remarks:      input.remarks,
+        },
+      });
+    }
   } catch (err) {
     return next(err);
   }

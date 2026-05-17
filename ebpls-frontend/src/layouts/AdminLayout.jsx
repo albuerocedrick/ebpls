@@ -16,7 +16,7 @@
 
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { Database, FileText, ScrollText } from 'lucide-react';
+import { Database, FileText, ScrollText, Mail, Activity, FolderSearch, Users } from 'lucide-react';
 import { Navbar, Sidebar } from '../components/layout';
 import { ROUTES } from '../utils/constants';
 import useUIStore from '../store/UIStore';
@@ -27,8 +27,33 @@ import useUIStore from '../store/UIStore';
 
 const ADMIN_NAV = [
   {
+    sectionLabel: 'Monitor',
+    items: [
+      {
+        to: ROUTES.ADMIN_DASHBOARD,
+        icon: <Activity size={18} />,
+        label: 'System Health',
+      },
+    ],
+  },
+  {
+    sectionLabel: 'Operations',
+    items: [
+      {
+        to: ROUTES.ADMIN_APPLICATIONS,
+        icon: <FolderSearch size={18} />,
+        label: 'Application Explorer',
+      },
+    ],
+  },
+  {
     sectionLabel: 'Configuration',
     items: [
+      {
+        to: ROUTES.ADMIN_USERS,
+        icon: <Users size={18} />,
+        label: 'User Management',
+      },
       {
         to: ROUTES.ADMIN_MASTER_DATA,
         icon: <Database size={18} />,
@@ -48,6 +73,11 @@ const ADMIN_NAV = [
         to: ROUTES.ADMIN_AUDIT_LOGS,
         icon: <ScrollText size={18} />,
         label: 'Audit Logs',
+      },
+      {
+        to: ROUTES.ADMIN_EMAIL_LOGS,
+        icon: <Mail size={18} />,
+        label: 'Email Logs',
       },
     ],
   },

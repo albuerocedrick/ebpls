@@ -34,6 +34,16 @@ const STANDARD_DOCUMENTS = [
     name: 'Lease Contract / TCT',
     description: 'Proof of property ownership (TCT/OCT) or lease agreement if renting.',
   },
+  {
+    id: 'VALID_ID_FRONT',
+    name: "Owner's Valid ID (Front)",
+    description: 'Clear copy of the FRONT of any valid government-issued ID (e.g., Passport, Driver’s License, UMID) of the business owner.',
+  },
+  {
+    id: 'VALID_ID_BACK',
+    name: "Owner's Valid ID (Back)",
+    description: 'Clear copy of the BACK of the same valid government-issued ID.',
+  },
 ];
 
 const Step4_Documents = ({ docFeedback }) => {
@@ -223,11 +233,12 @@ const Step4_Documents = ({ docFeedback }) => {
               disabled={isUploadingAny}
               onUploadStart={() => setIsUploadingAny(true)}
               onUploadEnd={() => setIsUploadingAny(false)}
+              feedback={docFeedback?.find(f => f.requirement === 'Barangay Business Clearance')?.remarks}
             />
           </div>
         )}
 
-        {/* Status chip shown when Option A is selected */}
+        {/* ... existing status chip ... */}
         {requestClearance && (
           <div className="px-5 pb-5">
             <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200">
@@ -248,19 +259,23 @@ const Step4_Documents = ({ docFeedback }) => {
           Other Required Documents
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {STANDARD_DOCUMENTS.map((req) => (
-            <DocumentUploadPanel
-              key={req.id}
-              title={req.name}
-              description={req.description}
-              value={getUploadedFileMeta(req.id)}
-              onChange={(meta) => handleDocumentUpload(req.id, meta)}
-              onRemove={() => handleDocumentRemove(req.id)}
-              disabled={isUploadingAny}
-              onUploadStart={() => setIsUploadingAny(true)}
-              onUploadEnd={() => setIsUploadingAny(false)}
-            />
-          ))}
+          {STANDARD_DOCUMENTS.map((req) => {
+            const specificFeedback = docFeedback?.find(f => f.requirement === req.name);
+            return (
+              <DocumentUploadPanel
+                key={req.id}
+                title={req.name}
+                description={req.description}
+                value={getUploadedFileMeta(req.id)}
+                onChange={(meta) => handleDocumentUpload(req.id, meta)}
+                onRemove={() => handleDocumentRemove(req.id)}
+                disabled={isUploadingAny}
+                onUploadStart={() => setIsUploadingAny(true)}
+                onUploadEnd={() => setIsUploadingAny(false)}
+                feedback={specificFeedback?.remarks || (specificFeedback ? 'Document needs attention' : null)}
+              />
+            );
+          })}
         </div>
       </div>
 

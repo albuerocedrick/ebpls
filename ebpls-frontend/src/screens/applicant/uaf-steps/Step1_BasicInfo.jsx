@@ -1,8 +1,10 @@
 // src/screens/applicant/uaf-steps/Step1_BasicInfo.jsx
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import useApplicationStore from '../../../store/applicationStore';
 import { Building, Tag, Info } from 'lucide-react';
+import apiClient from '../../../utils/apiClient';
+import { API_ENDPOINTS } from '../../../utils/constants';
 
 // Lookup data seeded from DB (seed.sql)
 const APP_TYPES = [
@@ -17,18 +19,31 @@ const PAYMENT_MODES = [
   { id: 3, name: 'Quarterly' }
 ];
 
-const ORG_TYPES = [
+const FALLBACK_ORG_TYPES = [
   { id: 1, name: 'Sole Proprietorship' },
   { id: 2, name: 'Partnership' },
   { id: 3, name: 'Corporation' },
-  { id: 4, name: 'Cooperative' },
-  { id: 5, name: 'Non-Governmental Organization' },
-  { id: 6, name: 'Government-Owned or Controlled Corporation' }
+  { id: 4, name: 'Cooperative' }
 ];
 
 const Step1_BasicInfo = () => {
   const data = useApplicationStore((state) => state.formData.step1);
   const setFormField = useApplicationStore((state) => state.setFormField);
+  const [orgTypes, setOrgTypes] = useState(FALLBACK_ORG_TYPES);
+
+  useEffect(() => {
+    const fetchLookups = async () => {
+      try {
+        const res = await apiClient.get(API_ENDPOINTS.APPLICATIONS_LOOKUPS);
+        if (res.success && res.data?.organization_types?.length > 0) {
+          setOrgTypes(res.data.organization_types);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch dynamic lookups, using fallback.');
+      }
+    };
+    fetchLookups();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -118,7 +133,7 @@ const Step1_BasicInfo = () => {
               <label className={labelClasses}>Organization Type <span className="text-red-500">*</span></label>
               <select name="org_type_id" value={data.org_type_id || ''} onChange={handleChange} className={inputClasses}>
                 <option value="" disabled>Select organization type</option>
-                {ORG_TYPES.map(org => (
+                {orgTypes.map(org => (
                   <option key={org.id} value={org.id}>{org.name}</option>
                 ))}
               </select>

@@ -26,7 +26,6 @@ const LILIW_CENTER = { lat: 14.1297, lng: 121.4326 };
 const LocationMarker = ({ position, onChange }) => {
   useMapEvents({
     click(e) {
-      // e.latlng contains the new clicked coordinates
       if (onChange) {
         onChange({
           lat: parseFloat(e.latlng.lat.toFixed(7)),
@@ -102,4 +101,4 @@ const InteractiveLocationPin = ({ value, onChange }) => {
   );
 };
 
-export default InteractiveLocationPin;
+export default InteractiveLocationPin;

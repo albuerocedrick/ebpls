@@ -284,11 +284,13 @@ const generateTOPPDF = async (data) => {
   // Instructions
   page.drawText('INSTRUCTIONS:', { x: leftMargin, y, size: 9, font: boldFont, color: COLORS.darkGray });
   y -= 16;
-  page.drawText('1. Present this Tax Order of Payment to the Municipal Treasurer\'s Office.', { x: leftMargin + 10, y, size: 9, font, color: COLORS.black });
+  page.drawText('1. Present this Tax Order of Payment to the Municipal Treasurer\'s Office for over-the-counter payment.', { x: leftMargin + 10, y, size: 9, font, color: COLORS.black });
   y -= 14;
-  page.drawText('2. Payment may be made in Cash or Manager\'s Check only.', { x: leftMargin + 10, y, size: 9, font, color: COLORS.black });
+  page.drawText('2. Over-the-counter payments may be made in Cash or Manager\'s Check only.', { x: leftMargin + 10, y, size: 9, font, color: COLORS.black });
   y -= 14;
-  page.drawText('3. An Official Receipt (E-Resibo) will be issued upon payment.', { x: leftMargin + 10, y, size: 9, font, color: COLORS.black });
+  page.drawText('3. Alternatively, if you do not want to pay over-the-counter, you can pay online via your Applicant Portal.', { x: leftMargin + 10, y, size: 9, font, color: COLORS.black });
+  y -= 14;
+  page.drawText('4. An Official Receipt (E-Resibo) will be issued upon payment.', { x: leftMargin + 10, y, size: 9, font, color: COLORS.black });
 
   // Footer
   page.drawText('This document is system-generated. Valid for the current assessment period only.', {

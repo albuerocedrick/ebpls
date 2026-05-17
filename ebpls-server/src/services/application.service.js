@@ -236,13 +236,31 @@ const deleteDraft = async (taxpayerId) => {
  * @returns {Promise<string>} The generated application number.
  */
 const submitApplication = async (taxpayerId, payload) => {
-  // 1. Validate State Machine (Implicitly, this is a Draft -> Pending action)
-  validateStateTransition(STATUSES.DRAFT, STATUSES.PENDING);
+  const isUpdate = !!payload.application_no;
+  let appNo = payload.application_no;
+  let currentStatus = STATUSES.DRAFT;
+  let businessId = null;
 
-  // 2. Generate the sequential ID
-  const appNo = await generateApplicationNo();
+  // 1. Validate State Machine
+  if (isUpdate) {
+    const { data: existingApp, error: fetchErr } = await supabaseAdmin
+      .from('applications')
+      .select('status, business_id')
+      .eq('application_no', appNo)
+      .single();
 
-  // 3. Insert Business Profile
+    if (fetchErr || !existingApp) {
+      throw createError('Application not found for update.', 404, ERROR_CODES.NOT_FOUND);
+    }
+    currentStatus = existingApp.status;
+    businessId = existingApp.business_id;
+    validateStateTransition(currentStatus, STATUSES.PENDING);
+  } else {
+    validateStateTransition(STATUSES.DRAFT, STATUSES.PENDING);
+    appNo = await generateApplicationNo();
+  }
+
+  // 2. Business Profile (Upsert or Insert)
   const businessPayload = {
     taxpayer_id: taxpayerId,
     business_name: payload.business_name,
@@ -259,36 +277,52 @@ const submitApplication = async (taxpayerId, payload) => {
     longitude: payload.longitude,
   };
 
-  const { data: businessData, error: businessError } = await supabaseAdmin
-    .from('businesses')
-    .insert([businessPayload])
-    .select('business_id')
-    .single();
+  if (isUpdate && businessId) {
+    const { error: bizUpdateError } = await supabaseAdmin
+      .from('businesses')
+      .update(businessPayload)
+      .eq('business_id', businessId);
+    
+    if (bizUpdateError) {
+      console.error(`[submitApp] Business update failed:`, bizUpdateError.message);
+      throw createError('Failed to update business profile.', 500, ERROR_CODES.INTERNAL_ERROR);
+    }
+  } else {
+    const { data: businessData, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .insert([businessPayload])
+      .select('business_id')
+      .single();
 
-  if (businessError) {
-    console.error(`[submitApp] Business insert failed:`, businessError.message);
-    throw createError('Failed to create business profile during submission.', 500, ERROR_CODES.INTERNAL_ERROR);
+    if (businessError) {
+      console.error(`[submitApp] Business insert failed:`, businessError.message);
+      throw createError('Failed to create business profile during submission.', 500, ERROR_CODES.INTERNAL_ERROR);
+    }
+    businessId = businessData.business_id;
   }
 
-  // 4. Insert Application Record
+  // 3. Application Record (Upsert or Insert)
   const applicationPayload = {
     application_no: appNo,
-    business_id: businessData.business_id,
+    business_id: businessId,
     type_id: payload.type_id,
     payment_mode_id: payload.payment_mode_id,
     status: STATUSES.PENDING,
     submitted_at: new Date().toISOString(),
+    return_remarks: null, // Clear remarks on resubmission
   };
 
   const { error: appError } = await supabaseAdmin
     .from('applications')
-    .insert([applicationPayload]);
+    .upsert([applicationPayload], { onConflict: 'application_no' });
 
   if (appError) {
-    // ROLLBACK manually: delete the business we just created to prevent orphaned data
-    console.error(`[submitApp] Application insert failed. Rolling back business ${businessData.business_id}:`, appError.message);
-    await supabaseAdmin.from('businesses').delete().eq('business_id', businessData.business_id);
-    throw createError('Failed to create application record.', 500, ERROR_CODES.INTERNAL_ERROR);
+    console.error(`[submitApp] Application submission failed:`, appError.message);
+    // ROLLBACK manually: only delete the business if we just created it (new app)
+    if (!isUpdate) {
+      await supabaseAdmin.from('businesses').delete().eq('business_id', businessId);
+    }
+    throw createError('Failed to record application submission.', 500, ERROR_CODES.INTERNAL_ERROR);
   }
 
   // 4b. Insert Line of Business activities into application_activities
@@ -356,6 +390,9 @@ const submitApplication = async (taxpayerId, payload) => {
       'LEASE_TCT':          'Lease Contract / TCT',
       'BARANGAY_CLEARANCE': 'Barangay Business Clearance',
       'CTC':                'Community Tax Certificate',
+      'VALID_ID_FRONT':     "Owner's Valid ID (Front)",
+      'VALID_ID_BACK':      "Owner's Valid ID (Back)",
+      'SKETCH_LOCATION':    "Sketch of Location",
     };
 
     for (const doc of payload.documents) {

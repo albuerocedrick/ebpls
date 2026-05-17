@@ -27,8 +27,15 @@ const retirementRoutes = require('./routes/retirement.routes');
 // Phase 8 Route Import
 const documentRoutes = require('./routes/document.routes');
 
+// Admin Route Import
+const adminRoutes = require('./routes/admin.routes');
+
 // Middleware imports
 const { errorHandler } = require("./middlewares/error.middleware");
+const { authenticate } = require("./middlewares/auth.middleware");
+const { authorize } = require("./middlewares/rbac.middleware");
+const { ROLES } = require("./utils/constants");
+const metricsTracker = require("./middlewares/metrics.middleware");
 
 const app = express();
 
@@ -56,6 +63,9 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Metrics Tracker
+app.use(metricsTracker);
+
 // -----------------------------------------------------------------
 // 4. API ROUTES
 // -----------------------------------------------------------------
@@ -73,6 +83,9 @@ app.use("/api/retirement", retirementRoutes);
 
 // Phase 8: Document Generation (PDF)
 app.use("/api/documents", documentRoutes);
+
+// Admin / Dashboard APIs
+app.use("/api/admin", authenticate, authorize(ROLES.ADMIN), adminRoutes);
 
 // Health check route
 app.get("/health", (req, res) => {

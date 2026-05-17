@@ -11,6 +11,8 @@ const { logAction, AUDIT_ACTIONS } = require('../services/audit.service');
 const { supabaseAdmin } = require('../config/supabase');
 const { createError } = require('../middlewares/error.middleware');
 const { ERROR_CODES, STATUSES } = require('../utils/constants');
+const { dispatchEmail, EMAIL_TRIGGERS } = require('../services/email.service');
+const pdfService = require('../services/pdf.service');
 
 /**
  * Generates the initial fee assessment for a verified application.
@@ -87,9 +89,7 @@ const finalizeAssessment = async (req, res, next) => {
   try {
     const { app_no } = req.params;
 
-    // 1. Use the shared service to transition the state.
-    // This helper handles fetching the app, validating the transition (Assessed -> For Payment),
-    // and updating the DB in one atomic-like sequence.
+    // 1. Transition: Assessed -> For Payment
     await applicationService.updateApplicationStatus(app_no, STATUSES.FOR_PAYMENT, req.user.userId);
 
     // 2. Audit
@@ -101,10 +101,68 @@ const finalizeAssessment = async (req, res, next) => {
       newValue: { status: STATUSES.FOR_PAYMENT, note: 'Assessment finalized and posted to billing.' }
     });
 
-    return res.status(200).json({
+    // Return response immediately — TOP email generation is fire-and-forget below.
+    res.status(200).json({
       success: true,
       message: 'Assessment finalized. Applicant can now view and pay.'
     });
+
+    // Phase 9: Send TOP_GENERATED email with PDF attached.
+    // Generate the TOP PDF in-memory here so the email is sent exactly once
+    // (not every time the applicant clicks the Download button).
+    const { data: topData } = await supabaseAdmin
+      .from('applications')
+      .select(`
+        businesses (
+          business_name,
+          taxpayers ( first_name, middle_name, last_name, users ( email ) )
+        )
+      `)
+      .eq('application_no', app_no)
+      .single();
+
+    const { data: topAssessment } = await supabaseAdmin
+      .from('assessments')
+      .select('id, total_amount, created_at, assessment_line_items ( fee_type_id, amount, fee_types ( name ) )')
+      .eq('application_no', app_no)
+      .single();
+
+    const topTaxpayer = topData?.businesses?.taxpayers;
+    const topUser     = topTaxpayer?.users;
+
+    if (topTaxpayer && topUser?.email && topAssessment) {
+      const ownerName  = `${topTaxpayer.first_name}${topTaxpayer.middle_name ? ' ' + topTaxpayer.middle_name : ''} ${topTaxpayer.last_name}`;
+      const lineItems  = topAssessment.assessment_line_items?.map((item) => ({
+        name:   item.fee_types?.name || `Fee #${item.fee_type_id}`,
+        amount: item.amount,
+      })) || [];
+
+      const topBuffer = await pdfService.generateTOPPDF({
+        applicationNo: app_no,
+        businessName:  topData.businesses?.business_name || 'Business',
+        ownerName,
+        assessedAt:    topAssessment.created_at,
+        lineItems,
+        totalAmount:   topAssessment.total_amount,
+      });
+
+      dispatchEmail({
+        triggerEvent:   EMAIL_TRIGGERS.TOP_GENERATED,
+        recipientEmail: topUser.email,
+        applicationNo:  app_no,
+        payload: {
+          name:         `${topTaxpayer.first_name} ${topTaxpayer.last_name}`,
+          applicationNo: app_no,
+          businessName: topData.businesses?.business_name || 'your business',
+          totalAmount:  topAssessment.total_amount,
+        },
+        attachments: [{
+          filename: `TOP_${app_no}.pdf`,
+          buffer:   topBuffer,
+        }],
+      });
+    }
+
   } catch (err) {
     next(err);
   }
@@ -251,10 +309,60 @@ const recordOTCPayment = async (req, res, next) => {
       newValue: { or_number, amount_tendered }
     });
 
-    return res.status(200).json({
+    // Return response immediately — email is fire-and-forget below.
+    res.status(200).json({
       success: true,
       data: transaction
     });
+
+    // Phase 9: Wire PAYMENT_RECORDED email for OTC.
+    // Resolve the applicant via the application → businesses → taxpayers → users join.
+    const { data: appInfo } = await supabaseAdmin
+      .from('applications')
+      .select(`
+        businesses (
+          business_name,
+          taxpayers (
+            first_name, last_name,
+            users ( email )
+          )
+        )
+      `)
+      .eq('application_no', application_no)
+      .single();
+
+    const taxpayer = appInfo?.businesses?.taxpayers;
+    const userInfo = taxpayer?.users;
+
+    if (taxpayer && userInfo?.email) {
+      dispatchEmail({
+        triggerEvent:   EMAIL_TRIGGERS.PAYMENT_RECORDED,
+        recipientEmail: userInfo.email,
+        applicationNo:  application_no,
+        payload: {
+          name:           `${taxpayer.first_name} ${taxpayer.last_name}`,
+          applicationNo:  application_no,
+          businessName:   appInfo.businesses?.business_name || 'your business',
+          orNumber:       or_number,
+          amount:         assessment.total_amount,
+          paymentChannel: `Over-the-Counter (${tendered_type})`,
+        },
+      });
+
+      // Phase 9: PERMIT_READY email — fires once here (not on every download click).
+      // Since OTC auto-completes the application (Paid → Completed), the permit
+      // is instantly available. Notify the applicant to log in and download it.
+      dispatchEmail({
+        triggerEvent:   EMAIL_TRIGGERS.PERMIT_READY,
+        recipientEmail: userInfo.email,
+        applicationNo:  application_no,
+        payload: {
+          name:         `${taxpayer.first_name} ${taxpayer.last_name}`,
+          applicationNo: application_no,
+          businessName: appInfo.businesses?.business_name || 'your business',
+        },
+      });
+    }
   } catch (err) {
     next(err);
   }
@@ -336,7 +444,7 @@ const initiateOnlinePayment = async (req, res, next) => {
       action: AUDIT_ACTIONS.ONLINE_PAYMENT_INITIATED,
       entityType: 'applications',
       entityId: application_no,
-      newValue: { payment_intent_id: pmSession.paymentIntentId }
+      newValue: { payment_intent_id: pmSession.paymentIntentId, amount: totalAmount }
     });
 
     return res.status(200).json({

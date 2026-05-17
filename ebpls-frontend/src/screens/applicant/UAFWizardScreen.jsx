@@ -129,6 +129,13 @@ const UAFWizardScreen = () => {
           if (data.step3?.lineOfBusinesses?.length > 0) {
             setFormField('step3', 'lineOfBusinesses', data.step3.lineOfBusinesses);
           }
+          // Pre-fill Step 4 (Documents)
+          if (data.step4) {
+            setFormField('step4', 'request_barangay_clearance', data.step4.request_barangay_clearance);
+            if (data.step4.documents?.length > 0) {
+              setFormField('step4', 'documents', data.step4.documents);
+            }
+          }
           // Store BPLO feedback
           if (data.feedback) {
             setFeedback(data.feedback);
@@ -168,6 +175,7 @@ const UAFWizardScreen = () => {
     setIsSubmitting(true);
     try {
       const payload = {
+        application_no: editAppNo || undefined,
         type_id: Number(formData.step1.type_id),
         payment_mode_id: formData.step1.payment_mode_id ? Number(formData.step1.payment_mode_id) : undefined,
         business_name: formData.step1.business_name,

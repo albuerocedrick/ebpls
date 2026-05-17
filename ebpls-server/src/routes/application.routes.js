@@ -52,6 +52,18 @@ router.post(
 // -----------------------------------------------------------------
 // 3. UTILITY ROUTES (Uploads & Status Polling)
 // -----------------------------------------------------------------
+router.get(
+  '/lookups',
+  authenticate,
+  applicationController.getUafLookups
+);
+
+router.get(
+  '/barangays',
+  authenticate,
+  applicationController.getActiveBarangays
+);
+
 router.post(
   '/upload',
   authenticate,

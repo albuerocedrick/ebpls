@@ -8,10 +8,24 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import useUIStore, { TOAST_TYPE } from '../../store/UIStore';
 import { apiClient } from '../../utils/apiClient';
+
+// Fix leaflet default marker icon
+const defaultIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
 
 // =========================================
 // Section Definitions
@@ -49,7 +63,7 @@ const DataRow = ({ label, value }) => (
 // Component
 // =========================================
 
-const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onChange }) => {
+const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onChange, disabled = false }) => {
   const addToast = useUIStore((s) => s.addToast);
   const [reviews, setReviews] = useState({});
   const [remarks, setRemarks] = useState({});
@@ -161,6 +175,25 @@ const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onC
                 ? `${business.latitude}, ${business.longitude}`
                 : 'Not pinned'
             } />
+            {business?.latitude && business?.longitude ? (
+              <div className="pt-2 pb-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--color-text-muted))] mb-1.5">Map Pin</p>
+                <div className="h-48 rounded-md overflow-hidden border border-border">
+                  <MapContainer
+                    center={[business.latitude, business.longitude]}
+                    zoom={17}
+                    scrollWheelZoom={false}
+                    style={{ height: '100%', width: '100%' }}
+                    zoomControl={false}
+                    dragging={false}
+                    attributionControl={false}
+                  >
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <Marker position={[business.latitude, business.longitude]} icon={defaultIcon} />
+                  </MapContainer>
+                </div>
+              </div>
+            ) : null}
           </div>
         );
       case 'business_activities':
@@ -268,44 +301,52 @@ const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onC
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleStatusChange(section.id, 'Verified')}
-                      className={[
-                        'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                        isVerified
-                          ? 'bg-green-600 text-white shadow-sm'
-                          : 'bg-white text-gray-600 border border-gray-300 hover:border-green-400 hover:text-green-600',
-                      ].join(' ')}
-                    >
-                      <CheckCircle size={13} />
-                      Verified
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleStatusChange(section.id, 'Discrepancy')}
-                      className={[
-                        'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                        isDiscrepancy
-                          ? 'bg-red-500 text-white shadow-sm'
-                          : 'bg-white text-gray-600 border border-gray-300 hover:border-red-400 hover:text-red-500',
-                      ].join(' ')}
-                    >
-                      <XCircle size={13} />
-                      Discrepancy
-                    </button>
-                  </div>
+                  {!disabled && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(section.id, 'Verified')}
+                        className={[
+                          'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                          isVerified
+                            ? 'bg-green-600 text-white shadow-sm'
+                            : 'bg-white text-gray-600 border border-gray-300 hover:border-green-400 hover:text-green-600',
+                        ].join(' ')}
+                      >
+                        <CheckCircle size={13} />
+                        Verified
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(section.id, 'Discrepancy')}
+                        className={[
+                          'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                          isDiscrepancy
+                            ? 'bg-red-500 text-white shadow-sm'
+                            : 'bg-white text-gray-600 border border-gray-300 hover:border-red-400 hover:text-red-500',
+                        ].join(' ')}
+                      >
+                        <XCircle size={13} />
+                        Discrepancy
+                      </button>
+                    </div>
+                  )}
 
                   {/* Discrepancy Remarks */}
                   {isDiscrepancy && (
-                    <textarea
-                      className="w-full text-sm p-2.5 rounded-md border border-red-300 bg-white text-[hsl(var(--color-text))] outline-none focus:ring-1 focus:ring-red-400 resize-none"
-                      placeholder="Describe the discrepancy (required)..."
-                      rows={2}
-                      value={remarks[section.id] || ''}
-                      onChange={(e) => handleRemarksChange(section.id, e.target.value)}
-                    />
+                    disabled ? (
+                      <div className="p-2.5 rounded-md border border-red-200 bg-red-50 text-xs text-red-700">
+                        <span className="font-semibold text-red-800">Discrepancy remarks:</span> {remarks[section.id] || 'No remarks provided.'}
+                      </div>
+                    ) : (
+                      <textarea
+                        className="w-full text-sm p-2.5 rounded-md border border-red-300 bg-white text-[hsl(var(--color-text))] outline-none focus:ring-1 focus:ring-red-400 resize-none"
+                        placeholder="Describe the discrepancy (required)..."
+                        rows={2}
+                        value={remarks[section.id] || ''}
+                        onChange={(e) => handleRemarksChange(section.id, e.target.value)}
+                      />
+                    )
                   )}
                 </div>
               )}
@@ -315,24 +356,26 @@ const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onC
       </Card.Body>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-border bg-surface-tint flex items-center justify-between">
-        <span className="text-xs text-[hsl(var(--color-text-muted))]">
-          {reviewedCount === SECTIONS.length
-            ? SECTIONS.every((s) => reviews[s.id] === 'Verified')
-              ? '✓ All sections verified'
-              : 'Review complete — has discrepancies'
-            : `${SECTIONS.length - reviewedCount} section(s) remaining`}
-        </span>
-        <Button
-          onClick={handleSave}
-          isLoading={isSubmitting}
-          size="sm"
-          leftIcon={<Save size={14} />}
-          disabled={reviewedCount < SECTIONS.length}
-        >
-          Save Review
-        </Button>
-      </div>
+      {!disabled && (
+        <div className="px-4 py-3 border-t border-border bg-surface-tint flex items-center justify-between">
+          <span className="text-xs text-[hsl(var(--color-text-muted))]">
+            {reviewedCount === SECTIONS.length
+              ? SECTIONS.every((s) => reviews[s.id] === 'Verified')
+                ? '✓ All sections verified'
+                : 'Review complete — has discrepancies'
+              : `${SECTIONS.length - reviewedCount} section(s) remaining`}
+          </span>
+          <Button
+            onClick={handleSave}
+            isLoading={isSubmitting}
+            size="sm"
+            leftIcon={<Save size={14} />}
+            disabled={reviewedCount < SECTIONS.length}
+          >
+            Save Review
+          </Button>
+        </div>
+      )}
     </Card>
   );
 };

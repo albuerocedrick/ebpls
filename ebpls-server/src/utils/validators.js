@@ -27,6 +27,7 @@ const DraftPayloadSchema = z.object({
 // -----------------------------------------------------------------
 const UAFSubmissionPayloadSchema = z.object({
   // Application Data
+  application_no: z.string().optional(),
   type_id: z.coerce.number().int().positive("Application type ID is required"),
   payment_mode_id: z.coerce.number().int().positive().optional(),
 

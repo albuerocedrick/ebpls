@@ -11,6 +11,7 @@ const paymongo = require('../services/paymongo.service');
 const applicationService = require('../services/application.service');
 const auditService = require('../services/audit.service');
 const { AUDIT_ACTIONS, STATUSES } = require('../utils/constants');
+const { dispatchEmail, EMAIL_TRIGGERS } = require('../services/email.service');
 
 /**
  * Main Webhook Receiver
@@ -152,7 +153,7 @@ async function processSuccessfulPayment(paymentData, eventAttributes, metaAppNo,
     action: AUDIT_ACTIONS.ONLINE_PAYMENT_CONFIRMED,
     entityType: 'transactions',
     entityId: transaction.transaction_id,
-    newValue: { or_number: orNumber, paymongo_payment_id: paymongoPaymentId },
+    newValue: { or_number: orNumber, paymongo_payment_id: paymongoPaymentId, amount: paymentData.attributes.amount / 100 },
     ipAddress: ip
   });
 
@@ -166,7 +167,46 @@ async function processSuccessfulPayment(paymentData, eventAttributes, metaAppNo,
     })
     .eq('log_id', logId);
 
-  // Note: Phase 8 & 9 will trigger PDF generation and Email here.
+  // Phase 9: Wire PAYMENT_RECORDED email for online payments.
+  // Resolve the applicant via the application → businesses → taxpayers → users join.
+  // This runs AFTER the audit & log update so the main flow is fully committed first.
+  const { data: onlineAppOwner } = await supabaseAdmin
+    .from('applications')
+    .select('businesses ( business_name, taxpayers ( first_name, last_name, users ( email ) ) )')
+    .eq('application_no', appNo)
+    .single();
+
+  const onlineTaxpayer = onlineAppOwner?.businesses?.taxpayers;
+  const onlineUser     = onlineTaxpayer?.users;
+
+  if (onlineTaxpayer && onlineUser?.email) {
+    dispatchEmail({
+      triggerEvent:   EMAIL_TRIGGERS.PAYMENT_RECORDED,
+      recipientEmail: onlineUser.email,
+      applicationNo:  appNo,
+      payload: {
+        name:           `${onlineTaxpayer.first_name} ${onlineTaxpayer.last_name}`,
+        applicationNo:  appNo,
+        businessName:   onlineAppOwner.businesses?.business_name || 'your business',
+        orNumber:       orNumber,
+        amount:         paymentData.attributes.amount / 100,
+        paymentChannel: `Online (${paymentChannel})`,
+      },
+    });
+
+    // Phase 9: PERMIT_READY email — fires once here (not on every download click).
+    // Online payments also auto-complete (Paid → Completed), permit is instantly available.
+    dispatchEmail({
+      triggerEvent:   EMAIL_TRIGGERS.PERMIT_READY,
+      recipientEmail: onlineUser.email,
+      applicationNo:  appNo,
+      payload: {
+        name:         `${onlineTaxpayer.first_name} ${onlineTaxpayer.last_name}`,
+        applicationNo: appNo,
+        businessName: onlineAppOwner.businesses?.business_name || 'your business',
+      },
+    });
+  }
 }
 
 /**

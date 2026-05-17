@@ -38,6 +38,11 @@ router.post('/login', authController.login);
  * @desc    Generates a password reset link (sent via email in Phase 9).
  * @access  Public
  */
-router.post('/forgot-password', authController.forgotPassword);
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Updates a user password using a token.
+ * @access  Public
+ */
+router.post('/reset-password', authController.resetPassword);
 
 module.exports = router;

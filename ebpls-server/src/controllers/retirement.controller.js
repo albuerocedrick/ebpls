@@ -9,9 +9,9 @@
 
 const { supabaseAdmin } = require('../config/supabase');
 const { logAction, AUDIT_ACTIONS } = require('../services/audit.service');
-const { emailService } = require('../services/email.service');
+const { dispatchEmail, EMAIL_TRIGGERS } = require('../services/email.service');
 const { createError } = require('../middlewares/error.middleware');
-const { ERROR_CODES, ROLES, EMAIL_TRIGGERS } = require('../utils/constants');
+const { ERROR_CODES, ROLES } = require('../utils/constants');
 
 // -----------------------------------------------------------------
 // RETIREMENT STATUS CONSTANTS (mirrors retirement_status enum in DB)
@@ -82,6 +82,23 @@ const submitRetirement = async (req, res, next) => {
     // 3. Guard: business must not already be retired
     if (business.is_retired) {
       throw createError('This business is already retired.', 409, ERROR_CODES.CONFLICT);
+    }
+
+    // 3b. Guard: business must have at least one 'Completed' permit application
+    const { data: completedApp, error: compAppErr } = await supabaseAdmin
+      .from('applications')
+      .select('application_no')
+      .eq('business_id', business_id)
+      .eq('status', 'Completed')
+      .limit(1)
+      .maybeSingle();
+
+    if (compAppErr || !completedApp) {
+      throw createError(
+        'This business is not eligible for retirement as it has never been successfully registered/completed.',
+        400,
+        ERROR_CODES.VALIDATION_ERROR
+      );
     }
 
     // 4. Guard: no active (non-Completed) retirement application for this business
@@ -530,18 +547,7 @@ const completeRetirement = async (req, res, next) => {
       throw createError('Failed to mark business as retired.', 500, ERROR_CODES.INTERNAL_ERROR);
     }
 
-    // 5. Trigger email notification
-    await emailService.enqueueEmail({
-      applicationNo: null,
-      triggerEvent: EMAIL_TRIGGERS.RETIREMENT_COMPLETE,
-      payload: {
-        retirement_id: id,
-        business_id: retirement.business_id,
-        submitted_by: retirement.submitted_by,
-      },
-    });
-
-    // 6. Audit
+    // 5. Audit
     await logAction({
       userId,
       action: AUDIT_ACTIONS.RETIREMENT_COMPLETED,
@@ -552,11 +558,38 @@ const completeRetirement = async (req, res, next) => {
       ipAddress: req.ip || null,
     });
 
-    return res.status(200).json({
+    // Return response immediately — email is fire-and-forget below.
+    res.status(200).json({
       success: true,
       message: 'Business retirement completed. The business is now officially retired.',
       data: updated,
     });
+
+    // Phase 9: Wire RETIREMENT_COMPLETE email trigger.
+    // Resolve the applicant via businesses → taxpayers → users join using business_id.
+    const { data: retirementBiz } = await supabaseAdmin
+      .from('businesses')
+      .select('business_name, taxpayers ( first_name, last_name, users ( email ) )')
+      .eq('business_id', retirement.business_id)
+      .single();
+
+    const retireeTaxpayer = retirementBiz?.taxpayers;
+    const retireeUser     = retireeTaxpayer?.users;
+
+    if (retireeTaxpayer && retireeUser?.email) {
+      dispatchEmail({
+        triggerEvent:   EMAIL_TRIGGERS.RETIREMENT_COMPLETE,
+        recipientEmail: retireeUser.email,
+        applicationNo:  null, // Retirement has no application_no
+        payload: {
+          name:         `${retireeTaxpayer.first_name} ${retireeTaxpayer.last_name}`,
+          businessName: retirementBiz?.business_name || 'your business',
+          retirementId: id,
+          cessationDate: retirement.cessation_date ? new Date(retirement.cessation_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A',
+          completedAt:  updated.completed_at,
+        },
+      });
+    }
   } catch (err) {
     next(err);
   }
@@ -581,12 +614,27 @@ const getMyBusinesses = async (req, res, next) => {
       return res.status(200).json({ success: true, data: [] });
     }
 
-    // Fetch active businesses
+    // 1. Fetch all unique business_ids belonging to this taxpayer that have a 'Completed' application
+    const { data: completedApps, error: appErr } = await supabaseAdmin
+      .from('applications')
+      .select('business_id')
+      .eq('status', 'Completed');
+
+    if (appErr) throw appErr;
+
+    const completedBizIds = [...new Set(completedApps?.map((app) => app.business_id).filter(Boolean))];
+
+    if (completedBizIds.length === 0) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    // 2. Fetch active businesses matching those IDs
     const { data: businesses, error: bizErr } = await supabaseAdmin
       .from('businesses')
       .select('business_id, business_name, trade_name, address_line1, barangay')
       .eq('taxpayer_id', taxpayer.taxpayer_id)
       .eq('is_retired', false)
+      .in('business_id', completedBizIds)
       .order('business_name', { ascending: true });
 
     if (bizErr) throw bizErr;

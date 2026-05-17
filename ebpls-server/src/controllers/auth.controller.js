@@ -39,8 +39,9 @@ const env = require('../config/env');
 const { supabaseAdmin } = require('../config/supabase');
 const { logAction, AUDIT_ACTIONS } = require('../services/audit.service');
 const { successResponse, errorResponse, getClientIp } = require('../utils/helpers');
-const { ERROR_CODES }  = require('../utils/constants');
+const { ERROR_CODES, EMAIL_TRIGGERS }  = require('../utils/constants');
 const { createError }  = require('../middlewares/error.middleware');
+const { dispatchEmail } = require('../services/email.service');
 
 // =================================================================
 // ZOD VALIDATION SCHEMAS
@@ -117,18 +118,17 @@ const register = async (req, res, next) => {
     const input = registerSchema.parse(req.body);
 
     // -----------------------------------------------------------
-    // STEP 2: Create the auth.users entry via Supabase Admin API.
-    // email_confirm: true skips email verification for this system
-    // (municipality staff register applicants directly, or applicants
-    // self-register with a pre-verified flow — TBD in Phase 9).
-    // ASSUMPTION: Email verification is skipped at registration.
-    // The Admin can configure Supabase email confirmation settings
-    // separately if required.
+    // STEP 2: Create the auth.users entry AND generate a verification
+    // link simultaneously via Supabase Admin API generateLink.
+    // By using generateLink, Supabase DOES NOT send the email itself.
+    // This allows us to bypass Supabase's strict email rate limits
+    // and send it via our custom email engine (Ethereal/Brevo).
     // -----------------------------------------------------------
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email:             input.email,
-      password:          input.password,
-      email_confirm:     true,
+    const { data: linkData, error: authError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'signup',
+      email: input.email,
+      password: input.password,
+      options: { redirectTo: 'http://localhost:5173/verify-success' }
     });
 
     if (authError) {
@@ -150,7 +150,8 @@ const register = async (req, res, next) => {
       ));
     }
 
-    const newUserId = authData.user.id;
+    const newUserId  = linkData.user.id;
+    const actionLink = linkData.properties?.action_link;
 
     // -----------------------------------------------------------
     // STEP 3: Create the taxpayer profile row.
@@ -196,10 +197,25 @@ const register = async (req, res, next) => {
     });
 
     // -----------------------------------------------------------
-    // STEP 5: Return success. Do not return the password.
+    // STEP 5: Dispatch the ACCOUNT_CREATED email with the confirm link.
+    // -----------------------------------------------------------
+    if (actionLink) {
+      dispatchEmail({
+        triggerEvent:   EMAIL_TRIGGERS.ACCOUNT_CREATED,
+        recipientEmail: input.email,
+        applicationNo:  null,
+        payload: {
+          name:       `${input.firstName} ${input.lastName}`,
+          actionLink: actionLink
+        }
+      });
+    }
+
+    // -----------------------------------------------------------
+    // STEP 6: Return success. Do not return the password.
     // -----------------------------------------------------------
     return res.status(201).json(
-      successResponse('Account created successfully. You may now log in.', {
+      successResponse('Account created successfully. Please check your email to verify your account.', {
         userId: newUserId,
         email:  input.email,
       })
@@ -299,6 +315,7 @@ const forgotPassword = async (req, res, next) => {
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type:  'recovery',
       email: input.email,
+      options: { redirectTo: 'http://localhost:5173/reset-password' }
     });
 
     if (linkError) {
@@ -323,19 +340,23 @@ const forgotPassword = async (req, res, next) => {
     }
 
     // -----------------------------------------------------------
-    // STEP 4: Return generic response.
-    // In development, include the actual link for easy testing.
-    // In production, Phase 9 email.service will handle delivery.
+    // STEP 4: Dispatch the PASSWORD_RESET email with the link.
     // -----------------------------------------------------------
-    const responseData = process.env.NODE_ENV === 'development' && linkData?.properties?.action_link
-      ? { resetLink: linkData.properties.action_link }
-      : null;
+    const actionLink = linkData?.properties?.action_link;
+
+    if (actionLink) {
+      dispatchEmail({
+        triggerEvent:   EMAIL_TRIGGERS.PASSWORD_RESET,
+        recipientEmail: input.email,
+        applicationNo:  null,
+        payload: {
+          actionLink: actionLink
+        }
+      });
+    }
 
     return res.status(200).json(
-      successResponse(
-        'If an account exists for that email, a password reset link has been sent.',
-        responseData
-      )
+      successResponse('If an account exists for that email, a password reset link has been sent.')
     );
 
   } catch (err) {
@@ -343,4 +364,46 @@ const forgotPassword = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, forgotPassword };
+/**
+ * RESET PASSWORD
+ * POST /api/auth/reset-password
+ * Actual update of the password using the token from the email.
+ */
+const resetPassword = async (req, res, next) => {
+  try {
+    const { password, token } = req.body;
+
+    if (!password || !token) {
+      throw createError(400, 'Password and token are required.');
+    }
+
+    // 1. Verify the token and get the user
+    // getUser() works with the access_token passed in from the frontend hash
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+
+    if (userError || !user) {
+      console.error('[auth.controller] resetPassword token error:', userError?.message);
+      throw createError(401, 'Invalid or expired reset token.');
+    }
+
+    // 2. Update the user's password
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      user.id,
+      { password }
+    );
+
+    if (updateError) {
+      console.error('[auth.controller] resetPassword update error:', updateError.message);
+      throw createError(500, 'Failed to update password.');
+    }
+
+    return res.status(200).json(
+      successResponse('Password has been updated successfully. You can now log in.')
+    );
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, forgotPassword, resetPassword };

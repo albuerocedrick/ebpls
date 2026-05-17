@@ -1,46 +1,118 @@
 const nodemailer = require('nodemailer');
+const https = require('https');
 const env = require('./env');
 
-let transporter;
+// ASSUMPTION: In 'production', env.js Zod superRefine already guarantees
+// SMTP_HOST, SMTP_USER, SMTP_PASS, and EMAIL_FROM are present.
+// In 'development' or 'test', we fall back to Ethereal Email automatically.
 
-// Only initialize the real transporter if the credentials are provided AND aren't the placeholders
-if (env.SMTP_HOST && env.SMTP_USER && env.SMTP_USER !== 'your_smtp_login') {
-  transporter = nodemailer.createTransport({
-    host: env.SMTP_HOST,
-    port: env.SMTP_PORT || 587,
-    secure: env.SMTP_PORT === 465, // true for 465, false for other ports
-    auth: {
-      user: env.SMTP_USER,
-      pass: env.SMTP_PASS,
-    },
-  });
-}
+let _transporterPromise = null;
 
-const sendEmail = async ({ to, subject, html }) => {
-  // ASSUMPTION: 'to' is always a valid email address, verified before calling
-  
-  if (!transporter) {
-    console.log('⚠️ [DEV MODE] Email skipped (SMTP not configured). Would have sent to:', to);
-    console.log(`Subject: ${subject}`);
-    return { skipped: true, messageId: 'mock-id' };
-  }
+/**
+ * Returns a singleton Nodemailer transporter (Only used for Ethereal now).
+ */
+const getEtherealTransporter = () => {
+  if (_transporterPromise) return _transporterPromise;
 
-  try {
-    const info = await transporter.sendMail({
-      from: env.EMAIL_FROM || 'noreply@localhost',
-      to,
-      subject,
-      html,
+  _transporterPromise = nodemailer.createTestAccount().then((account) => {
+    console.log('🔧 [DEV] Ethereal Email account created. All emails are captured — nothing is sent to real inboxes.');
+    return nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: {
+        user: account.user,
+        pass: account.pass,
+      },
     });
-    console.log('✉️ Message sent: %s', info.messageId);
-    return info;
-  } catch (error) {
-    console.error('❌ Error sending email:', error);
-    throw error;
-  }
+  });
+
+  return _transporterPromise;
 };
 
-module.exports = {
-  transporter,
-  sendEmail
+/**
+ * Sends email using the Brevo REST API to bypass strict SMTP IP blocking.
+ */
+const sendViaBrevoAPI = (to, subject, html, attachments = []) => {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({
+      sender: { email: env.EMAIL_FROM || 'noreply@liliw.gov.ph', name: 'eBPLS Municipality of Liliw' },
+      to: [{ email: to }],
+      subject: subject,
+      htmlContent: html,
+      attachment: attachments.length > 0 ? attachments.map(a => ({
+        name: a.filename,
+        // Ensure content is base64 encoded as required by Brevo API
+        content: Buffer.isBuffer(a.content) ? a.content.toString('base64') : Buffer.from(a.content || '').toString('base64')
+      })) : undefined
+    });
+
+    const options = {
+      hostname: 'api.brevo.com',
+      path: '/v3/smtp/email',
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': env.BREVO_API_KEY || env.SMTP_PASS, // Prefer dedicated API Key
+        'content-type': 'application/json',
+        'content-length': Buffer.byteLength(payload)
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try {
+            const json = JSON.parse(data);
+            console.log(`✉️  Email sent via Brevo API: ${json.messageId} → ${to}`);
+            resolve({ messageId: json.messageId, previewUrl: null });
+          } catch (e) {
+            resolve({ messageId: 'api-success-no-id', previewUrl: null });
+          }
+        } else {
+          reject(new Error(`Brevo API Error: ${res.statusCode} ${data}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
 };
+
+/**
+ * Sends an email. Automatically routes to Brevo API if configured, else Ethereal.
+ * @param {object} options
+ * @param {string} options.to - Recipient email address.
+ * @param {string} options.subject - Email subject line.
+ * @param {string} options.html - Rendered HTML body.
+ * @param {Array}  [options.attachments] - Optional Nodemailer attachment objects.
+ * @returns {Promise<{messageId: string, previewUrl?: string}>}
+ */
+const sendEmail = async ({ to, subject, html, attachments = [] }) => {
+  // If we have Brevo credentials, use the REST API to bypass IP blocking
+  if (env.SMTP_HOST && env.SMTP_HOST.includes('brevo.com') && env.SMTP_PASS) {
+    return sendViaBrevoAPI(to, subject, html, attachments);
+  }
+
+  // Fallback to Nodemailer for Ethereal (Development/Test)
+  const transporter = await getEtherealTransporter();
+
+  const info = await transporter.sendMail({
+    from: env.EMAIL_FROM || '"eBPLS Municipality of Liliw" <noreply@liliw.gov.ph>',
+    to,
+    subject,
+    html,
+    attachments,
+  });
+
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  console.log(`📬 [DEV] Email preview URL: ${previewUrl}`);
+
+  return { messageId: info.messageId, previewUrl };
+};
+
+module.exports = { getTransporter: getEtherealTransporter, sendEmail };

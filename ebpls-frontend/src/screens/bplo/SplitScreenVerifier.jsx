@@ -28,8 +28,23 @@ import {
   ChevronDown,
   Eye,
   Save,
+  MapPin,
 } from 'lucide-react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for React-Leaflet missing default marker icon
+const defaultIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -101,6 +116,8 @@ const INITIAL_CHECKLIST = [
   { requirementId: 5, label: 'Zoning Clearance', status: DOC_STATUS.PENDING },
   { requirementId: 6, label: 'Lease Contract / TCT', status: DOC_STATUS.PENDING },
   { requirementId: 7, label: 'Community Tax Certificate (CTC)', status: DOC_STATUS.PENDING },
+  { requirementId: 17, label: "Owner's Valid ID (Front)", status: DOC_STATUS.PENDING },
+  { requirementId: 19, label: "Owner's Valid ID (Back)", status: DOC_STATUS.PENDING },
 ];
 
 // =========================================
@@ -117,14 +134,18 @@ const isImageUrl = (url, filePath) => {
 
 const SplitScreenVerifier = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { appNo } = useParams();
   const addToast = useUIStore((s) => s.addToast);
+
+  const isAdminView = location.pathname.startsWith('/admin');
 
   const [checklist, setChecklist] = useState(INITIAL_CHECKLIST);
   const [selectedDocId, setSelectedDocId] = useState(null);
   const [docViewerUrl, setDocViewerUrl] = useState(null);
   const [isLoadingDoc, setIsLoadingDoc] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [leftPaneMode, setLeftPaneMode] = useState('doc'); // 'doc' | 'map'
   const [remarks, setRemarks] = useState('');
   const [isSubmittingVerify, setIsSubmittingVerify] = useState(false);
   const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
@@ -146,7 +167,9 @@ const SplitScreenVerifier = () => {
       if (!appNo) return;
       try {
         // Transition to Under Review when officer opens the verifier
-        await apiClient.put(`/api/bplo/applications/start-review/${appNo}`).catch(() => {});
+        if (!isAdminView) {
+          await apiClient.put(`/api/bplo/applications/start-review/${appNo}`).catch(() => {});
+        }
 
         const response = await apiClient.get(`/api/bplo/applications/${appNo}`);
         const data = response.data || response;
@@ -175,7 +198,7 @@ const SplitScreenVerifier = () => {
     };
 
     fetchApplicationDetails();
-  }, [appNo, addToast]);
+  }, [appNo, addToast, isAdminView]);
 
   // ─── Guard Logic (Task 4.10) ──────────────────────────────────
   const canVerify = useMemo(() => {
@@ -337,12 +360,12 @@ const SplitScreenVerifier = () => {
     <div className="flex flex-col gap-5">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2">
-        <Link to={ROUTES.BPLO_DASHBOARD} className="flex items-center gap-1 text-sm text-accent hover:opacity-80 transition-opacity">
-          <ChevronLeft size={16} /> Dashboard
+        <Link to={isAdminView ? '/admin/applications' : ROUTES.BPLO_DASHBOARD} className="flex items-center gap-1 text-sm text-accent hover:opacity-80 transition-opacity">
+          <ChevronLeft size={16} /> {isAdminView ? 'Application Explorer' : 'Dashboard'}
         </Link>
         <span className="text-[hsl(var(--color-text-muted))] text-sm">/</span>
         <span className="text-sm text-[hsl(var(--color-text-muted))]">
-          Verify {appNo || 'Select an application'}
+          {isAdminView ? 'Inspect' : 'Verify'} {appNo || 'Select an application'}
         </span>
       </div>
 
@@ -368,93 +391,154 @@ const SplitScreenVerifier = () => {
       {/* THREE-PANEL LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-[600px]">
 
-        {/* LEFT PANE: Document Viewer */}
+        {/* LEFT PANE: Document Viewer / Map View */}
         <div className="lg:col-span-2 flex flex-col gap-3">
           <Card padding="none" className="flex-1 flex flex-col">
             <Card.Header>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileSearch size={15} className="text-[hsl(var(--color-text-muted))]" />
-                  <p className="text-sm font-semibold text-[hsl(var(--color-text))]">
-                    {selectedDoc ? selectedDoc.label : 'Document Viewer'}
-                  </p>
+                {/* Tab switcher */}
+                <div className="flex bg-[hsl(var(--color-surface-tint))] p-1 rounded-lg gap-1">
+                  <button
+                    onClick={() => setLeftPaneMode('doc')}
+                    className={[
+                      'flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all',
+                      leftPaneMode === 'doc'
+                        ? 'bg-white shadow-sm text-[hsl(var(--color-text))]'
+                        : 'text-[hsl(var(--color-text-muted))] hover:text-[hsl(var(--color-text))]',
+                    ].join(' ')}
+                  >
+                    <FileSearch size={13} /> Documents
+                  </button>
+                  <button
+                    onClick={() => setLeftPaneMode('map')}
+                    className={[
+                      'flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all',
+                      leftPaneMode === 'map'
+                        ? 'bg-white shadow-sm text-[hsl(var(--color-text))]'
+                        : 'text-[hsl(var(--color-text-muted))] hover:text-[hsl(var(--color-text))]',
+                    ].join(' ')}
+                  >
+                    <MapPin size={13} /> Location Pin
+                  </button>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={handleZoomOut} className="p-1.5 rounded hover:bg-surface-tint transition-colors" aria-label="Zoom out">
-                    <ZoomOut size={14} className="text-[hsl(var(--color-text-muted))]" />
-                  </button>
-                  <span className="text-xs font-mono text-[hsl(var(--color-text-muted))] min-w-[3rem] text-center">{zoomLevel}%</span>
-                  <button onClick={handleZoomIn} className="p-1.5 rounded hover:bg-surface-tint transition-colors" aria-label="Zoom in">
-                    <ZoomIn size={14} className="text-[hsl(var(--color-text-muted))]" />
-                  </button>
-                  <button onClick={handleZoomReset} className="p-1.5 rounded hover:bg-surface-tint transition-colors" aria-label="Reset zoom">
-                    <RotateCcw size={14} className="text-[hsl(var(--color-text-muted))]" />
-                  </button>
-                </div>
+                {/* Zoom controls (only in doc mode) */}
+                {leftPaneMode === 'doc' && (
+                  <div className="flex items-center gap-1">
+                    <button onClick={handleZoomOut} className="p-1.5 rounded hover:bg-surface-tint transition-colors" aria-label="Zoom out">
+                      <ZoomOut size={14} className="text-[hsl(var(--color-text-muted))]" />
+                    </button>
+                    <span className="text-xs font-mono text-[hsl(var(--color-text-muted))] min-w-[3rem] text-center">{zoomLevel}%</span>
+                    <button onClick={handleZoomIn} className="p-1.5 rounded hover:bg-surface-tint transition-colors" aria-label="Zoom in">
+                      <ZoomIn size={14} className="text-[hsl(var(--color-text-muted))]" />
+                    </button>
+                    <button onClick={handleZoomReset} className="p-1.5 rounded hover:bg-surface-tint transition-colors" aria-label="Reset zoom">
+                      <RotateCcw size={14} className="text-[hsl(var(--color-text-muted))]" />
+                    </button>
+                  </div>
+                )}
               </div>
             </Card.Header>
-            <Card.Body className="flex-1 overflow-auto p-2">
-              <div
-                className="min-h-[450px] bg-surface-tint rounded-md border border-border flex items-center justify-center overflow-hidden"
-                style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top left' }}
-              >
-                {isLoadingDoc ? (
-                  <div className="flex flex-col items-center gap-2 py-12">
-                    <div className="w-6 h-6 rounded-full border-2 border-border border-t-accent animate-spin" />
-                    <p className="text-xs text-[hsl(var(--color-text-muted))]">Loading document...</p>
-                  </div>
-                ) : docViewerUrl ? (
-                  isImageUrl(docViewerUrl, selectedDoc?.filePath) ? (
-                    <img
-                      key={docViewerUrl}
-                      src={docViewerUrl}
-                      alt={selectedDoc?.label || 'Document'}
-                      className="max-w-full h-auto object-contain"
-                    />
-                  ) : (
-                    /* Use <object> for PDF — Chrome blocks iframe PDF with sandbox */
-                    <object
-                      key={docViewerUrl}
-                      data={docViewerUrl}
-                      type="application/pdf"
-                      className="w-full min-h-[550px]"
-                      aria-label={selectedDoc?.label || 'PDF Document'}
-                    >
-                      {/* Fallback if object tag fails */}
-                      <div className="flex flex-col items-center gap-3 py-12 px-6">
-                        <FileSearch size={32} className="text-[hsl(var(--color-text-muted))]" />
-                        <p className="text-sm text-[hsl(var(--color-text))] text-center">
-                          PDF cannot be displayed inline.
-                        </p>
-                        <a
-                          href={docViewerUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-accent underline underline-offset-2 hover:opacity-80"
-                        >
-                          Open PDF in new tab
-                        </a>
-                      </div>
-                    </object>
-                  )
-                ) : selectedDoc ? (
-                  <div className="text-center px-6 py-12">
-                    <FileSearch size={32} className="text-[hsl(var(--color-text-muted))] mx-auto mb-3" />
-                    <p className="text-sm font-medium text-[hsl(var(--color-text))]">{selectedDoc.label}</p>
-                    <p className="text-xs text-[hsl(var(--color-text-muted))] mt-1">
-                      No document uploaded for this requirement.
-                    </p>
-                  </div>
+
+            {/* MAP VIEW */}
+            {leftPaneMode === 'map' ? (
+              <div className="flex-1 flex flex-col">
+                {applicationMeta?.latitude && applicationMeta?.longitude ? (
+                  <>
+                    <div className="px-4 py-2 bg-[hsl(var(--color-surface-tint))] border-b border-border">
+                      <p className="text-xs text-[hsl(var(--color-text-muted))]">
+                        Declared address: <span className="font-medium text-[hsl(var(--color-text))]">{applicationMeta.address_line1}, {applicationMeta.barangay}</span>
+                      </p>
+                      <p className="text-[11px] text-[hsl(var(--color-text-muted))] mt-0.5">
+                        Coordinates: {applicationMeta.latitude}, {applicationMeta.longitude}
+                      </p>
+                    </div>
+                    <div className="flex-1 min-h-[450px]">
+                      <MapContainer
+                        center={[applicationMeta.latitude, applicationMeta.longitude]}
+                        zoom={17}
+                        scrollWheelZoom={true}
+                        style={{ height: '100%', width: '100%', minHeight: '450px' }}
+                      >
+                        <TileLayer
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <Marker
+                          position={[applicationMeta.latitude, applicationMeta.longitude]}
+                          icon={defaultIcon}
+                        />
+                      </MapContainer>
+                    </div>
+                  </>
                 ) : (
-                  <div className="text-center px-6 py-12">
-                    <Eye size={28} className="text-[hsl(var(--color-text-muted))] mx-auto mb-3 opacity-40" />
-                    <p className="text-sm text-[hsl(var(--color-text-muted))]">
-                      Click the eye icon on a document to preview it here.
+                  <div className="flex-1 flex flex-col items-center justify-center gap-3 py-12 px-6">
+                    <MapPin size={32} className="text-[hsl(var(--color-text-muted))] opacity-40" />
+                    <p className="text-sm text-[hsl(var(--color-text-muted))] text-center">
+                      No location pin provided by the applicant.
+                    </p>
+                    <p className="text-xs text-[hsl(var(--color-text-muted))] text-center">
+                      The declared address is: <span className="font-medium">{applicationMeta?.address_line1 || '—'}, {applicationMeta?.barangay || '—'}</span>
                     </p>
                   </div>
                 )}
               </div>
-            </Card.Body>
+            ) : (
+              /* DOCUMENT VIEWER */
+              <Card.Body className="flex-1 overflow-auto p-2">
+                <div
+                  className="min-h-[450px] bg-surface-tint rounded-md border border-border flex items-center justify-center overflow-hidden"
+                  style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top left' }}
+                >
+                  {isLoadingDoc ? (
+                    <div className="flex flex-col items-center gap-2 py-12">
+                      <div className="w-6 h-6 rounded-full border-2 border-border border-t-accent animate-spin" />
+                      <p className="text-xs text-[hsl(var(--color-text-muted))]">Loading document...</p>
+                    </div>
+                  ) : docViewerUrl ? (
+                    isImageUrl(docViewerUrl, selectedDoc?.filePath) ? (
+                      <img
+                        key={docViewerUrl}
+                        src={docViewerUrl}
+                        alt={selectedDoc?.label || 'Document'}
+                        className="max-w-full h-auto object-contain"
+                      />
+                    ) : (
+                      <object
+                        key={docViewerUrl}
+                        data={docViewerUrl}
+                        type="application/pdf"
+                        className="w-full min-h-[550px]"
+                        aria-label={selectedDoc?.label || 'PDF Document'}
+                      >
+                        <div className="flex flex-col items-center gap-3 py-12 px-6">
+                          <FileSearch size={32} className="text-[hsl(var(--color-text-muted))]" />
+                          <p className="text-sm text-[hsl(var(--color-text))] text-center">PDF cannot be displayed inline.</p>
+                          <a
+                            href={docViewerUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-accent underline underline-offset-2 hover:opacity-80"
+                          >
+                            Open PDF in new tab
+                          </a>
+                        </div>
+                      </object>
+                    )
+                  ) : selectedDoc ? (
+                    <div className="text-center px-6 py-12">
+                      <FileSearch size={32} className="text-[hsl(var(--color-text-muted))] mx-auto mb-3" />
+                      <p className="text-sm font-medium text-[hsl(var(--color-text))]">{selectedDoc.label}</p>
+                      <p className="text-xs text-[hsl(var(--color-text-muted))] mt-1">No document uploaded for this requirement.</p>
+                    </div>
+                  ) : (
+                    <div className="text-center px-6 py-12">
+                      <Eye size={28} className="text-[hsl(var(--color-text-muted))] mx-auto mb-3 opacity-40" />
+                      <p className="text-sm text-[hsl(var(--color-text-muted))]">Click the eye icon on a document to preview it here.</p>
+                    </div>
+                  )}
+                </div>
+              </Card.Body>
+            )}
           </Card>
         </div>
 
@@ -510,11 +594,13 @@ const SplitScreenVerifier = () => {
                         ) : (
                           <div className="relative shrink-0">
                             <select
+                              disabled={isAdminView}
                               value={item.status}
                               onChange={(e) => handleStatusChange(item.requirementId, e.target.value)}
                               className={[
                                 'appearance-none text-xs font-medium pl-2 pr-6 py-1 rounded border cursor-pointer outline-none transition-colors',
                                 statusBgColor(item.status),
+                                isAdminView ? 'cursor-not-allowed opacity-80' : '',
                               ].join(' ')}
                               aria-label={`Status for ${item.label}`}
                             >
@@ -554,6 +640,7 @@ const SplitScreenVerifier = () => {
             applicationData={applicationData}
             initialData={initialDataReviews}
             onChange={setIsDataReviewVerified}
+            disabled={isAdminView}
           />
         </div>
       </div>
@@ -579,30 +666,40 @@ const SplitScreenVerifier = () => {
             )}
           </div>
 
-          <textarea
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-            rows={3}
-            placeholder="Required when returning application: explain missing/incorrect documents or data."
-            className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-[hsl(var(--color-text))] outline-none focus:ring-2 focus:ring-accent resize-none"
-            aria-label="Return remarks"
-          />
+          {isAdminView ? (
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-md flex items-center justify-center">
+              <p className="text-sm text-blue-700 font-medium">
+                You are viewing this application in Read-Only Administrator Mode. Actions are disabled.
+              </p>
+            </div>
+          ) : (
+            <>
+              <textarea
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                rows={3}
+                placeholder="Required when returning application: explain missing/incorrect documents or data."
+                className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-[hsl(var(--color-text))] outline-none focus:ring-2 focus:ring-accent resize-none"
+                aria-label="Return remarks"
+              />
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button variant="secondary" fullWidth leftIcon={<Save size={16} />} onClick={handleSaveProgress} isLoading={isSavingProgress} disabled={!appNo}>
-              Save Progress
-            </Button>
-            <Button variant="primary" fullWidth leftIcon={<CheckSquare size={16} />} onClick={handleVerify} isLoading={isSubmittingVerify} disabled={!appNo || !canVerify}>
-              Approve Application
-            </Button>
-            <Button variant="danger" fullWidth leftIcon={<XSquare size={16} />} onClick={handleReturn} isLoading={isSubmittingReturn} disabled={!appNo || !canReturn}>
-              Return with Remarks
-            </Button>
-          </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button variant="secondary" fullWidth leftIcon={<Save size={16} />} onClick={handleSaveProgress} isLoading={isSavingProgress} disabled={!appNo}>
+                  Save Progress
+                </Button>
+                <Button variant="primary" fullWidth leftIcon={<CheckSquare size={16} />} onClick={handleVerify} isLoading={isSubmittingVerify} disabled={!appNo || !canVerify}>
+                  Approve Application
+                </Button>
+                <Button variant="danger" fullWidth leftIcon={<XSquare size={16} />} onClick={handleReturn} isLoading={isSubmittingReturn} disabled={!appNo || !canReturn}>
+                  Return with Remarks
+                </Button>
+              </div>
 
-          <p className="text-xs text-[hsl(var(--color-text-muted))] text-center mt-1">
-            Approve is enabled only when all documents are verified, all data sections are reviewed, and barangay clearance (if applicable) is issued.
-          </p>
+              <p className="text-xs text-[hsl(var(--color-text-muted))] text-center mt-1">
+                Approve is enabled only when all documents are verified, all data sections are reviewed, and barangay clearance (if applicable) is issued.
+              </p>
+            </>
+          )}
         </div>
       </Card>
     </div>

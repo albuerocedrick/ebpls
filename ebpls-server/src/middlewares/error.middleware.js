@@ -79,6 +79,11 @@ const errorHandler = (err, req, res, next) => {
   // Always log the error server-side for debugging and incident response.
   console.error(`[error.middleware] ${req.method} ${req.originalUrl} — ${err.message}`);
 
+  // Track error in global metrics
+  if (global.systemStats) {
+    global.systemStats.errors++;
+  }
+
   // Log full stack trace in development only.
   if (process.env.NODE_ENV === 'development') {
     console.error(err.stack);

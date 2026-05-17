@@ -104,6 +104,7 @@ const AUDIT_ACTIONS = Object.freeze({
 
   // Admin
   MASTER_DATA_UPDATED:        'MASTER_DATA_UPDATED',
+  DOCUMENT_TEMPLATE_UPLOADED: 'DOCUMENT_TEMPLATE_UPLOADED',
 });
 
 // -----------------------------------------------------------------

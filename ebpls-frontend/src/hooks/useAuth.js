@@ -116,31 +116,25 @@ function useAuth() {
           // Mock: simulate a short network delay then succeed.
           await new Promise((r) => setTimeout(r, 600));
         } else {
-          await apiClient.post(API_ENDPOINTS.AUTH_REGISTER, {
-            firstName, // Corrected to camelCase for backend Zod schema
-            lastName,  // Corrected to camelCase for backend Zod schema
+          const response = await apiClient.post(API_ENDPOINTS.AUTH_REGISTER, {
+            firstName,
+            lastName,
             email,
             password,
           });
+          return response; // Return the full response for the UI to handle
         }
-
-        addToast({
-          message: 'Account created! Please sign in.',
-          type: TOAST_TYPE.SUCCESS,
-          duration: 5000,
-        });
-
-        navigate(ROUTES.LOGIN, { replace: true });
       } catch (err) {
         addToast({
           message: err.message || 'Registration failed. Please try again.',
           type: TOAST_TYPE.ERROR,
         });
+        throw err; // Rethrow so the component knows it failed
       } finally {
         setIsLoading(false);
       }
     },
-    [navigate, addToast],
+    [addToast],
   );
 
   // =========================================

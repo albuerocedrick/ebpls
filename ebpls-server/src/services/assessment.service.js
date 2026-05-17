@@ -53,10 +53,12 @@ const calculateFees = async (applicationNo) => {
       // Logic: Use fixed_amount if exists, otherwise fallback to placeholder
       amount = Number(fee.fixed_amount || 500); 
     } else if (fee.computation_basis === 'Gross_Sales') {
-      // Placeholder: 2% of gross sales or capitalization (whichever is applicable)
-      // In production, this would use a complex bracket/tier schedule.
+      // Use dynamic percentage_value if populated, otherwise fallback to 2% (0.02)
       const base = totalGrossSales > 0 ? totalGrossSales : totalCapital;
-      amount = base * 0.02; 
+      const rate = fee.percentage_value !== null && fee.percentage_value !== undefined 
+        ? Number(fee.percentage_value) 
+        : 0.02; 
+      amount = base * rate; 
     }
 
     results.push({
@@ -72,7 +74,7 @@ const calculateFees = async (applicationNo) => {
 
     const referenceFee = results.find(r => r.fee_type_id === fee.percentage_of_id);
     const refAmount = referenceFee ? referenceFee.amount : 0;
-    const amount = refAmount * (Number(fee.percentage_value) / 100);
+    const amount = refAmount * Number(fee.percentage_value || 0);
 
     results.push({
       fee_type_id: fee.id,
@@ -159,15 +161,23 @@ const overrideLineItem = async (lineItemId, newAmount, reason, officerUserId) =>
 
   if (updateError) throw createError('Failed to update line item.', 500, ERROR_CODES.INTERNAL_ERROR);
 
-  // 3. Special Logic: Recalculate Fire Safety if Mayor's Permit (ID=1) was changed
-  if (currentItem.fee_type_id === 1) {
-    // Fire Safety (ID=8) is 10% of Mayor's Permit
-    const fireSafetyAmount = Math.round((newAmount * 0.10) * 100) / 100;
-    await supabaseAdmin
-      .from('assessment_line_items')
-      .update({ amount: fireSafetyAmount })
-      .eq('assessment_id', assessmentId)
-      .eq('fee_type_id', 8);
+  // 3. Dynamic Logic: Recalculate dependent percentage fees instead of hardcoding Mayor/BFP logic
+  const { data: dependentFees } = await supabaseAdmin
+    .from('fee_types')
+    .select('id, percentage_value')
+    .eq('percentage_of_id', currentItem.fee_type_id)
+    .eq('computation_basis', 'Percentage')
+    .eq('is_active', true);
+
+  if (dependentFees && dependentFees.length > 0) {
+    for (const depFee of dependentFees) {
+      const depAmount = Math.round((newAmount * Number(depFee.percentage_value || 0)) * 100) / 100;
+      await supabaseAdmin
+        .from('assessment_line_items')
+        .update({ amount: depAmount })
+        .eq('assessment_id', assessmentId)
+        .eq('fee_type_id', depFee.id);
+    }
   }
 
   // 4. Recalculate total assessment amount

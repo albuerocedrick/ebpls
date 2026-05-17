@@ -48,7 +48,11 @@ async function request(endpoint, options = {}) {
     },
   };
 
-  if (options.body && typeof options.body === 'object') {
+  if (options.body instanceof FormData) {
+    config.body = options.body;
+    // When using FormData, fetch automatically sets the correct Content-Type with boundary
+    delete config.headers['Content-Type'];
+  } else if (options.body && typeof options.body === 'object') {
     config.body = JSON.stringify(options.body);
   }
 

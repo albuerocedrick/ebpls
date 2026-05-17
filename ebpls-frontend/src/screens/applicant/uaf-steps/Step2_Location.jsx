@@ -1,13 +1,30 @@
 // src/screens/applicant/uaf-steps/Step2_Location.jsx
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import useApplicationStore from '../../../store/applicationStore';
 import InteractiveLocationPin from '../../../components/shared/InteractiveLocationPin';
 import { MapPin, Building2, Lock } from 'lucide-react';
+import { BARANGAYS_LILIW, API_ENDPOINTS } from '../../../utils/constants';
+import apiClient from '../../../utils/apiClient';
 
 const Step2_Location = () => {
   const data = useApplicationStore((state) => state.formData.step2);
   const setFormField = useApplicationStore((state) => state.setFormField);
+  const [barangayList, setBarangayList] = useState(BARANGAYS_LILIW);
+
+  useEffect(() => {
+    const fetchBarangays = async () => {
+      try {
+        const res = await apiClient.get(API_ENDPOINTS.APPLICATIONS_BARANGAYS);
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setBarangayList(res.data);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch dynamic barangay list, falling back to static constants.', err);
+      }
+    };
+    fetchBarangays();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -17,6 +34,12 @@ const Step2_Location = () => {
   const handleLocationChange = (coords) => {
     setFormField('step2', 'latitude', coords.lat);
     setFormField('step2', 'longitude', coords.lng);
+  };
+
+  // When the barangay dropdown changes, update the form field
+  const handleBarangayChange = (e) => {
+    const selectedName = e.target.value;
+    setFormField('step2', 'barangay', selectedName);
   };
 
   const inputClasses = "w-full px-3 py-2 bg-[hsl(var(--color-surface,0,0%,100%))] border border-[hsl(var(--color-border,0,0%,80%))] rounded-md text-sm text-[hsl(var(--color-text,0,0%,10%))] focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors";
@@ -47,16 +70,20 @@ const Step2_Location = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Barangay Dropdown */}
             <div>
               <label className={labelClasses}>Barangay <span className="text-red-500">*</span></label>
-              <input 
-                type="text" 
-                name="barangay" 
-                value={data.barangay} 
-                onChange={handleChange} 
-                placeholder="e.g., Ilayang San Roque" 
-                className={inputClasses} 
-              />
+              <select
+                name="barangay"
+                value={data.barangay || ''}
+                onChange={handleBarangayChange}
+                className={inputClasses}
+              >
+                <option value="" disabled>— Select Barangay —</option>
+                {barangayList.map((barangay) => (
+                  <option key={barangay} value={barangay}>{barangay}</option>
+                ))}
+              </select>
             </div>
             
             {/* Locked Municipality Fields */}
@@ -98,7 +125,7 @@ const Step2_Location = () => {
         
         <InteractiveLocationPin 
           value={{ lat: data.latitude, lng: data.longitude }} 
-          onChange={handleLocationChange} 
+          onChange={handleLocationChange}
         />
         
       </div>
@@ -107,4 +134,4 @@ const Step2_Location = () => {
   );
 };
 
-export default Step2_Location;
+export default Step2_Location;

@@ -1,40 +1,44 @@
 // src/screens/applicant/uaf-steps/Step3_Activities.jsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import useApplicationStore from '../../../store/applicationStore';
 import { Store, Plus, Trash2, Info, PhilippinePeso } from 'lucide-react';
+import apiClient from '../../../utils/apiClient';
+import { API_ENDPOINTS } from '../../../utils/constants';
 
-// Seeded from 008_business_activities / seed.sql
-const BUSINESS_ACTIVITIES = [
+// Fallback constant
+const FALLBACK_ACTIVITIES = [
   'General Merchandise / Retail Trade',
   'Food and Beverage Service (Restaurant / Eatery / Carinderia)',
   'Food Manufacturing and Processing',
   'Wholesale Trade',
-  'Personal Services (Salon, Spa, Laundry, etc.)',
-  'Professional Services (Legal, Medical, Accounting, Consultancy)',
-  'Financial Services (Lending, Pawnshop, Money Changer)',
-  'Lodging / Accommodation Services',
-  'Transportation and Logistics',
-  'Construction and Contracting',
-  'Educational Services',
-  'Entertainment and Recreation',
-  'Hardware and Construction Materials',
-  'Agricultural Products and Supplies',
-  'Pharmaceutical / Drug Store',
-  'Information Technology and Communications',
-  'Real Estate Activities',
-  'Other Services'
+  'Personal Services (Salon, Spa, Laundry, etc.)'
 ];
 
 const Step3_Activities = () => {
   const data = useApplicationStore((state) => state.formData.step3);
   const setFormField = useApplicationStore((state) => state.setFormField);
 
+  const [businessActivities, setBusinessActivities] = useState(FALLBACK_ACTIVITIES);
+
   // Ensure there is at least one empty LOB entry on mount
   useEffect(() => {
     if (!data.lineOfBusinesses || data.lineOfBusinesses.length === 0) {
       setFormField('step3', 'lineOfBusinesses', [{ name: '', capital_investment: '', units: 1 }]);
     }
+    
+    // Fetch dynamic lookups
+    const fetchLookups = async () => {
+      try {
+        const res = await apiClient.get(API_ENDPOINTS.APPLICATIONS_LOOKUPS);
+        if (res.success && res.data?.business_activities?.length > 0) {
+          setBusinessActivities(res.data.business_activities);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch dynamic lookups, using fallback.');
+      }
+    };
+    fetchLookups();
   }, [data.lineOfBusinesses, setFormField]);
 
   const lobs = data.lineOfBusinesses || [];
@@ -94,7 +98,7 @@ const Step3_Activities = () => {
                     className={inputClasses}
                   >
                     <option value="" disabled>Select business activity</option>
-                    {BUSINESS_ACTIVITIES.map((activity, i) => (
+                    {businessActivities.map((activity, i) => (
                       <option key={i} value={activity}>{activity}</option>
                     ))}
                   </select>

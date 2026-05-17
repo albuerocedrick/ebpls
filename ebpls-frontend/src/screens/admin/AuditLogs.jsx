@@ -1,79 +1,305 @@
-/**
- * AuditLogs.jsx — Admin Module
- * DPA-compliant filterable audit log viewer.
- * Phase 10: Build with real audit data from GET /api/admin/audit-logs.
- * RBAC: Admin role only.
- */
-
-import React from 'react';
-import { ScrollText, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ScrollText, Filter, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
+import apiClient from '../../utils/apiClient';
+import { API_ENDPOINTS } from '../../utils/constants';
+import toast from 'react-hot-toast';
 
-const SAMPLE_LOGS = [
-  { actor: 'bplo@liliw.gov', action: 'APPLICATION_VERIFIED', entity: 'BP-2025-010', timestamp: '2025-05-06 09:14:23', ip: '192.168.1.5' },
-  { actor: 'treasury@liliw.gov', action: 'PAYMENT_RECORDED', entity: 'BP-2025-008', timestamp: '2025-05-06 08:50:11', ip: '192.168.1.8' },
-  { actor: 'admin@liliw.gov', action: 'USER_ROLE_UPDATED', entity: 'USR-0042', timestamp: '2025-05-05 17:02:44', ip: '192.168.1.2' },
-  { actor: 'bplo@liliw.gov', action: 'APPLICATION_RETURNED', entity: 'BP-2025-007', timestamp: '2025-05-05 14:30:00', ip: '192.168.1.5' },
-];
 
-const ACTION_COLOR = {
-  APPLICATION_VERIFIED: 'text-[hsl(var(--color-status-verified))]',
-  PAYMENT_RECORDED: 'text-[hsl(var(--color-status-paid))]',
-  USER_ROLE_UPDATED: 'text-accent',
-  APPLICATION_RETURNED: 'text-[hsl(var(--color-status-returned))]',
+const ACTION_COLORS = {
+  APPLICATION_VERIFIED: 'text-blue-600 bg-blue-50',
+  APPLICATION_RETURNED: 'text-orange-600 bg-orange-50',
+  APPLICATION_STATUS_UPDATED: 'text-purple-600 bg-purple-50',
+  FEE_ASSESSED: 'text-indigo-600 bg-indigo-50',
+  FEE_OVERRIDE: 'text-red-600 bg-red-50',
+  OTC_PAYMENT_RECORDED: 'text-green-600 bg-green-50',
+  ONLINE_PAYMENT_INITIATED: 'text-teal-600 bg-teal-50',
+  REQUIREMENT_UPLOADED: 'text-cyan-600 bg-cyan-50',
 };
 
-const AuditLogs = () => (
-  <div className="flex flex-col gap-6">
-    <div className="flex items-start justify-between gap-4">
+const getPaymentAmount = (log) => {
+  if (!log) return null;
+  const sources = [
+    log.new_value?.amount,
+    log.new_value?.amount_tendered,
+    log.new_value?.total_amount,
+    log.new_value?.amount_due,
+    log.old_value?.amount,
+    log.old_value?.amount_tendered,
+    log.old_value?.total_amount,
+    log.old_value?.amount_due,
+  ];
+  for (const val of sources) {
+    if (val !== undefined && val !== null && !isNaN(Number(val))) {
+      return Number(val);
+    }
+  }
+  return null;
+};
+
+const AuditLogs = () => {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const limit = 20;
+
+  const [filterAction, setFilterAction] = useState('');
+  const [filterRole, setFilterRole] = useState('');
+  
+  // To view details
+  const [selectedLog, setSelectedLog] = useState(null);
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page, limit });
+      if (filterAction) params.append('action', filterAction);
+      if (filterRole) params.append('role', filterRole);
+
+      const res = await apiClient.get(`${API_ENDPOINTS.ADMIN_AUDIT_LOGS}?${params.toString()}`);
+      
+      if (res?.success) {
+        setLogs(res.data);
+        setTotalPages(res.pagination.totalPages);
+        setTotalRecords(res.pagination.total);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load audit logs.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, [page, filterAction, filterRole]);
+
+  const handleFilterSubmit = (e) => {
+    e?.preventDefault();
+    setPage(1);
+    fetchLogs();
+  };
+
+  const getActionStyle = (action) => {
+    return ACTION_COLORS[action] || 'text-gray-600 bg-gray-100';
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-text))]">Audit Logs</h1>
-        <p className="text-sm text-[hsl(var(--color-text-muted))] mt-1">
-          DPA 2012 compliance log — all system mutations recorded immutably.
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Audit Logs</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          DPA 2012 compliance log — all system mutations are recorded immutably.
         </p>
       </div>
-      <Button variant="secondary" size="sm" leftIcon={<Filter size={14} />} disabled>
-        Filter
-      </Button>
-    </div>
 
-    {/* Log table */}
-    <Card padding="none">
-      <Card.Header>
-        <div className="flex items-center gap-2">
-          <ScrollText size={15} className="text-[hsl(var(--color-text-muted))]" />
-          <p className="text-sm font-semibold text-[hsl(var(--color-text))]">Recent Actions</p>
+      <div className="flex flex-col md:flex-row gap-4 items-end">
+        <form onSubmit={handleFilterSubmit} className="flex-1 flex gap-3 flex-wrap">
+          <div className="w-64">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Action Type</label>
+            <select
+              value={filterAction}
+              onChange={(e) => { setFilterAction(e.target.value); setPage(1); }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">All Actions</option>
+              {Object.keys(ACTION_COLORS).map(action => (
+                <option key={action} value={action}>{action.replace(/_/g, ' ')}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-64">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Actor Role</label>
+            <select
+              value={filterRole}
+              onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">All Roles</option>
+              <option value="Admin">Admin</option>
+              <option value="BPLO_Officer">BPLO Officer</option>
+              <option value="Treasury_Officer">Treasury Officer</option>
+              <option value="Barangay_Officer">Barangay Officer</option>
+              <option value="Applicant">Applicant</option>
+            </select>
+          </div>
+        </form>
+      </div>
+
+      <Card padding="none" className="overflow-hidden shadow-sm border border-gray-200 rounded-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50 border-b border-gray-200 text-[11px] uppercase tracking-wider text-gray-500 font-semibold">
+              <tr>
+                <th className="px-6 py-4 w-48">Timestamp</th>
+                <th className="px-6 py-4 w-56">Actor</th>
+                <th className="px-6 py-4">Action</th>
+                <th className="px-6 py-4 w-40">Entity ID</th>
+                <th className="px-6 py-4 w-24 text-center">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="px-6 py-16 text-center text-gray-400">
+                    <Loader2 size={24} className="animate-spin mx-auto mb-3" />
+                    Loading compliance logs...
+                  </td>
+                </tr>
+              ) : logs.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-6 py-16 text-center text-gray-400">
+                    No audit logs found matching your filters.
+                  </td>
+                </tr>
+              ) : (
+                logs.map((log) => (
+                  <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                      {new Date(log.created_at).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-xs">
+                      <div className="font-medium text-gray-900">{log.users?.email || 'System'}</div>
+                      <div className="text-gray-400 mt-0.5">{log.users?.roles?.role_name || 'SYSTEM_ROLE'}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide border border-transparent ${getActionStyle(log.action)}`}>
+                        {log.action}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-mono text-gray-500 truncate max-w-[150px]">
+                      {log.entity_id}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button 
+                        onClick={() => setSelectedLog(log)}
+                        className="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline focus:outline-none"
+                      >
+                        View JSON
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      </Card.Header>
-      <Card.Body className="!p-0">
-        {/* Column headers */}
-        <div className="grid grid-cols-4 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[hsl(var(--color-text-muted))] bg-surface-tint border-b border-border">
-          <span>Actor</span>
-          <span>Action</span>
-          <span>Entity</span>
-          <span>Timestamp</span>
+        
+        {/* Pagination */}
+        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+          <p className="text-xs text-gray-500">
+            Showing <span className="font-medium">{logs.length}</span> of <span className="font-medium">{totalRecords}</span> logs
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1 || loading}
+              className="p-1.5 rounded-md hover:bg-white disabled:opacity-50 text-gray-600 transition-colors border border-transparent hover:border-gray-200 shadow-sm disabled:shadow-none"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-xs font-medium text-gray-600">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages || loading}
+              className="p-1.5 rounded-md hover:bg-white disabled:opacity-50 text-gray-600 transition-colors border border-transparent hover:border-gray-200 shadow-sm disabled:shadow-none"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
-        <div className="divide-y divide-border">
-          {SAMPLE_LOGS.map((log, i) => (
-            <div key={i} className="grid grid-cols-4 px-4 py-2.5 text-xs items-center hover:bg-surface-tint transition-colors duration-150">
-              <span className="text-[hsl(var(--color-text))] font-mono truncate">{log.actor}</span>
-              <span className={`font-mono font-semibold ${ACTION_COLOR[log.action] || 'text-[hsl(var(--color-text))]'}`}>
-                {log.action}
-              </span>
-              <span className="text-[hsl(var(--color-text-muted))] font-mono">{log.entity}</span>
-              <span className="text-[hsl(var(--color-text-muted))] font-mono">{log.timestamp}</span>
+      </Card>
+
+      {/* JSON Viewer Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2 text-sm">
+                <ScrollText size={16} className="text-blue-600" />
+                Immutable Log Record
+              </h3>
+              <button 
+                onClick={() => setSelectedLog(null)}
+                className="text-gray-400 hover:text-gray-900 p-1.5 rounded-lg hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
+              >
+                ✕
+              </button>
             </div>
-          ))}
+            <div className="p-6 overflow-y-auto space-y-6">
+              {(() => {
+                const paymentAmount = getPaymentAmount(selectedLog);
+                return (
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <div>
+                      <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Action</span>
+                      <span className="font-medium text-gray-900">{selectedLog.action}</span>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Entity</span>
+                      <span className="font-mono text-xs bg-gray-200/60 text-gray-700 px-1.5 py-0.5 rounded">{selectedLog.entity_type}</span>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Actor ID</span>
+                      <span className="font-mono text-xs text-gray-600">{selectedLog.user_id || 'System'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Timestamp</span>
+                      <span className="font-mono text-xs text-gray-600">{new Date(selectedLog.created_at).toLocaleString()}</span>
+                    </div>
+                    {paymentAmount !== null && (
+                      <div className="col-span-2 pt-2 border-t border-gray-200/60 mt-2">
+                        <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Payment Amount</span>
+                        <span className="font-bold text-emerald-600 text-lg bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100 inline-flex items-center gap-1">
+                          ₱ {paymentAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              
+              <div className="space-y-4">
+                {selectedLog.old_value && (
+                  <div>
+                    <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                      Before Mutation
+                    </h4>
+                    <pre className="bg-[#fdf8f6] text-[#c53030] p-4 rounded-xl text-xs font-mono overflow-x-auto border border-[#fed7d7] shadow-inner">
+                      {JSON.stringify(selectedLog.old_value, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                {selectedLog.new_value && (
+                  <div>
+                    <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                      After Mutation
+                    </h4>
+                    <pre className="bg-[#f0fff4] text-[#276749] p-4 rounded-xl text-xs font-mono overflow-x-auto border border-[#c6f6d5] shadow-inner">
+                      {JSON.stringify(selectedLog.new_value, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                {!selectedLog.old_value && !selectedLog.new_value && (
+                  <div className="text-center py-8 text-gray-400 text-sm italic">
+                    No payload data captured for this action.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </Card.Body>
-      <Card.Footer>
-        <p className="text-xs text-[hsl(var(--color-text-muted))] text-center">
-          Phase 0 — sample data. Filterable viewer with real data built in Phase 10.
-        </p>
-      </Card.Footer>
-    </Card>
-  </div>
-);
+      )}
+    </div>
+  );
+};
 
 export default AuditLogs;

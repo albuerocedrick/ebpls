@@ -1,18 +1,6 @@
-/**
- * Register.jsx
- * Applicant self-registration screen.
- * Phase 2A: Wired to POST /api/auth/register via useAuth hook.
- *
- * Validation (client-side, before submit):
- *   - firstName, lastName required
- *   - email: valid format
- *   - password: min 8 characters
- *   - confirmPassword: must match password
- */
-
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, CheckCircle2 } from 'lucide-react';
 
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
@@ -63,9 +51,11 @@ const INITIAL_FIELDS = {
 const Register = () => {
   const { register, isLoading } = useAuth();
 
-  const [fields, setFields]   = useState(INITIAL_FIELDS);
-  const [errors, setErrors]   = useState({});
-  const [touched, setTouched] = useState({});
+  const [fields, setFields]       = useState(INITIAL_FIELDS);
+  const [errors, setErrors]       = useState({});
+  const [touched, setTouched]     = useState({});
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [successEmail, setSuccessEmail] = useState('');
 
   const set = useCallback(
     (field) => (e) =>
@@ -89,16 +79,73 @@ const Register = () => {
 
     if (Object.keys(validationErrors).length > 0) return;
 
-    await register({
-      firstName: fields.firstName.trim(),
-      lastName:  fields.lastName.trim(),
-      email:     fields.email.trim(),
-      password:  fields.password,
-    });
+    try {
+      const result = await register({
+        firstName: fields.firstName.trim(),
+        lastName:  fields.lastName.trim(),
+        email:     fields.email.trim(),
+        password:  fields.password,
+      });
+
+      if (result) {
+        setSuccessEmail(fields.email.trim());
+        setIsSuccess(true);
+      }
+    } catch (err) {
+      // Error is already toasted by useAuth hook
+    }
   };
 
   // Re-validate on every field change once the user has touched that field.
   const getError = (field) => (touched[field] ? errors[field] : undefined);
+
+  if (isSuccess) {
+    return (
+      <div className="p-8 flex flex-col gap-6 items-center text-center animate-in fade-in zoom-in duration-300">
+        <div
+          style={{
+            width: '4rem',
+            height: '4rem',
+            borderRadius: '50%',
+            backgroundColor: 'hsl(var(--color-success-bg, 142, 70%, 95%))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '0.5rem'
+          }}
+        >
+          <CheckCircle2
+            size={32}
+            style={{ color: 'hsl(var(--color-success, 142, 76%, 36%))' }}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold text-[hsl(var(--color-text))]">
+            Verify your email
+          </h1>
+          <p className="text-sm text-[hsl(var(--color-text-muted))] leading-relaxed">
+            We've sent a verification link to <strong>{successEmail}</strong>.<br />
+            Please click the link in your email to activate your account.
+          </p>
+        </div>
+
+        <div className="w-full h-px bg-border my-2" />
+
+        <div className="flex flex-col gap-4 w-full">
+          <p className="text-xs text-[hsl(var(--color-text-muted))]">
+            Once verified, you can return here to sign in.
+          </p>
+          <Link
+            to={ROUTES.LOGIN}
+            className="w-full inline-flex items-center justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-all"
+          >
+            Back to Sign In
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-6" noValidate>

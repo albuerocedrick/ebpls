@@ -1,19 +1,21 @@
 // src/components/shared/DocumentUploadPanel.jsx
 
 import React, { useState, useRef, useCallback } from 'react';
-import { UploadCloud, FileText, X, CheckCircle2, Image as ImageIcon, Trash2, Loader2 } from 'lucide-react';
+import { UploadCloud, FileText, X, CheckCircle2, Image as ImageIcon, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import apiClient from '../../utils/apiClient';
 import { API_ENDPOINTS } from '../../utils/constants';
 
 const formatFileSize = (bytes) => {
+  if (bytes === undefined || bytes === null || isNaN(bytes)) return '';
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
+  if (isNaN(i)) return '';
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
-const DocumentUploadPanel = ({ title, description, value, onChange, onRemove, disabled, onUploadStart, onUploadEnd }) => {
+const DocumentUploadPanel = ({ title, description, value, onChange, onRemove, disabled, onUploadStart, onUploadEnd, feedback }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -127,6 +129,14 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove, di
             {description}
           </p>
         )}
+        {feedback && (
+          <div className="mt-2 flex items-start gap-1.5 p-2 rounded bg-red-50 border border-red-100">
+            <AlertCircle size={14} className="text-red-600 shrink-0 mt-0.5" />
+            <p className="text-[11px] font-medium text-red-800 leading-tight">
+              {feedback}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="p-4">
@@ -145,7 +155,9 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove, di
                 {value.file_name}
               </p>
               <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,40%))]">
-                {formatFileSize(value.file_size)} • {isImage ? 'Image' : 'Document'}
+                {formatFileSize(value.file_size)}
+                {value.file_size ? ' • ' : ''}
+                {isImage ? 'Image' : 'Document'}
               </p>
             </div>
 

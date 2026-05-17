@@ -36,6 +36,8 @@ const LandingPage       = lazy(() => import('./screens/public/LandingPage'));
 const Login             = lazy(() => import('./screens/auth/Login'));
 const Register          = lazy(() => import('./screens/auth/Register'));
 const ForgotPassword    = lazy(() => import('./screens/auth/ForgotPassword'));
+const ResetPassword     = lazy(() => import('./screens/auth/ResetPassword'));
+const VerifySuccess     = lazy(() => import('./screens/auth/VerifySuccess'));
 
 // Applicant
 const ApplicantDashboard  = lazy(() => import('./screens/applicant/Dashboard'));
@@ -60,9 +62,13 @@ const RetirementQueue = lazy(() => import('./screens/bplo/RetirementQueue'));
 const ClearanceQueue  = lazy(() => import('./screens/barangay/ClearanceQueue'));
 
 // Admin
-const MasterData        = lazy(() => import('./screens/admin/MasterData'));
+const AdminDashboard      = lazy(() => import('./screens/admin/AdminDashboard'));
+const ApplicationExplorer = lazy(() => import('./screens/admin/ApplicationExplorer'));
+const UsersManagement     = lazy(() => import('./screens/admin/UsersManagement'));
+const MasterData          = lazy(() => import('./screens/admin/MasterData'));
 const DocumentBuilder   = lazy(() => import('./screens/admin/DocumentBuilder'));
 const AuditLogs         = lazy(() => import('./screens/admin/AuditLogs'));
+const EmailLogs         = lazy(() => import('./screens/admin/EmailLogs'));
 
 // Payment
 const PaymentSuccess    = lazy(() => import('./screens/payment/PaymentSuccess'));
@@ -128,6 +134,14 @@ function App() {
             <Route
               path={ROUTES.FORGOT_PASSWORD}
               element={<ForgotPassword />}
+            />
+            <Route
+              path={ROUTES.RESET_PASSWORD}
+              element={<ResetPassword />}
+            />
+            <Route
+              path={ROUTES.VERIFY_SUCCESS}
+              element={<VerifySuccess />}
             />
           </Route>
 
@@ -242,11 +256,16 @@ function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route
                 index
-                element={<Navigate to={ROUTES.ADMIN_MASTER_DATA} replace />}
+                element={<Navigate to={ROUTES.ADMIN_DASHBOARD} replace />}
               />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="applications" element={<ApplicationExplorer />} />
+              <Route path="applications/:appNo" element={<SplitScreenVerifier />} />
+              <Route path="users" element={<UsersManagement />} />
               <Route path="master-data" element={<MasterData />} />
               <Route path="document-builder" element={<DocumentBuilder />} />
               <Route path="audit-logs" element={<AuditLogs />} />
+              <Route path="email-logs" element={<EmailLogs />} />
             </Route>
           </Route>
 
