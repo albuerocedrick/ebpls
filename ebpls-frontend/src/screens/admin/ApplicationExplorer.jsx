@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Loader, RefreshCw, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Select from '../../components/ui/Select';
 import apiClient from '../../utils/apiClient';
 import { API_ENDPOINTS, STATUSES } from '../../utils/constants';
 import toast from 'react-hot-toast';
@@ -69,14 +70,14 @@ const ApplicationExplorer = () => {
         <button
           onClick={() => fetchApplications()}
           disabled={loading}
-          className="flex items-center gap-2 bg-white px-4 py-2 rounded-md shadow-sm border text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+          className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-200 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
         >
           <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           Refresh
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Filters */}
         <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row gap-4 justify-between items-center">
           <form onSubmit={handleSearch} className="flex gap-2 w-full md:w-auto flex-1 max-w-md">
@@ -87,23 +88,24 @@ const ApplicationExplorer = () => {
                 placeholder="Search App No..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-2xl text-sm focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all"
               />
             </div>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            <button type="submit" className="px-4 py-2 bg-gray-900 text-white rounded-2xl text-sm font-medium hover:bg-gray-800">
               Search
             </button>
           </form>
 
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <Filter size={18} className="text-gray-400" />
-            <select
+            <Select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full md:w-auto"
+              fullWidth={false}
+              size="sm"
+              className="min-w-[180px]"
             >
               <option value="">All Statuses</option>
               {Object.values(STATUSES)
@@ -111,92 +113,76 @@ const ApplicationExplorer = () => {
                 .map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
-            </select>
+            </Select>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-gray-600 uppercase text-xs border-b">
-              <tr>
-                <th className="px-6 py-4 font-semibold">App No.</th>
-                <th className="px-6 py-4 font-semibold">Business / Taxpayer</th>
-                <th className="px-6 py-4 font-semibold">Type</th>
-                <th className="px-6 py-4 font-semibold">Submitted</th>
-                <th className="px-6 py-4 font-semibold">Status</th>
-                <th className="px-6 py-4 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading && applications.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                    <Loader className="animate-spin mx-auto mb-4" size={24} />
-                    Loading applications...
-                  </td>
-                </tr>
-              ) : applications.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                    <FileText className="mx-auto mb-4 text-gray-400" size={32} />
-                    No applications found.
-                  </td>
-                </tr>
-              ) : (
-                applications.map((app) => (
-                  <tr key={app.application_no} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-gray-900">
-                      {app.application_no}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{app.business_name || 'N/A'}</div>
-                      <div className="text-xs text-gray-500">{app.taxpayer_name || 'No Taxpayer Info'} • {app.taxpayer_email}</div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {app.type || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {new Date(app.submitted_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[app.status] || 'bg-gray-100 text-gray-800'}`}>
-                        {app.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => navigate(`/admin/applications/${app.application_no}`)}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-xs bg-blue-50 px-3 py-1.5 rounded transition-colors"
-                      >
-                        View Details
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        {/* List */}
+        <div className="divide-y divide-gray-100">
+          {loading && applications.length === 0 ? (
+            <div className="px-6 py-12 text-center text-sm text-gray-400">
+              <Loader className="animate-spin mx-auto mb-3" size={24} />
+              Loading applications...
+            </div>
+          ) : applications.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <FileText className="mx-auto mb-3 text-gray-200" size={32} />
+              <p className="text-sm text-gray-400">No applications found.</p>
+            </div>
+          ) : (
+            applications.map((app) => (
+              <div
+                key={app.application_no}
+                onClick={() => navigate(`/admin/applications/${app.application_no}`)}
+                className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 hover:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.06)] transition-all duration-200 cursor-pointer group"
+              >
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="p-2.5 bg-gray-50 rounded-xl shrink-0 group-hover:bg-gray-100 transition-colors">
+                    <FileText size={16} className="text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-3">
+                      <p className="text-sm font-bold text-gray-900 truncate">{app.business_name || 'N/A'}</p>
+                      <span className="text-xs font-mono text-gray-400 shrink-0">{app.application_no}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-gray-400 truncate">{app.taxpayer_name || 'No Taxpayer'}</p>
+                      <span className="text-gray-200">•</span>
+                      <p className="text-xs text-gray-400">{app.type || 'N/A'}</p>
+                      <span className="text-gray-200">•</span>
+                      <p className="text-xs text-gray-400">{new Date(app.submitted_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 ml-4">
+                  <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${statusColors[app.status] || 'bg-gray-100 text-gray-800'}`}>
+                    {app.status}
+                  </span>
+                  <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Pagination */}
         {!loading && applications.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50 text-sm text-gray-600">
-            <div>
-              Showing <span className="font-medium">{applications.length}</span> of <span className="font-medium">{total}</span> applications
-            </div>
+          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              Showing <span className="font-semibold text-gray-700">{applications.length}</span> of <span className="font-semibold text-gray-700">{total}</span> applications
+            </p>
             <div className="flex gap-2">
               <button 
                 disabled={page === 1}
                 onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="px-3 py-1 border rounded bg-white hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2 border border-gray-200 rounded-2xl bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 transition-all"
               >
                 Previous
               </button>
               <button 
                 disabled={applications.length < 50}
                 onClick={() => setPage(p => p + 1)}
-                className="px-3 py-1 border rounded bg-white hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2 bg-gray-900 text-white rounded-2xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-all"
               >
                 Next
               </button>

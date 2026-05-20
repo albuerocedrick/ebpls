@@ -49,13 +49,13 @@ const Input = ({
       {/* Label */}
       <label
         htmlFor={inputId}
-        className="text-sm font-medium text-[hsl(var(--color-text))]"
+        className="text-sm font-semibold text-gray-700"
       >
         {label}
         {required && (
           <span
             aria-hidden="true"
-            className="ml-1 text-[hsl(var(--color-error))]"
+            className="ml-1 text-red-500"
           >
             *
           </span>
@@ -77,20 +77,20 @@ const Input = ({
           required={required}
           className={[
             // Base structure
-            'w-full rounded-md border bg-[hsl(var(--color-surface-raised))]',
-            'text-sm text-[hsl(var(--color-text))]',
-            'placeholder:text-[hsl(var(--color-text-muted))]',
+            'w-full rounded-2xl border bg-gray-50',
+            'text-sm text-gray-900',
+            'placeholder:text-gray-400',
             // Padding — account for left/right elements
-            leftElement ? 'pl-9' : 'pl-3',
-            rightElement ? 'pr-9' : 'pr-3',
-            'py-2',
+            leftElement ? 'pl-10' : 'pl-4',
+            rightElement ? 'pr-10' : 'pr-4',
+            'py-3',
             // Border and focus transitions
-            'transition-[border-color,box-shadow] duration-200 ease-in-out',
+            'transition-all duration-200',
             'outline-none',
             // State: default
-            !hasError && 'border-border focus:border-accent focus:ring-2 focus:ring-[hsl(var(--color-accent-subtle))]',
+            !hasError && 'border-gray-200 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 focus:bg-white',
             // State: error
-            hasError && 'border-[hsl(var(--color-error))] focus:border-[hsl(var(--color-error))] focus:ring-2 focus:ring-[hsl(var(--color-error-bg))]',
+            hasError && 'border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-50',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -106,7 +106,7 @@ const Input = ({
 
       {/* Hint text */}
       {hint && !hasError && (
-        <p id={hintId} className="text-xs text-[hsl(var(--color-text-muted))]">
+        <p id={hintId} className="text-xs text-gray-400">
           {hint}
         </p>
       )}
@@ -116,7 +116,7 @@ const Input = ({
         <p
           id={errorId}
           role="alert"
-          className="text-xs text-[hsl(var(--color-error))] font-medium"
+          className="text-xs text-red-500 font-medium"
         >
           {error}
         </p>

@@ -20,6 +20,7 @@ import 'leaflet/dist/leaflet.css';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
+import Select from '../../components/ui/Select';
 import apiClient from '../../utils/apiClient';
 import { toast } from 'react-hot-toast';
 import { API_ENDPOINTS, BARANGAYS_LILIW } from '../../utils/constants';
@@ -228,57 +229,66 @@ const ClearanceQueue = () => {
       {/* Header + Filter */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--color-text))]">Clearance Queue</h1>
-          <p className="text-sm text-[hsl(var(--color-text-muted))] mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Clearance Queue</h1>
+          <p className="text-sm text-gray-500 mt-1">
             Review application details, documents, and location pins before issuing clearances.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-white border border-border rounded-lg px-3 py-2 shadow-sm min-w-[240px]">
-          <Filter size={16} className="text-[hsl(var(--color-text-muted))]" />
-          <select
-            value={selectedBarangay}
-            onChange={(e) => setSelectedBarangay(e.target.value)}
-            className="flex-1 bg-transparent text-sm font-medium outline-none text-[hsl(var(--color-text))] cursor-pointer"
-          >
-            <option value="All Barangays">All Barangays</option>
-            {barangayList.map((b) => <option key={b} value={b}>{b}</option>)}
-          </select>
-        </div>
+        <Select
+          value={selectedBarangay}
+          onChange={(e) => setSelectedBarangay(e.target.value)}
+          fullWidth={false}
+          size="sm"
+          className="min-w-[200px]"
+        >
+          <option value="All Barangays">All Barangays</option>
+          {barangayList.map((b) => <option key={b} value={b}>{b}</option>)}
+        </Select>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        {[
-          { label: 'Pending Clearances', value: filteredClearances.length, color: 'text-[hsl(var(--color-status-pending))]' },
-          { label: 'Action Needed',      value: filteredClearances.length, color: 'text-[hsl(var(--color-status-verified))]' },
-        ].map((stat) => (
-          <Card key={stat.label} padding="md" className="text-center">
-            <p className={`text-3xl font-bold ${stat.color}`}>{loading ? '-' : stat.value}</p>
-            <p className="text-xs text-[hsl(var(--color-text-muted))] mt-1">{stat.label}</p>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="group bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-default">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+              <ClipboardCheck size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending Clearances</p>
+              <p className="text-2xl font-bold text-gray-900 mt-0.5">{loading ? '—' : filteredClearances.length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="group bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-default">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+              <CheckCircle2 size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Action Needed</p>
+              <p className="text-2xl font-bold text-gray-900 mt-0.5">{loading ? '—' : filteredClearances.length}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Queue List */}
-      <Card padding="none">
-        <Card.Header>
-          <div className="flex items-center gap-2">
-            <ClipboardCheck size={16} className="text-[hsl(var(--color-text-muted))]" />
-            <p className="text-sm font-semibold text-[hsl(var(--color-text))]">Pending Requests</p>
-          </div>
-        </Card.Header>
-        <Card.Body className="!p-0">
-          <div className="divide-y divide-border">
-            {loading ? (
-              <div className="px-4 py-8 text-center text-sm text-[hsl(var(--color-text-muted))]">Loading clearances...</div>
-            ) : filteredClearances.length === 0 ? (
-              <div className="px-4 py-12 text-center text-sm text-[hsl(var(--color-text-muted))]">
-                {selectedBarangay === 'All Barangays'
-                  ? 'No pending clearances found.'
-                  : `No pending clearances found for ${selectedBarangay}.`}
-              </div>
-            ) : (
-              filteredClearances.map((item) => {
+      <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-2">
+          <ClipboardCheck size={16} className="text-gray-400" />
+          <p className="text-sm font-bold text-gray-900">Pending Requests</p>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {loading ? (
+            <div className="px-6 py-12 text-center text-sm text-gray-400">Loading clearances...</div>
+          ) : filteredClearances.length === 0 ? (
+            <div className="px-6 py-12 text-center text-sm text-gray-400">
+              {selectedBarangay === 'All Barangays'
+                ? 'No pending clearances found.'
+                : 'No pending clearances found for ' + selectedBarangay + '.'}
+            </div>
+          ) : (
+            filteredClearances.map((item) => {
                 const biz = item.applications?.businesses;
                 return (
                   <div key={item.id} className="px-4 py-3 hover:bg-surface-tint transition-colors">
@@ -309,8 +319,7 @@ const ClearanceQueue = () => {
               })
             )}
           </div>
-        </Card.Body>
-      </Card>
+        </div>
 
       {/* ── View Details Modal ─────────────────────────────────────── */}
       {isViewModalOpen && selectedClearance && (

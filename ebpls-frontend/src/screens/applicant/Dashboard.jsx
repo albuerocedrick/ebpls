@@ -10,19 +10,13 @@ import { ROUTES } from '../../utils/constants';
 import apiClient from '../../utils/apiClient';
 
 const ApplicantDashboard = () => {
-  // Auth State
   const firstName = useAuthStore((state) => state.user?.firstName);
-
-  // Zustand State (Drafts)
   const draft_id = useApplicationStore((state) => state.draft_id);
   const current_step = useApplicationStore((state) => state.current_step);
 
-  // Local State for Applications List
   const [applications, setApplications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Local State for Retirements List
   const [retirements, setRetirements] = useState([]);
   const [isLoadingRetirements, setIsLoadingRetirements] = useState(true);
 
@@ -31,177 +25,168 @@ const ApplicantDashboard = () => {
       try {
         setIsLoading(true);
         setError(null);
-        
-        // Fetch the list of applications owned by the logged-in user
         const response = await apiClient.get('/api/applications/list');
-        
-        if (response && response.success) {
-          setApplications(response.data || []);
-        }
+        if (response && response.success) setApplications(response.data || []);
       } catch (err) {
-        console.error('[Dashboard] Failed to fetch applications:', err);
         setError(err.message || 'Unable to load applications at this time.');
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchApplications();
   }, []);
 
-  // Fetch retirements
   useEffect(() => {
     const fetchRetirements = async () => {
       try {
         setIsLoadingRetirements(true);
         const response = await apiClient.get('/api/retirement/my');
-        if (response && response.success) {
-          setRetirements(response.data || []);
-        }
-      } catch (err) {
-        // Silent fail — retirements section is supplementary
-        console.warn('[Dashboard] Failed to fetch retirements:', err);
-      } finally {
-        setIsLoadingRetirements(false);
-      }
+        if (response && response.success) setRetirements(response.data || []);
+      } catch { /* silent */ }
+      finally { setIsLoadingRetirements(false); }
     };
     fetchRetirements();
   }, []);
 
   return (
-    <div className="flex flex-col gap-6">
-      
-      {/* Header section */}
+    <div className="space-y-6 pb-12">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-text,0,0%,10%))]">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
           Welcome, {firstName || 'Applicant'}!
         </h1>
-        <p className="text-sm text-[hsl(var(--color-text-muted,0,0%,40%))] mt-1">
+        <p className="text-sm text-gray-500 mt-1">
           Manage your business permit applications and track their progress.
         </p>
       </div>
 
-      {/* Quick Actions Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {draft_id ? (
-          <Link 
+          <Link
             to={ROUTES?.APPLICANT_UAF || '/applicant/uaf'}
-            className="flex flex-col items-center justify-center gap-3 p-5 bg-[hsl(var(--color-surface,0,0%,100%))] border border-accent rounded-xl shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))] hover:shadow-[var(--shadow-md,0_4px_6px_-1px_rgba(0,0,0,0.1))] transition-shadow group relative overflow-hidden"
+            className="group relative overflow-hidden bg-white p-6 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] transition-all duration-300 text-left"
           >
-            <div className="absolute top-0 left-0 w-full h-1 bg-accent" />
-            <div className="w-12 h-12 rounded-full bg-accent/10 text-accent flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Play size={24} fill="currentColor" />
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold text-accent">Resume Draft</p>
-              <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,40%))] mt-0.5">Step {current_step} of 5</p>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gray-900 rounded-t-3xl" />
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Resume Draft</h3>
+                <p className="text-xs text-gray-500 mt-1">Step {current_step} of 5</p>
+              </div>
+              <div className="h-14 w-14 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+                <Play size={20} fill="currentColor" />
+              </div>
             </div>
           </Link>
         ) : (
-          <Link 
+          <Link
             to={ROUTES?.APPLICANT_UAF || '/applicant/uaf'}
-            className="flex flex-col items-center justify-center gap-3 p-5 bg-[hsl(var(--color-surface,0,0%,100%))] border border-[hsl(var(--color-border,0,0%,90%))] rounded-xl shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))] hover:shadow-[var(--shadow-md,0_4px_6px_-1px_rgba(0,0,0,0.1))] hover:border-accent/50 transition-all group"
+            className="group relative overflow-hidden bg-white p-6 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] transition-all duration-300 text-left"
           >
-            <div className="w-12 h-12 rounded-full bg-[hsl(var(--color-surface-raised,0,0%,96%))] text-[hsl(var(--color-text,0,0%,10%))] flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-colors">
-              <FilePlus size={24} />
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))]">New Application</p>
-              <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,40%))] mt-0.5">Start a fresh UAF</p>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">New Application</h3>
+                <p className="text-xs text-gray-500 mt-1">Start a fresh UAF</p>
+              </div>
+              <div className="h-14 w-14 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+                <FilePlus size={20} />
+              </div>
             </div>
           </Link>
         )}
 
-        <Link 
+        <Link
           to={ROUTES?.APPLICANT_STATUS || '/applicant/status'}
-          className="flex flex-col items-center justify-center gap-3 p-5 bg-[hsl(var(--color-surface,0,0%,100%))] border border-[hsl(var(--color-border,0,0%,90%))] rounded-xl shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))] hover:shadow-[var(--shadow-md,0_4px_6px_-1px_rgba(0,0,0,0.1))] transition-shadow group"
+          className="group relative overflow-hidden bg-white p-6 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] transition-all duration-300 text-left"
         >
-          <div className="w-12 h-12 rounded-full bg-[hsl(var(--color-surface-raised,0,0%,96%))] text-[hsl(var(--color-text,0,0%,10%))] flex items-center justify-center group-hover:bg-[hsl(var(--color-border,0,0%,90%))] transition-colors">
-            <ClipboardList size={24} />
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))]">Track Status</p>
-            <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,40%))] mt-0.5">View active permits</p>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Track Status</h3>
+              <p className="text-xs text-gray-500 mt-1">View active permits</p>
+            </div>
+            <div className="h-14 w-14 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+              <ClipboardList size={20} />
+            </div>
           </div>
         </Link>
 
-        <Link 
+        <Link
           to={ROUTES?.APPLICANT_RETIRE || '/applicant/retire'}
-          className="flex flex-col items-center justify-center gap-3 p-5 bg-[hsl(var(--color-surface,0,0%,100%))] border border-[hsl(var(--color-border,0,0%,90%))] rounded-xl shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))] hover:shadow-[var(--shadow-md,0_4px_6px_-1px_rgba(0,0,0,0.1))] hover:border-red-300 transition-all group"
+          className="group relative overflow-hidden bg-white p-6 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] transition-all duration-300 text-left"
         >
-          <div className="w-12 h-12 rounded-full bg-[hsl(var(--color-surface-raised,0,0%,96%))] text-[hsl(var(--color-text,0,0%,10%))] flex items-center justify-center group-hover:bg-red-50 group-hover:text-red-600 transition-colors">
-            <XCircle size={24} />
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))]">Retire Business</p>
-            <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,40%))] mt-0.5">Close a business</p>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Retire Business</h3>
+              <p className="text-xs text-gray-500 mt-1">Close a business</p>
+            </div>
+            <div className="h-14 w-14 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-700 group-hover:bg-red-50 group-hover:text-red-600 transition-all duration-300">
+              <XCircle size={20} />
+            </div>
           </div>
         </Link>
       </div>
 
       {/* Applications List */}
-      <div className="border border-[hsl(var(--color-border,0,0%,90%))] rounded-xl bg-[hsl(var(--color-surface,0,0%,100%))] overflow-hidden shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))]">
-        <div className="bg-[hsl(var(--color-surface-raised,0,0%,96%))] px-4 py-3 border-b border-[hsl(var(--color-border,0,0%,90%))] flex items-center gap-2">
-          <FileText size={18} className="text-[hsl(var(--color-text-muted,0,0%,40%))]" />
-          <h2 className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))]">My Applications</h2>
+      <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-2xl bg-gray-100 flex items-center justify-center">
+            <FileText size={18} className="text-gray-600" />
+          </div>
+          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">My Applications</h2>
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center p-8 text-[hsl(var(--color-text-muted,0,0%,40%))]">
-            <Loader2 size={32} className="animate-spin mb-3 text-accent" />
-            <p className="text-sm font-medium">Loading applications...</p>
+          <div className="flex flex-col items-center justify-center p-10">
+            <Loader2 size={28} className="animate-spin text-gray-300 mb-3" />
+            <p className="text-sm text-gray-400">Loading applications...</p>
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center p-8 text-red-500">
-            <AlertCircle size={32} className="mb-3 opacity-50" />
-            <p className="text-sm font-medium">{error}</p>
+          <div className="flex flex-col items-center justify-center p-10">
+            <AlertCircle size={28} className="text-red-300 mb-3" />
+            <p className="text-sm text-red-500">{error}</p>
           </div>
         ) : applications.length > 0 ? (
-          <ul className="divide-y divide-[hsl(var(--color-border,0,0%,90%))]">
+          <div className="divide-y divide-gray-100">
             {applications.map((app) => (
-              <li key={app.application_no}>
-                <Link 
-                  to={`${ROUTES?.APPLICANT_STATUS || '/applicant/status'}?id=${app.application_no}`}
-                  className="flex items-center justify-between p-4 hover:bg-[hsl(var(--color-surface-raised,0,0%,98%))] transition-colors active:bg-[hsl(var(--color-surface-raised,0,0%,96%))]"
-                >
-                  <div className="flex items-start gap-3 overflow-hidden pr-4">
-                    <div className="mt-1 p-2 bg-[hsl(var(--color-surface-raised,0,0%,96%))] rounded-md shrink-0">
-                      <Building2 size={16} className="text-[hsl(var(--color-text-muted,0,0%,40%))]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))] truncate">
-                        {app.businesses?.business_name || 'Unnamed Business'}
+              <Link
+                key={app.application_no}
+                to={`${ROUTES?.APPLICANT_STATUS || '/applicant/status'}?id=${app.application_no}`}
+                className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors group"
+              >
+                <div className="flex items-center gap-4 overflow-hidden pr-4">
+                  <div className="p-2.5 bg-gray-50 rounded-xl shrink-0">
+                    <Building2 size={16} className="text-gray-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-900 truncate">
+                      {app.businesses?.business_name || 'Unnamed Business'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs font-mono text-gray-400">{app.application_no}</p>
+                      <span className="text-gray-200">•</span>
+                      <p className="text-xs text-gray-400">
+                        {app.submitted_at
+                          ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' }).format(new Date(app.submitted_at))
+                          : 'Not submitted'}
                       </p>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1">
-                        <p className="text-xs font-mono text-[hsl(var(--color-text-muted,0,0%,40%))]">
-                          {app.application_no}
-                        </p>
-                        <span className="hidden sm:inline text-[hsl(var(--color-border,0,0%,80%))]">•</span>
-                        <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,50%))]">
-                          {app.submitted_at 
-                            ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' }).format(new Date(app.submitted_at))
-                            : 'Not submitted yet'}
-                        </p>
-                      </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-3 shrink-0">
-                    <StatusBadge status={app.status} size="sm" className="hidden sm:inline-flex" />
-                    <ChevronRight size={18} className="text-[hsl(var(--color-text-muted,0,0%,40%))]" />
-                  </div>
-                </Link>
-              </li>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <StatusBadge status={app.status} size="sm" className="hidden sm:inline-flex" />
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+                </div>
+              </Link>
             ))}
-          </ul>
+          </div>
         ) : (
-          <div className="p-8 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 rounded-full bg-[hsl(var(--color-surface-raised,0,0%,96%))] flex items-center justify-center mb-3">
-              <FileText size={24} className="text-[hsl(var(--color-border,0,0%,80%))]" />
+          <div className="p-10 flex flex-col items-center justify-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mb-3">
+              <FileText size={22} className="text-gray-300" />
             </div>
-            <p className="text-sm font-medium text-[hsl(var(--color-text,0,0%,10%))]">No applications found</p>
-            <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,40%))] mt-1 max-w-xs">
-              You haven't submitted any business permit applications yet. Click "New Application" to get started.
+            <p className="text-sm font-semibold text-gray-700">No applications found</p>
+            <p className="text-xs text-gray-400 mt-1 max-w-xs">
+              You haven't submitted any business permit applications yet.
             </p>
           </div>
         )}
@@ -209,53 +194,49 @@ const ApplicantDashboard = () => {
 
       {/* My Retirements Section */}
       {!isLoadingRetirements && retirements.length > 0 && (
-        <div className="border border-[hsl(var(--color-border,0,0%,90%))] rounded-xl bg-[hsl(var(--color-surface,0,0%,100%))] overflow-hidden shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))]">
-          <div className="bg-red-50 px-4 py-3 border-b border-red-100 flex items-center gap-2">
-            <XCircle size={18} className="text-red-500" />
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))]">My Retirements</h2>
+        <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-red-50 flex items-center justify-center">
+              <XCircle size={18} className="text-red-500" />
+            </div>
+            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">My Retirements</h2>
           </div>
 
-          <ul className="divide-y divide-[hsl(var(--color-border,0,0%,90%))]">
+          <div className="divide-y divide-gray-100">
             {retirements.map((ret) => (
-              <li key={ret.id} className="flex items-center justify-between p-4">
-                <div className="flex items-start gap-3 overflow-hidden pr-4">
-                  <div className="mt-1 p-2 bg-red-50 rounded-md shrink-0">
+              <div key={ret.id} className="flex items-center justify-between px-6 py-4">
+                <div className="flex items-center gap-4 overflow-hidden pr-4">
+                  <div className="p-2.5 bg-red-50 rounded-xl shrink-0">
                     <Building2 size={16} className="text-red-400" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))] truncate">
+                    <p className="text-sm font-bold text-gray-900 truncate">
                       {ret.businesses?.business_name || 'Unknown Business'}
                     </p>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1">
-                      <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,40%))]">
-                        Reason: {ret.reason?.substring(0, 40)}{ret.reason?.length > 40 ? '...' : ''}
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-gray-400 truncate">
+                        {ret.reason?.substring(0, 40)}{ret.reason?.length > 40 ? '...' : ''}
                       </p>
-                      <span className="hidden sm:inline text-[hsl(var(--color-border,0,0%,80%))]">•</span>
-                      <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,50%))]">
-                        {ret.created_at
-                          ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' }).format(new Date(ret.created_at))
-                          : ''}
+                      <span className="text-gray-200">•</span>
+                      <p className="text-xs text-gray-400">
+                        {ret.created_at ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' }).format(new Date(ret.created_at)) : ''}
                       </p>
                     </div>
                   </div>
                 </div>
-
-                <div className="shrink-0">
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                    ret.status === 'Completed' ? 'bg-gray-100 text-gray-600' :
-                    ret.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                    ret.status === 'Assessed' ? 'bg-blue-100 text-blue-700' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {ret.status}
-                  </span>
-                </div>
-              </li>
+                <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                  ret.status === 'Completed' ? 'bg-gray-100 text-gray-600' :
+                  ret.status === 'Paid' ? 'bg-green-50 text-green-700 border border-green-200' :
+                  ret.status === 'Assessed' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                  'bg-amber-50 text-amber-700 border border-amber-200'
+                }`}>
+                  {ret.status}
+                </span>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
-
     </div>
   );
 };

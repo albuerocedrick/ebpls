@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { LogIn } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { LogIn, Mail, Lock, ArrowRight } from 'lucide-react';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import { ROUTES } from '../../utils/constants';
 import useAuth from '../../hooks/useAuth';
-import toast from 'react-hot-toast';
 
 const Login = () => {
   const { login, isLoading } = useAuth();
@@ -19,15 +18,19 @@ const Login = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-bold text-[hsl(var(--color-text))]">Sign In</h1>
-        <p className="text-sm text-[hsl(var(--color-text-muted))]">
-          Enter your credentials to access the system.
+    <form onSubmit={handleSubmit} className="p-8 sm:p-10 flex flex-col gap-8">
+      {/* Header */}
+      <div className="space-y-2">
+        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
+          Welcome back
+        </h1>
+        <p className="text-sm text-gray-500 leading-relaxed">
+          Enter your credentials to access your account.
         </p>
       </div>
 
-      <div className="flex flex-col gap-4">
+      {/* Fields */}
+      <div className="space-y-5">
         <Input
           label="Email Address"
           type="email"
@@ -35,42 +38,57 @@ const Login = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          leftElement={<Mail size={16} />}
         />
-        <Input
-          label="Password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <div>
+          <Input
+            label="Password"
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            leftElement={<Lock size={16} />}
+          />
+          <div className="flex justify-end mt-2.5">
+            <Link
+              to={ROUTES.FORGOT_PASSWORD}
+              className="text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              Forgot password?
+            </Link>
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <Button
-          variant="primary"
-          fullWidth
-          type="submit"
-          leftIcon={<LogIn size={16} />}
-          isLoading={isLoading}
-          disabled={!email || !password}
-        >
-          Sign In
-        </Button>
-        <Link
-          to={ROUTES.FORGOT_PASSWORD}
-          className="text-center text-xs text-accent hover:opacity-80 transition-opacity"
-        >
-          Forgot your password?
-        </Link>
+      {/* Submit */}
+      <Button
+        variant="primary"
+        fullWidth
+        type="submit"
+        size="lg"
+        leftIcon={<LogIn size={17} />}
+        isLoading={isLoading}
+        disabled={!email || !password}
+      >
+        Sign In
+      </Button>
+
+      {/* Divider */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1 h-px bg-gray-100" />
+        <span className="text-xs text-gray-400 font-medium">New here?</span>
+        <div className="flex-1 h-px bg-gray-100" />
       </div>
 
-      <div className="border-t border-border pt-4 text-center text-sm text-[hsl(var(--color-text-muted))]">
-        New applicant?{' '}
-        <Link to={ROUTES.REGISTER} className="text-accent font-medium hover:opacity-80 transition-opacity">
-          Create an account
-        </Link>
-      </div>
+      {/* Register link */}
+      <Link
+        to={ROUTES.REGISTER}
+        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all"
+      >
+        Create an account
+        <ArrowRight size={15} />
+      </Link>
     </form>
   );
 };

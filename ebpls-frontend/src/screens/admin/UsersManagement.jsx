@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Loader2, RefreshCw, Shield, User, Power, FileText, Filter } from 'lucide-react';
+import Select from '../../components/ui/Select';
 import apiClient from '../../utils/apiClient';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
@@ -104,14 +105,14 @@ const UsersManagement = () => {
         <button
           onClick={() => fetchUsers()}
           disabled={loading}
-          className="flex items-center gap-2 bg-white px-4 py-2 rounded-md shadow-sm border text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+          className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-200 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
         >
           <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           Refresh
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Filters */}
         <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row gap-4 justify-between items-center">
           <form onSubmit={handleSearch} className="flex gap-2 w-full md:w-auto flex-1 max-w-md">
@@ -122,29 +123,30 @@ const UsersManagement = () => {
                 placeholder="Search by email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-2xl text-sm focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all"
               />
             </div>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            <button type="submit" className="px-4 py-2 bg-gray-900 text-white rounded-2xl text-sm font-medium hover:bg-gray-800">
               Search
             </button>
           </form>
 
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <Filter size={18} className="text-gray-400" />
-            <select
+            <Select
               value={roleFilter}
               onChange={(e) => {
                 setRoleFilter(e.target.value);
                 setPage(1);
               }}
-              className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 w-full md:w-auto bg-white"
+              fullWidth={false}
+              size="sm"
+              className="min-w-[180px]"
             >
               <option value="">All Roles</option>
               {ROLE_OPTIONS.map((opt) => (
                 <option key={opt.id} value={opt.id}>{opt.name.replace('_', ' ')}</option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 
@@ -183,7 +185,7 @@ const UsersManagement = () => {
                   return (
                     <tr 
                       key={user.user_id} 
-                      className={`hover:bg-gray-50 transition-colors ${
+                      className={`hover:bg-gray-50 hover:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.06)] transition-all duration-200 ${
                         isMe 
                           ? 'bg-blue-50/50 border-l-4 border-blue-500' 
                           : !user.is_active 
@@ -193,14 +195,14 @@ const UsersManagement = () => {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isAdmin ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isAdmin ? 'bg-gray-100 text-gray-700' : 'bg-gray-100 text-gray-700'}`}>
                             {isAdmin ? <Shield size={18} /> : <User size={18} />}
                           </div>
                           <div>
                             <div className="font-medium text-gray-900 flex items-center gap-1.5">
                               {user.name}
                               {isMe && (
-                                <span className="text-[10px] bg-blue-100 text-blue-700 font-semibold px-1.5 py-0.5 rounded-full">
+                                <span className="text-[10px] bg-gray-900 text-white font-semibold px-1.5 py-0.5 rounded-full">
                                   You
                                 </span>
                               )}
@@ -210,19 +212,21 @@ const UsersManagement = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <select
+                        <Select
                           disabled={isProcessing || isMe}
                           value={user.role_id}
                           onChange={(e) => changeUserRole(user.user_id, e.target.value)}
-                          className={`border rounded px-2 py-1.5 text-xs font-medium focus:ring-2 focus:ring-blue-500 ${isProcessing || isMe ? 'opacity-50 cursor-not-allowed' : ''} ${isAdmin ? 'bg-purple-50 text-purple-800 border-purple-200' : 'bg-gray-50 text-gray-800 border-gray-200'}`}
+                          fullWidth={false}
+                          size="sm"
+                          className="min-w-[140px]"
                         >
                           {ROLE_OPTIONS.map((opt) => (
                             <option key={opt.id} value={opt.id}>{opt.name.replace('_', ' ')}</option>
                           ))}
-                        </select>
+                        </Select>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${user.is_active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                        <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${user.is_active ? 'bg-gray-100 text-gray-700' : 'bg-red-50 text-red-600'}`}>
                           {user.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
@@ -230,7 +234,7 @@ const UsersManagement = () => {
                         <button
                           onClick={() => toggleUserStatus(user.user_id, user.is_active)}
                           disabled={isProcessing || isMe}
-                          className={`flex items-center gap-1.5 justify-center ml-auto px-3 py-1.5 rounded text-xs font-medium transition-colors border ${isProcessing || isMe ? 'opacity-50 cursor-not-allowed' : ''} ${user.is_active ? 'bg-white border-red-200 text-red-600 hover:bg-red-50' : 'bg-white border-green-200 text-green-600 hover:bg-green-50'}`}
+                          className={`flex items-center gap-1.5 justify-center ml-auto px-4 py-2 rounded-2xl text-xs font-medium transition-all ${isProcessing || isMe ? 'opacity-50 cursor-not-allowed' : ''} ${user.is_active ? 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
                         >
                           {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Power size={14} />}
                           {user.is_active ? 'Deactivate' : 'Activate'}
@@ -246,22 +250,22 @@ const UsersManagement = () => {
 
         {/* Pagination */}
         {!loading && users.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50 text-sm text-gray-600">
-            <div>
-              Showing <span className="font-medium">{users.length}</span> of <span className="font-medium">{total}</span> users
-            </div>
+          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              Showing <span className="font-semibold text-gray-700">{users.length}</span> of <span className="font-semibold text-gray-700">{total}</span> users
+            </p>
             <div className="flex gap-2">
               <button 
                 disabled={page === 1}
                 onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="px-3 py-1 border rounded bg-white hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2 border border-gray-200 rounded-2xl bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 transition-all"
               >
                 Previous
               </button>
               <button 
                 disabled={users.length < 50}
                 onClick={() => setPage(p => p + 1)}
-                className="px-3 py-1 border rounded bg-white hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2 bg-gray-900 text-white rounded-2xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-all"
               >
                 Next
               </button>

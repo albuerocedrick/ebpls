@@ -11,7 +11,7 @@
  * @policy  Status selection via dropdown for better UX.
  */
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
   FileSearch,
   CheckSquare,
@@ -96,12 +96,90 @@ const iconForStatus = (status) => {
 
 const statusBgColor = (status) => {
   switch (status) {
-    case DOC_STATUS.YES: return 'bg-green-50 border-green-200';
-    case DOC_STATUS.NO: return 'bg-red-50 border-red-200';
-    case DOC_STATUS.NOT_NEEDED: return 'bg-gray-50 border-gray-200';
-    case DOC_STATUS.AWAITING_ISSUANCE: return 'bg-amber-50 border-amber-200';
-    default: return 'bg-white border-border';
+    case DOC_STATUS.YES: return 'bg-green-50 border-green-200 text-green-700';
+    case DOC_STATUS.NO: return 'bg-red-50 border-red-200 text-red-700';
+    case DOC_STATUS.NOT_NEEDED: return 'bg-gray-50 border-gray-200 text-gray-600';
+    case DOC_STATUS.AWAITING_ISSUANCE: return 'bg-amber-50 border-amber-200 text-amber-700';
+    default: return 'bg-white border-gray-200 text-gray-700';
   }
+};
+
+// Custom inline status dropdown (replaces native <select>)
+const StatusDropdown = ({ disabled, value, onChange, options, statusBgColor: getBgColor, label }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const [openUp, setOpenUp] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  // Determine if dropdown should open upward based on position
+  const handleOpen = () => {
+    if (disabled) return;
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setOpenUp(spaceBelow < 200);
+    }
+    setOpen(!open);
+  };
+
+  const currentLabel = options.find((o) => o.value === value)?.label || value;
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={handleOpen}
+        className={[
+          'text-xs font-semibold pl-3 pr-7 py-1.5 rounded-xl border cursor-pointer transition-all',
+          'focus:outline-none focus:ring-2 focus:ring-gray-100',
+          getBgColor(value),
+          disabled ? 'cursor-not-allowed opacity-80' : '',
+        ].join(' ')}
+        aria-label={`Status for ${label}`}
+      >
+        {currentLabel}
+        <ChevronDown size={11} className={`absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div
+          className={[
+            'absolute right-0 z-[100] bg-white border border-gray-100 rounded-xl shadow-[0_8px_24px_-4px_rgba(0,0,0,0.15)] py-1.5 min-w-[150px]',
+            openUp ? 'bottom-full mb-1' : 'top-full mt-1',
+          ].join(' ')}
+          style={{ position: 'fixed', ...(ref.current ? (() => {
+            const rect = ref.current.getBoundingClientRect();
+            if (openUp) {
+              return { bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right };
+            }
+            return { top: rect.bottom + 4, right: window.innerWidth - rect.right };
+          })() : {}) }}
+        >
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={[
+                'w-full text-left px-3 py-2 text-xs font-medium transition-colors rounded-lg mx-0.5',
+                opt.value === value ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50',
+              ].join(' ')}
+              style={{ width: 'calc(100% - 4px)' }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 // =========================================
@@ -592,26 +670,14 @@ const SplitScreenVerifier = () => {
                             Awaiting Issuance
                           </span>
                         ) : (
-                          <div className="relative shrink-0">
-                            <select
-                              disabled={isAdminView}
-                              value={item.status}
-                              onChange={(e) => handleStatusChange(item.requirementId, e.target.value)}
-                              className={[
-                                'appearance-none text-xs font-medium pl-2 pr-6 py-1 rounded border cursor-pointer outline-none transition-colors',
-                                statusBgColor(item.status),
-                                isAdminView ? 'cursor-not-allowed opacity-80' : '',
-                              ].join(' ')}
-                              aria-label={`Status for ${item.label}`}
-                            >
-                              {STATUS_OPTIONS.map((opt) => (
-                                <option key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-[hsl(var(--color-text-muted))]" />
-                          </div>
+                          <StatusDropdown
+                            disabled={isAdminView}
+                            value={item.status}
+                            onChange={(val) => handleStatusChange(item.requirementId, val)}
+                            options={STATUS_OPTIONS}
+                            statusBgColor={statusBgColor}
+                            label={item.label}
+                          />
                         )}
                       </div>
 

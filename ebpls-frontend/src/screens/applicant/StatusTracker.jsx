@@ -283,18 +283,21 @@ const StatusTracker = () => {
 
       {/* PHASE 5: POLLING UI FOR ONLINE PAYMENT */}
       {currentStatus === STATUSES.PAYMENT_PROCESSING && (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-10 text-center flex flex-col items-center">
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4"><Loader2 className="w-8 h-8 text-purple-600 animate-spin" /></div>
-          <h3 className="text-lg font-bold text-purple-900 tracking-tight">Confirming Your Payment</h3>
-          <p className="text-sm text-purple-700 mt-2 max-w-sm">We are waiting for PayMongo to confirm your transaction. This page will update automatically once confirmed.</p>
-          <div className="mt-6 flex items-center gap-2 text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-4"><span className="w-2 h-2 bg-purple-400 rounded-full animate-ping"></span> Live Verification in progress</div>
+        <div className="bg-white border border-gray-200 rounded-3xl p-10 text-center flex flex-col items-center">
+          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mb-5">
+            <Loader2 className="w-7 h-7 text-gray-900 animate-spin" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 tracking-tight">Confirming Your Payment</h3>
+          <p className="text-sm text-gray-500 mt-2 max-w-sm leading-relaxed">We are waiting for PayMongo to confirm your transaction. This page will update automatically once confirmed.</p>
+          <div className="mt-6 flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            <span className="w-2 h-2 bg-gray-900 rounded-full animate-ping"></span> Verification in progress
+          </div>
           
-          <div className="pt-4 border-t border-purple-200 w-full mt-4">
-            <p className="text-xs text-purple-600 mb-3">Taking too long or cancelled the window?</p>
+          <div className="pt-5 border-t border-gray-100 w-full mt-6">
+            <p className="text-xs text-gray-400 mb-3">Taking too long or cancelled the window?</p>
             <Button 
-              variant="secondary" 
+              variant="primary" 
               size="sm"
-              className="!bg-purple-600 !text-white !border-none hover:!bg-purple-700"
               onClick={handlePayOnline}
               loading={isActionLoading}
             >
@@ -306,17 +309,23 @@ const StatusTracker = () => {
 
       {/* PAID / COMPLETED SECTION — Download buttons */}
       {(currentStatus === STATUSES.PAID || currentStatus === STATUSES.COMPLETED) && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-emerald-200 flex items-center gap-3">
-            <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg"><Award size={20} /></div>
+        <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-100 rounded-2xl flex items-center justify-center">
+              <Award size={18} className="text-gray-700" />
+            </div>
             <div>
-              <h3 className="text-sm font-bold text-emerald-900">Your Permit is Ready</h3>
-              <p className="text-xs text-emerald-700 mt-0.5">Download your official documents below.</p>
+              <h3 className="text-sm font-bold text-gray-900">Your Permit is Ready</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Download your official documents below.</p>
             </div>
           </div>
           <div className="p-5 flex flex-col sm:flex-row gap-3">
-            <button onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/permit/${appId}?token=${token}`, '_blank'); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm cursor-pointer"><Award size={18} /> Business Permit <Download size={16} className="ml-auto opacity-70" /></button>
-            <button onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/eresibo/${appId}?token=${token}`, '_blank'); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white text-emerald-800 text-sm font-semibold rounded-lg border border-emerald-300 hover:bg-emerald-50 transition-colors cursor-pointer"><Receipt size={18} /> E-Resibo (Receipt) <Download size={16} className="ml-auto opacity-70" /></button>
+            <button onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/permit/${appId}?token=${token}`, '_blank'); }} className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 bg-gray-900 text-white text-sm font-semibold rounded-2xl hover:bg-gray-800 transition-all shadow-sm cursor-pointer">
+              <Award size={17} /> Business Permit <Download size={15} className="ml-auto opacity-60" />
+            </button>
+            <button onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/eresibo/${appId}?token=${token}`, '_blank'); }} className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 bg-white text-gray-900 text-sm font-semibold rounded-2xl border border-gray-200 hover:bg-gray-50 transition-all cursor-pointer">
+              <Receipt size={17} /> E-Resibo (Receipt) <Download size={15} className="ml-auto opacity-40" />
+            </button>
           </div>
         </div>
       )}

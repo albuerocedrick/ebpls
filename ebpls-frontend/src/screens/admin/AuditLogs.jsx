@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollText, Filter, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import Card from '../../components/ui/Card';
+import { ScrollText, Loader2 } from 'lucide-react';
+import Select from '../../components/ui/Select';
 import apiClient from '../../utils/apiClient';
 import { API_ENDPOINTS } from '../../utils/constants';
 import toast from 'react-hot-toast';
@@ -100,24 +100,26 @@ const AuditLogs = () => {
       <div className="flex flex-col md:flex-row gap-4 items-end">
         <form onSubmit={handleFilterSubmit} className="flex-1 flex gap-3 flex-wrap">
           <div className="w-64">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Action Type</label>
-            <select
+            <Select
+              label="Action Type"
               value={filterAction}
               onChange={(e) => { setFilterAction(e.target.value); setPage(1); }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+              size="sm"
+              className="min-w-[180px]"
             >
               <option value="">All Actions</option>
               {Object.keys(ACTION_COLORS).map(action => (
                 <option key={action} value={action}>{action.replace(/_/g, ' ')}</option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="w-64">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Actor Role</label>
-            <select
+            <Select
+              label="Actor Role"
               value={filterRole}
               onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+              size="sm"
+              className="min-w-[180px]"
             >
               <option value="">All Roles</option>
               <option value="Admin">Admin</option>
@@ -125,21 +127,21 @@ const AuditLogs = () => {
               <option value="Treasury_Officer">Treasury Officer</option>
               <option value="Barangay_Officer">Barangay Officer</option>
               <option value="Applicant">Applicant</option>
-            </select>
+            </Select>
           </div>
         </form>
       </div>
 
-      <Card padding="none" className="overflow-hidden shadow-sm border border-gray-200 rounded-xl">
+      <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-50 border-b border-gray-200 text-[11px] uppercase tracking-wider text-gray-500 font-semibold">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead className="bg-gray-50/50 border-b border-gray-100 text-[10px] uppercase tracking-widest text-gray-400 font-bold">
               <tr>
-                <th className="px-6 py-4 w-48">Timestamp</th>
-                <th className="px-6 py-4 w-56">Actor</th>
+                <th className="px-6 py-4 w-44">Timestamp</th>
+                <th className="px-6 py-4 w-52">Actor</th>
                 <th className="px-6 py-4">Action</th>
-                <th className="px-6 py-4 w-40">Entity ID</th>
-                <th className="px-6 py-4 w-24 text-center">Details</th>
+                <th className="px-6 py-4 w-36">Entity ID</th>
+                <th className="px-6 py-4 w-20 text-center">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
@@ -158,7 +160,7 @@ const AuditLogs = () => {
                 </tr>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={log.id} className="hover:bg-gray-50 hover:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.04)] transition-all duration-200">
                     <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
                       {new Date(log.created_at).toLocaleString()}
                     </td>
@@ -177,9 +179,9 @@ const AuditLogs = () => {
                     <td className="px-6 py-4 text-center">
                       <button 
                         onClick={() => setSelectedLog(log)}
-                        className="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline focus:outline-none"
+                        className="text-xs font-semibold text-gray-500 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-xl transition-all"
                       >
-                        View JSON
+                        View
                       </button>
                     </td>
                   </tr>
@@ -190,31 +192,31 @@ const AuditLogs = () => {
         </div>
         
         {/* Pagination */}
-        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-          <p className="text-xs text-gray-500">
-            Showing <span className="font-medium">{logs.length}</span> of <span className="font-medium">{totalRecords}</span> logs
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+          <p className="text-xs text-gray-400">
+            Showing <span className="font-semibold text-gray-700">{logs.length}</span> of <span className="font-semibold text-gray-700">{totalRecords}</span> logs
           </p>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1 || loading}
-              className="p-1.5 rounded-md hover:bg-white disabled:opacity-50 text-gray-600 transition-colors border border-transparent hover:border-gray-200 shadow-sm disabled:shadow-none"
+              className="px-4 py-2 border border-gray-200 rounded-2xl bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 transition-all"
             >
-              <ChevronLeft size={16} />
+              Previous
             </button>
-            <span className="text-xs font-medium text-gray-600">
-              Page {page} of {totalPages}
+            <span className="text-xs font-semibold text-gray-600">
+              {page} / {totalPages}
             </span>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages || loading}
-              className="p-1.5 rounded-md hover:bg-white disabled:opacity-50 text-gray-600 transition-colors border border-transparent hover:border-gray-200 shadow-sm disabled:shadow-none"
+              className="px-4 py-2 bg-gray-900 text-white rounded-2xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-all"
             >
-              <ChevronRight size={16} />
+              Next
             </button>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* JSON Viewer Modal */}
       {selectedLog && (

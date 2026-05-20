@@ -156,7 +156,7 @@ const MasterData = () => {
           value={boolVal ? 'true' : 'false'} 
           onChange={(e) => onChange(col, e.target.value === 'true')}
           disabled={disabled}
-          className={`w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 bg-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all bg-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <option value="true">Yes</option>
           <option value="false">No</option>
@@ -169,7 +169,7 @@ const MasterData = () => {
           value={value || 'Fixed'} 
           onChange={(e) => onChange(col, e.target.value)}
           disabled={disabled}
-          className={`w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 bg-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all bg-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <option value="Fixed">Fixed</option>
           <option value="Gross_Sales">Gross_Sales</option>
@@ -185,7 +185,7 @@ const MasterData = () => {
           value={value || ''}
           onChange={(e) => onChange(col, e.target.value === '' ? null : Number(e.target.value))}
           disabled={disabled}
-          className={`w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 bg-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all bg-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <option value="">None (Select dependency)</option>
           {otherFees.map(fee => (
@@ -203,7 +203,7 @@ const MasterData = () => {
           value={value === undefined || value === null ? '' : value}
           onChange={(e) => onChange(col, e.target.value === '' ? null : Number(e.target.value))}
           disabled={disabled}
-          className={`w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
+          className={`w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
         />
       );
     }
@@ -214,7 +214,7 @@ const MasterData = () => {
         value={value || ''}
         onChange={(e) => onChange(col, e.target.value)}
         disabled={disabled}
-        className={`w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
+        className={`w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
       />
     );
   };
@@ -222,9 +222,9 @@ const MasterData = () => {
   const displayValue = (col, value) => {
     if (col === 'is_active') {
       return value ? (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700">Active</span>
+        <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-700">Active</span>
       ) : (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700">Inactive</span>
+        <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-red-50 text-red-600">Inactive</span>
       );
     }
     if (col === 'computation_basis') {
@@ -238,9 +238,9 @@ const MasterData = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-full mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Master Data</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">Master Data</h1>
         <p className="text-sm text-gray-500 mt-1">
           Manage system lookup tables, fee definitions, and configuration values.
         </p>
@@ -248,18 +248,18 @@ const MasterData = () => {
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar: Table Selection */}
-        <div className="w-full lg:w-64 shrink-0 space-y-2">
+        <div className="w-full lg:w-56 shrink-0 space-y-1.5">
           {TABLES.map((table) => (
             <button
               key={table.id}
               onClick={() => setActiveTable(table)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all text-left ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all text-left ${
                 activeTable.id === table.id
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                  ? 'bg-gray-900 text-white shadow-sm'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-100'
               }`}
             >
-              <Database size={16} className={activeTable.id === table.id ? 'text-white' : 'text-gray-400'} />
+              <Database size={15} className={activeTable.id === table.id ? 'text-white/70' : 'text-gray-400'} />
               {table.name}
             </button>
           ))}
@@ -268,46 +268,47 @@ const MasterData = () => {
         {/* Main Content: Data Grid */}
         <div className="flex-1 min-w-0">
           <Card padding="none" className="overflow-hidden">
-            <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-              <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                {activeTable.name} <span className="text-xs font-normal bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">{data.length} records</span>
+            <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+              <h2 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
+                {activeTable.name}
+                <span className="text-xs font-normal bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">{data.length}</span>
               </h2>
               <button
                 onClick={() => setIsCreating(true)}
                 disabled={isCreating || isSaving || editingId !== null}
-                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-2xl text-xs font-medium transition-all disabled:opacity-50"
               >
                 <Plus size={14} /> Add New
               </button>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-white border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-semibold">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead className="bg-gray-50/50 border-b border-gray-100 text-[10px] uppercase tracking-widest text-gray-400 font-bold">
                   <tr>
-                    <th className="px-4 py-3 w-16">ID</th>
+                    <th className="px-5 py-3.5 w-14">ID</th>
                     {activeTable.columns.map(col => (
-                      <th key={col} className="px-4 py-3">{col.replace('_', ' ')}</th>
+                      <th key={col} className="px-5 py-3.5 whitespace-nowrap">{col.replace(/_/g, ' ')}</th>
                     ))}
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {/* Create Row */}
                   {isCreating && (
-                    <tr className="bg-blue-50/50">
-                      <td className="px-4 py-3 text-xs text-gray-400 font-mono">NEW</td>
+                    <tr className="bg-gray-50">
+                      <td className="px-5 py-3.5 text-xs text-gray-400 font-mono">NEW</td>
                       {activeTable.columns.map(col => (
-                        <td key={col} className="px-4 py-3">
+                        <td key={col} className="px-5 py-3.5">
                           {renderInput(col, createForm[col], (k, v) => setCreateForm(prev => ({ ...prev, [k]: v })), false, createForm)}
                         </td>
                       ))}
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button 
                             onClick={handleCreate} 
                             disabled={isSaving}
-                            className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors disabled:opacity-50"
+                            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all disabled:opacity-50"
                             title="Save"
                           >
                             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
@@ -315,7 +316,7 @@ const MasterData = () => {
                           <button 
                             onClick={() => { setIsCreating(false); setCreateForm({}); }}
                             disabled={isSaving}
-                            className="p-1.5 text-gray-500 hover:bg-gray-200 rounded transition-colors disabled:opacity-50"
+                            className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all disabled:opacity-50"
                             title="Cancel"
                           >
                             <X size={16} />
@@ -346,10 +347,10 @@ const MasterData = () => {
                       
                       return (
                         <tr key={row.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 text-xs font-mono text-gray-500">{row.id}</td>
+                          <td className="px-5 py-3.5 text-xs font-mono text-gray-500">{row.id}</td>
                           
                           {activeTable.columns.map(col => (
-                            <td key={col} className="px-4 py-3">
+                            <td key={col} className="px-5 py-3.5">
                               {isEditing 
                                 ? renderInput(col, editForm[col], (k, v) => setEditForm(prev => ({ ...prev, [k]: v })), isProtected, editForm)
                                 : displayValue(col, row[col])
@@ -357,14 +358,14 @@ const MasterData = () => {
                             </td>
                           ))}
                           
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-5 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-2">
                               {isEditing ? (
                                 <>
                                   <button 
                                     onClick={() => handleSave(row.id)} 
                                     disabled={isSaving}
-                                    className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors disabled:opacity-50"
+                                    className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all disabled:opacity-50"
                                     title="Save changes"
                                   >
                                     {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
@@ -372,7 +373,7 @@ const MasterData = () => {
                                   <button 
                                     onClick={() => { setEditingId(null); setEditForm({}); }}
                                     disabled={isSaving}
-                                    className="p-1.5 text-gray-500 hover:bg-gray-200 rounded transition-colors disabled:opacity-50"
+                                    className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all disabled:opacity-50"
                                     title="Cancel editing"
                                   >
                                     <X size={16} />
@@ -383,14 +384,14 @@ const MasterData = () => {
                                   <button 
                                     onClick={() => handleEdit(row)} 
                                     disabled={isCreating || editingId !== null}
-                                    className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors disabled:opacity-50"
+                                    className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all disabled:opacity-50"
                                     title="Edit row"
                                   >
                                     <Edit2 size={16} />
                                   </button>
                                   {isProtected ? (
                                     <span 
-                                      className="p-1.5 text-gray-400 cursor-not-allowed flex items-center justify-center" 
+                                      className="p-2 text-gray-300 cursor-not-allowed flex items-center justify-center" 
                                       title="Core dependency: cannot be deleted."
                                     >
                                       <Lock size={16} />
@@ -399,7 +400,7 @@ const MasterData = () => {
                                     <button 
                                       onClick={() => handleDelete(row.id)} 
                                       disabled={isCreating || editingId !== null || isSaving}
-                                      className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
+                                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all disabled:opacity-50"
                                       title="Delete row"
                                     >
                                       <Trash2 size={16} />

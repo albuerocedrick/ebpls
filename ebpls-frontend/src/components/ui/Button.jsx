@@ -21,34 +21,40 @@ import { Loader2 } from 'lucide-react';
 
 const VARIANT_CLASSES = {
   primary: [
-    'bg-accent text-white',
-    'hover:bg-[hsl(var(--color-accent-hover))]',
+    'bg-gray-900 text-white',
+    'hover:bg-gray-800',
     'border border-transparent',
-    'focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+    'focus-visible:ring-4 focus-visible:ring-gray-200 focus-visible:ring-offset-0',
+    'shadow-sm hover:shadow-md hover:shadow-gray-900/10',
   ].join(' '),
 
   secondary: [
-    'bg-surface-tint text-[hsl(var(--color-text))]',
-    'hover:bg-[hsl(var(--color-border))]',
-    'border border-border',
+    'bg-white text-gray-700',
+    'hover:bg-gray-50 hover:border-gray-300',
+    'border border-gray-200',
+    'focus-visible:ring-4 focus-visible:ring-gray-100',
+    'shadow-sm',
   ].join(' '),
 
   outline: [
-    'bg-transparent text-accent',
-    'hover:bg-[hsl(var(--color-accent-subtle))]',
-    'border border-accent',
+    'bg-transparent text-gray-700',
+    'hover:bg-gray-50',
+    'border border-gray-200',
+    'focus-visible:ring-4 focus-visible:ring-gray-100',
   ].join(' '),
 
   ghost: [
-    'bg-transparent text-[hsl(var(--color-text-muted))]',
-    'hover:bg-surface-tint hover:text-[hsl(var(--color-text))]',
+    'bg-transparent text-gray-500',
+    'hover:bg-gray-100 hover:text-gray-900',
     'border border-transparent',
   ].join(' '),
 
   danger: [
-    'bg-[hsl(var(--color-error))] text-white',
-    'hover:bg-[hsl(350_80%_42%)]',
+    'bg-red-600 text-white',
+    'hover:bg-red-700',
     'border border-transparent',
+    'focus-visible:ring-4 focus-visible:ring-red-100',
+    'shadow-sm',
   ].join(' '),
 };
 
@@ -93,7 +99,7 @@ const Button = ({
       disabled={isDisabled}
       className={[
         // Base structure
-        'inline-flex items-center justify-center font-medium rounded-md',
+        'inline-flex items-center justify-center font-medium rounded-2xl',
         'select-none whitespace-nowrap',
         // Variant & size
         VARIANT_CLASSES[variant],

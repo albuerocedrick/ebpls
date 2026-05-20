@@ -1,36 +1,17 @@
 /**
  * Sidebar.jsx
- * Desktop-first collapsible navigation column.
- * Used by: BPLOLayout, TreasuryLayout, BarangayLayout, AdminLayout.
- *
- * Nav items are injected by the parent layout so this component
- * remains fully role-agnostic.
- *
- * @policy  Width is var(--sidebar-width) = 15rem. Never hardcode it.
- * @policy  Active nav item uses --color-accent-subtle background and
- *          --color-accent text. Not a solid accent fill (would violate 60-30-10).
- * @policy  Icons must be Lucide elements. No emojis.
- * @policy  Sidebar respects isSidebarOpen from UIStore.
- *          On mobile, it renders as an overlay. On desktop, it shifts content.
+ * Dark sidebar navigation — matches the reference design.
  */
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import useUIStore from '../../store/UIStore';
+import useAuthStore from '../../store/authStore';
 
 // =========================================
-// Sub-component: Nav Item
+// Nav Item
 // =========================================
 
-/**
- * @param {object} props
- * @param {string} props.to        - React Router path
- * @param {React.ReactElement} props.icon   - Lucide icon element
- * @param {string} props.label
- * @param {boolean} [props.end]    - Match exactly
- * @param {Function} [props.isActive] - Custom active logic
- * @param {Function} [props.onNavigate] - Called after navigation
- */
 const NavItem = ({ to, icon, label, end = false, isActive: customIsActive, onNavigate }) => (
   <NavLink
     to={to}
@@ -39,19 +20,16 @@ const NavItem = ({ to, icon, label, end = false, isActive: customIsActive, onNav
     className={(navLinkProps) => {
       const active = customIsActive ? customIsActive(navLinkProps) : navLinkProps.isActive;
       return [
-        'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium',
-        'transition-[color,background-color,box-shadow] duration-200 ease-in-out',
+        'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium',
+        'transition-all duration-200',
         'group',
         active
-          ? 'bg-[hsl(var(--color-accent-subtle))] text-accent'
-          : 'text-[hsl(var(--color-text-muted))] hover:bg-surface-tint hover:text-[hsl(var(--color-text))]',
+          ? 'bg-white/10 text-white'
+          : 'text-gray-400 hover:bg-white/5 hover:text-gray-200',
       ].join(' ');
     }}
   >
-    <span
-      className="shrink-0 transition-transform duration-200 group-hover:scale-110"
-      aria-hidden="true"
-    >
+    <span className="shrink-0 text-lg opacity-70 group-hover:opacity-100 transition-opacity">
       {icon}
     </span>
     <span className="truncate">{label}</span>
@@ -59,19 +37,13 @@ const NavItem = ({ to, icon, label, end = false, isActive: customIsActive, onNav
 );
 
 // =========================================
-// Sub-component: Nav Section
+// Nav Section
 // =========================================
 
-/**
- * Groups nav items under an optional section label.
- * @param {object} props
- * @param {string} [props.sectionLabel]
- * @param {React.ReactNode} props.children
- */
 const NavSection = ({ sectionLabel, children }) => (
   <div className="flex flex-col gap-0.5">
     {sectionLabel && (
-      <p className="px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-wider text-[hsl(var(--color-text-muted))] select-none">
+      <p className="px-4 pt-6 pb-2 text-[0.6rem] font-bold text-gray-500 uppercase tracking-[0.15em] select-none">
         {sectionLabel}
       </p>
     )}
@@ -80,25 +52,19 @@ const NavSection = ({ sectionLabel, children }) => (
 );
 
 // =========================================
-// Main Sidebar Component
+// Main Sidebar
 // =========================================
 
-/**
- * @param {object}   props
- * @param {Array}    props.navItems  - Array of nav sections:
- *   [{ sectionLabel?: string, items: [{ to, icon, label }] }]
- * @param {React.ReactNode} [props.footer]  - Optional content pinned to the sidebar bottom
- */
 const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
   const { isSidebarOpen, closeSidebar } = useUIStore();
+  const user = useAuthStore((s) => s.user);
 
   return (
     <>
-      {/* Mobile overlay backdrop — closes sidebar on tap */}
+      {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/30 lg:hidden"
-          style={{ zIndex: 'calc(var(--z-sticky) - 1)' }}
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm lg:hidden z-[39]"
           onClick={closeSidebar}
           aria-hidden="true"
         />
@@ -109,20 +75,40 @@ const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
         aria-label="Navigation sidebar"
         className={[
           'fixed top-0 left-0 h-full',
-          panelClassName || 'bg-[hsl(var(--color-surface-raised))]',
-          'border-r border-border shadow-sm',
+          panelClassName || 'bg-gray-900',
           'flex flex-col',
-          'transition-transform duration-300 ease-in-out',
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          'transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         ].join(' ')}
         style={{
           width: 'var(--sidebar-width)',
-          paddingTop: 'var(--navbar-height)',
           zIndex: 'var(--z-sticky)',
         }}
       >
-        {/* Scrollable nav area */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-1">
+        {/* User Profile Section */}
+        <div className="p-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-800 border-2 border-gray-700 flex items-center justify-center">
+                <span className="text-white text-sm font-bold">
+                  {user?.firstName ? user.firstName.charAt(0).toUpperCase() : 'U'}
+                </span>
+              </div>
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white truncate">
+                {user?.firstName || 'User'}
+              </p>
+              <p className="text-[11px] text-gray-400 truncate">
+                {user?.email || 'Active'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
           {navItems.map((section, idx) => (
             <NavSection key={idx} sectionLabel={section.sectionLabel}>
               {section.items.map((item) => (
@@ -134,7 +120,6 @@ const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
                   end={item.end}
                   isActive={item.isActive}
                   onNavigate={() => {
-                    // Close sidebar on mobile after navigation
                     if (window.innerWidth < 1024) closeSidebar();
                   }}
                 />
@@ -143,9 +128,9 @@ const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
           ))}
         </nav>
 
-        {/* Pinned footer area (e.g. logout button) */}
+        {/* Footer */}
         {footer && (
-          <div className="px-3 py-4 border-t border-border shrink-0">
+          <div className="px-3 py-4 border-t border-gray-800 shrink-0">
             {footer}
           </div>
         )}

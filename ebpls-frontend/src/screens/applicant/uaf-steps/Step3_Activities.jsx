@@ -5,6 +5,7 @@ import useApplicationStore from '../../../store/applicationStore';
 import { Store, Plus, Trash2, Info, PhilippinePeso } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 import { API_ENDPOINTS } from '../../../utils/constants';
+import Select from '../../../components/ui/Select';
 
 // Fallback constant
 const FALLBACK_ACTIVITIES = [
@@ -61,8 +62,8 @@ const Step3_Activities = () => {
     setFormField('step3', 'lineOfBusinesses', updatedLOBs);
   };
 
-  const inputClasses = "w-full px-3 py-2 bg-[hsl(var(--color-surface,0,0%,100%))] border border-[hsl(var(--color-border,0,0%,80%))] rounded-md text-sm text-[hsl(var(--color-text,0,0%,10%))] focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors";
-  const labelClasses = "block text-xs font-semibold text-[hsl(var(--color-text,0,0%,10%))] mb-1.5";
+  const inputClasses = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 focus:outline-none focus:border-gray-400 focus:ring-4 focus:ring-gray-100 focus:bg-white transition-all cursor-pointer";
+  const labelClasses = "block text-sm font-semibold text-gray-700 mb-2";
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -91,17 +92,17 @@ const Step3_Activities = () => {
               <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4">
                 {/* LOB Type */}
                 <div className="md:col-span-6">
-                  <label className={labelClasses}>Line of Business <span className="text-red-500">*</span></label>
-                  <select 
-                    value={lob.name} 
-                    onChange={(e) => handleChange(index, 'name', e.target.value)} 
-                    className={inputClasses}
+                  <Select
+                    label="Line of Business"
+                    required
+                    value={lob.name}
+                    onChange={(e) => handleChange(index, 'name', e.target.value)}
                   >
                     <option value="" disabled>Select business activity</option>
                     {businessActivities.map((activity, i) => (
                       <option key={i} value={activity}>{activity}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 {/* Capital Investment / Gross Sales */}

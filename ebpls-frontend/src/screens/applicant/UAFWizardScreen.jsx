@@ -227,8 +227,8 @@ const UAFWizardScreen = () => {
   if (editLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 max-w-4xl mx-auto">
-        <Loader2 size={32} className="animate-spin text-accent" />
-        <p className="text-sm text-[hsl(var(--color-text-muted,0,0%,40%))]">Loading application data...</p>
+        <Loader2 size={28} className="animate-spin text-gray-300" />
+        <p className="text-sm text-gray-400">Loading application data...</p>
       </div>
     );
   }
@@ -239,38 +239,40 @@ const UAFWizardScreen = () => {
       {/* Header & Autosave Status */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--color-text,0,0%,10%))]">Business Permit Application</h1>
-          <p className="text-sm text-[hsl(var(--color-text-muted,0,0%,40%))] mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Business Permit Application</h1>
+          <p className="text-sm text-gray-500 mt-1">
             Unified Application Form (UAF)
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-[hsl(var(--color-surface-raised,0,0%,96%))] border border-[hsl(var(--color-border,0,0%,90%))]">
+        <div className="flex items-center gap-2 text-xs font-medium px-3.5 py-2 rounded-2xl bg-white border border-gray-200 shadow-sm">
           {isSaving ? (
             <>
-              <Loader2 size={14} className="animate-spin text-accent" />
-              <span className="text-[hsl(var(--color-text,0,0%,10%))]">Saving draft...</span>
+              <Loader2 size={14} className="animate-spin text-gray-400" />
+              <span className="text-gray-600">Saving draft...</span>
             </>
           ) : lastSavedAt ? (
             <>
               <Check size={14} className="text-green-600" />
-              <span className="text-[hsl(var(--color-text-muted,0,0%,40%))]">Saved {formatDateTime(lastSavedAt)}</span>
+              <span className="text-gray-500">Saved {formatDateTime(lastSavedAt)}</span>
             </>
           ) : (
             <>
-              <Save size={14} className="text-[hsl(var(--color-text-muted,0,0%,40%))]" />
-              <span className="text-[hsl(var(--color-text-muted,0,0%,40%))]">Draft saved locally</span>
+              <Save size={14} className="text-gray-400" />
+              <span className="text-gray-500">Draft saved locally</span>
             </>
           )}
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="bg-[hsl(var(--color-surface,0,0%,100%))] border border-[hsl(var(--color-border,0,0%,90%))] rounded-xl p-4 sm:p-6 shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))]">
+      {/* Progress Stepper */}
+      <div className="bg-white border border-gray-100 rounded-3xl p-5 sm:p-7 shadow-sm">
         <div className="flex items-center justify-between relative">
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-[hsl(var(--color-border,0,0%,90%))] z-0" />
+          {/* Background track — aligned to center of circles */}
+          <div className="absolute left-0 right-0 top-[18px] sm:top-[22px] h-[3px] bg-gray-100 z-0 rounded-full" />
+          {/* Active track */}
           <div
-            className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-accent z-0 transition-all duration-300 ease-out"
+            className="absolute left-0 top-[18px] sm:top-[22px] h-[3px] bg-blue-500 z-0 rounded-full transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
             style={{ width: `${((current_step - 1) / (WIZARD_STEPS.length - 1)) * 100}%` }}
           />
 
@@ -280,24 +282,26 @@ const UAFWizardScreen = () => {
             const Icon        = step.icon;
 
             return (
-              <div key={step.id} className="relative z-10 flex flex-col items-center gap-2">
+              <div key={step.id} className="relative z-10 flex flex-col items-center gap-2.5">
                 <div
-                  className={`
-                    w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-colors duration-300
-                    ${isCompleted
-                      ? 'bg-accent border-accent text-white'
+                  className={[
+                    'w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center border-2 transition-all duration-300',
+                    isCompleted
+                      ? 'bg-blue-500 border-blue-500 text-white'
                       : isActive
-                        ? 'bg-white border-accent text-accent'
-                        : 'bg-[hsl(var(--color-surface-raised,0,0%,96%))] border-[hsl(var(--color-border,0,0%,80%))] text-[hsl(var(--color-border,0,0%,80%))]'
-                    }
-                  `}
+                        ? 'bg-white border-blue-500 text-blue-500 shadow-md shadow-blue-500/20'
+                        : 'bg-gray-50 border-gray-200 text-gray-300',
+                  ].join(' ')}
                 >
                   {isCompleted
-                    ? <Check size={18} strokeWidth={3} />
-                    : <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                    ? <Check size={16} strokeWidth={3} />
+                    : <Icon size={16} strokeWidth={isActive ? 2.5 : 1.5} />
                   }
                 </div>
-                <span className={`hidden sm:block text-xs font-semibold ${isActive || isCompleted ? 'text-[hsl(var(--color-text,0,0%,10%))]' : 'text-[hsl(var(--color-text-muted,0,0%,50%))]'}`}>
+                <span className={[
+                  'hidden sm:block text-[11px] font-semibold transition-colors duration-300',
+                  isActive ? 'text-gray-900' : isCompleted ? 'text-gray-700' : 'text-gray-400',
+                ].join(' ')}>
                   {step.label}
                 </span>
               </div>

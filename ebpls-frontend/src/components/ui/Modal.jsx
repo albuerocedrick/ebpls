@@ -107,9 +107,9 @@ const Modal = ({
       {/* Modal panel — sits above the backdrop */}
       <div
         className={[
-          'relative w-full bg-[hsl(var(--color-surface-raised))] rounded-lg',
-          'shadow-[var(--shadow-raised)]',
-          'border border-border',
+          'relative w-full bg-white rounded-3xl',
+          'shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)]',
+          'border border-gray-100',
           'flex flex-col max-h-[90vh]',
           SIZE_CLASSES[size],
           // Entrance animation
@@ -117,10 +117,10 @@ const Modal = ({
         ].join(' ')}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 shrink-0">
           <h2
             id={`${title}-modal-title`}
-            className="text-base font-semibold text-[hsl(var(--color-text))]"
+            className="text-base font-bold text-gray-900"
           >
             {title}
           </h2>
@@ -130,7 +130,7 @@ const Modal = ({
               size="sm"
               onClick={handleClose}
               aria-label="Close modal"
-              className="!p-1.5 -mr-1"
+              className="!p-2 -mr-1"
             >
               <X size={16} />
             </Button>
@@ -138,13 +138,13 @@ const Modal = ({
         </div>
 
         {/* Body — scrollable */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5">
           {children}
         </div>
 
         {/* Footer — optional */}
         {footer && (
-          <div className="px-5 py-4 border-t border-border bg-surface-tint shrink-0 rounded-b-lg">
+          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 shrink-0 rounded-b-3xl">
             {footer}
           </div>
         )}

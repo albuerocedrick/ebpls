@@ -54,23 +54,20 @@ const BPLOLayout = () => {
   const { isSidebarOpen } = useUIStore();
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ backgroundColor: 'hsl(var(--color-surface-bplo))' }}
-    >
+    <div className="min-h-screen bg-gray-50">
       <Navbar portalLabel="BPLO Portal" />
       <Sidebar navItems={BPLO_NAV} />
 
       {/* Content — shifts right when sidebar is open */}
       <main
         id="bplo-content"
-        className="transition-[margin-left] duration-300 ease-in-out overflow-x-hidden"
+        className="transition-[margin-left] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-x-hidden min-h-screen"
         style={{
           paddingTop: 'var(--navbar-height)',
           marginLeft: isSidebarOpen ? 'var(--sidebar-width)' : '0',
         }}
       >
-        <div className="p-6">
+        <div className="p-4 sm:p-6 lg:p-8">
           <Outlet />
         </div>
       </main>

@@ -142,16 +142,16 @@ const RetirementAssess = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Retirement Assessments</h1>
-          <p className="text-sm text-white/60">Assess final taxes and record OTC payments for business retirements.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Retirement Assessments</h1>
+          <p className="text-sm text-gray-500 mt-1">Assess final taxes and record OTC payments for business retirements.</p>
         </div>
         <button
           onClick={fetchQueue}
-          className="p-2 rounded-lg border border-white/20 hover:bg-white/10 text-white/70 transition-colors"
+          className="p-2.5 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-all"
           title="Refresh"
         >
           <RefreshCw size={16} />
@@ -161,36 +161,36 @@ const RetirementAssess = () => {
       {/* List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 size={24} className="animate-spin text-white/50" />
+          <Loader2 size={24} className="animate-spin text-gray-400" />
         </div>
       ) : retirements.length === 0 ? (
         <div className="text-center py-12">
-          <Building2 size={40} className="mx-auto text-white/30 mb-3" />
-          <p className="text-white/50">No retirement applications in queue.</p>
+          <Building2 size={40} className="mx-auto text-gray-300 mb-3" />
+          <p className="text-gray-400">No retirement applications in queue.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {retirements.map((item) => (
             <div
               key={item.id}
-              className="border border-white/10 rounded-lg p-4 bg-white/5"
+              className="border border-gray-200 rounded-lg p-4 bg-white"
             >
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-white">
+                    <span className="font-semibold text-gray-900">
                       {item.businesses?.business_name || 'Unknown'}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[item.status]}`}>
                       {item.status}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-4 text-xs text-white/50">
+                  <div className="flex flex-wrap gap-4 text-xs text-gray-400">
                     <span>Applicant: {item.submitter?.first_name} {item.submitter?.last_name}</span>
                     <span>Cessation: {formatDate(item.cessation_date)}</span>
                     <span>Gross Sales: ₱{Number(item.final_gross_sales || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
                   </div>
-                  <p className="text-sm text-white/70">Reason: {item.reason}</p>
+                  <p className="text-sm text-gray-600">Reason: {item.reason}</p>
                 </div>
 
                 {/* Actions */}
@@ -198,7 +198,7 @@ const RetirementAssess = () => {
                   {item.status === 'Pending' && (
                     <button
                       onClick={() => openAssessModal(item.id)}
-                      className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-2xl bg-gray-900 hover:bg-gray-800 text-gray-900 text-sm font-medium transition-colors flex items-center gap-1.5"
                     >
                       <DollarSign size={14} />
                       Assess
@@ -207,7 +207,7 @@ const RetirementAssess = () => {
                   {item.status === 'Assessed' && (
                     <button
                       onClick={() => openPaymentModal(item.id, item.final_gross_sales)}
-                      className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-2xl bg-green-600 hover:bg-green-700 text-gray-900 text-sm font-medium transition-colors flex items-center gap-1.5"
                     >
                       <CheckCircle size={14} />
                       Record Payment
@@ -227,10 +227,10 @@ const RetirementAssess = () => {
 
       {/* ASSESS MODAL */}
       {assessingId && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[hsl(220,20%,18%)] border border-white/10 rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-bold text-white mb-4">Assess Retirement</h2>
-            <p className="text-sm text-white/60 mb-4">Add fee line items for the final tax computation.</p>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 w-full shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] max-w-md">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Assess Retirement</h2>
+            <p className="text-sm text-gray-500 mb-4">Add fee line items for the final tax computation.</p>
 
             <div className="space-y-3 max-h-60 overflow-y-auto">
               {lineItems.map((item, idx) => (
@@ -238,24 +238,24 @@ const RetirementAssess = () => {
                   <select
                     value={item.fee_type_id}
                     onChange={(e) => updateLineItem(idx, 'fee_type_id', e.target.value)}
-                    className="flex-1 px-2 py-2 rounded bg-[hsl(220,20%,22%)] border border-white/20 text-white text-sm appearance-none cursor-pointer"
+                    className="flex-1 px-2 py-2 rounded-2xl bg-gray-50 border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all appearance-none cursor-pointer"
                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
                   >
-                    <option value="1" className="bg-[#1e2a3a] text-white">Mayor&#39;s Permit Fee</option>
-                    <option value="2" className="bg-[#1e2a3a] text-white">Business Tax</option>
-                    <option value="3" className="bg-[#1e2a3a] text-white">Sanitary Inspection Fee</option>
-                    <option value="4" className="bg-[#1e2a3a] text-white">Zoning / Occupancy Fee</option>
-                    <option value="5" className="bg-[#1e2a3a] text-white">Garbage Collection Fee</option>
-                    <option value="6" className="bg-[#1e2a3a] text-white">Environmental Fee</option>
-                    <option value="7" className="bg-[#1e2a3a] text-white">Weight and Measures Fee</option>
-                    <option value="8" className="bg-[#1e2a3a] text-white">Fire Safety Inspection Fee</option>
+                    <option value="1" className="bg-gray-50 text-gray-900">Mayor&#39;s Permit Fee</option>
+                    <option value="2" className="bg-gray-50 text-gray-900">Business Tax</option>
+                    <option value="3" className="bg-gray-50 text-gray-900">Sanitary Inspection Fee</option>
+                    <option value="4" className="bg-gray-50 text-gray-900">Zoning / Occupancy Fee</option>
+                    <option value="5" className="bg-gray-50 text-gray-900">Garbage Collection Fee</option>
+                    <option value="6" className="bg-gray-50 text-gray-900">Environmental Fee</option>
+                    <option value="7" className="bg-gray-50 text-gray-900">Weight and Measures Fee</option>
+                    <option value="8" className="bg-gray-50 text-gray-900">Fire Safety Inspection Fee</option>
                   </select>
                   <input
                     type="number"
                     placeholder="₱ Amount"
                     value={item.amount}
                     onChange={(e) => updateLineItem(idx, 'amount', e.target.value)}
-                    className="w-28 px-2 py-2 rounded bg-[hsl(220,20%,22%)] border border-white/20 text-white text-sm placeholder:text-white/40"
+                    className="w-28 px-2 py-2 rounded-2xl bg-gray-50 border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all placeholder:text-gray-900/40"
                     min="0"
                     step="0.01"
                   />
@@ -278,14 +278,14 @@ const RetirementAssess = () => {
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setAssessingId(null)}
-                className="px-4 py-2 rounded-lg border border-white/20 text-white/70 text-sm hover:bg-white/10"
+                className="px-4 py-2 rounded-2xl border border-gray-200 text-gray-700 text-sm hover:bg-gray-100"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAssess}
                 disabled={actionLoading === assessingId}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-1.5"
+                className="px-4 py-2 rounded-2xl bg-gray-900 hover:bg-gray-800 text-gray-900 text-sm font-medium disabled:opacity-50 flex items-center gap-1.5"
               >
                 {actionLoading === assessingId ? <Loader2 size={14} className="animate-spin" /> : <DollarSign size={14} />}
                 Confirm Assessment
@@ -297,40 +297,40 @@ const RetirementAssess = () => {
 
       {/* PAYMENT MODAL */}
       {payingId && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[hsl(220,20%,18%)] border border-white/10 rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-bold text-white mb-4">Record OTC Payment</h2>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 w-full shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] max-w-md">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Record OTC Payment</h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-white/70 mb-1">OR Number</label>
+                <label className="block text-sm text-gray-600 mb-1">OR Number</label>
                 <input
                   type="text"
                   value={paymentForm.or_number}
                   onChange={(e) => setPaymentForm((p) => ({ ...p, or_number: e.target.value }))}
                   placeholder="e.g. RET-2026-0001"
-                  className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white text-sm"
+                  className="w-full px-3 py-2 rounded bg-gray-100 border border-gray-200 text-gray-900 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-white/70 mb-1">Amount Tendered (₱)</label>
+                <label className="block text-sm text-gray-600 mb-1">Amount Tendered (₱)</label>
                 <input
                   type="number"
                   value={paymentForm.amount_tendered}
                   onChange={(e) => setPaymentForm((p) => ({ ...p, amount_tendered: e.target.value }))}
                   min="0"
                   step="0.01"
-                  className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white text-sm"
+                  className="w-full px-3 py-2 rounded bg-gray-100 border border-gray-200 text-gray-900 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-white/70 mb-1">Payment Type</label>
+                <label className="block text-sm text-gray-600 mb-1">Payment Type</label>
                 <select
                   value={paymentForm.tendered_type}
                   onChange={(e) => setPaymentForm((p) => ({ ...p, tendered_type: e.target.value }))}
-                  className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white text-sm"
+                  className="w-full px-3 py-2 rounded bg-gray-100 border border-gray-200 text-gray-900 text-sm"
                 >
                   <option value="Cash">Cash</option>
                   <option value="Manager Check">Manager Check</option>
@@ -340,21 +340,21 @@ const RetirementAssess = () => {
               {paymentForm.tendered_type === 'Manager Check' && (
                 <>
                   <div>
-                    <label className="block text-sm text-white/70 mb-1">Check Number</label>
+                    <label className="block text-sm text-gray-600 mb-1">Check Number</label>
                     <input
                       type="text"
                       value={paymentForm.check_number}
                       onChange={(e) => setPaymentForm((p) => ({ ...p, check_number: e.target.value }))}
-                      className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white text-sm"
+                      className="w-full px-3 py-2 rounded bg-gray-100 border border-gray-200 text-gray-900 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-white/70 mb-1">Bank Name</label>
+                    <label className="block text-sm text-gray-600 mb-1">Bank Name</label>
                     <input
                       type="text"
                       value={paymentForm.bank_name}
                       onChange={(e) => setPaymentForm((p) => ({ ...p, bank_name: e.target.value }))}
-                      className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white text-sm"
+                      className="w-full px-3 py-2 rounded bg-gray-100 border border-gray-200 text-gray-900 text-sm"
                     />
                   </div>
                 </>
@@ -364,14 +364,14 @@ const RetirementAssess = () => {
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setPayingId(null)}
-                className="px-4 py-2 rounded-lg border border-white/20 text-white/70 text-sm hover:bg-white/10"
+                className="px-4 py-2 rounded-2xl border border-gray-200 text-gray-700 text-sm hover:bg-gray-100"
               >
                 Cancel
               </button>
               <button
                 onClick={handlePayment}
                 disabled={actionLoading === payingId}
-                className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-1.5"
+                className="px-4 py-2 rounded-2xl bg-green-600 hover:bg-green-700 text-gray-900 text-sm font-medium disabled:opacity-50 flex items-center gap-1.5"
               >
                 {actionLoading === payingId ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
                 Record Payment

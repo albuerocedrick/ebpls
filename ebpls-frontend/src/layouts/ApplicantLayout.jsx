@@ -48,26 +48,31 @@ const ApplicantLayout = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[hsl(var(--color-bg,0,0%,98%))]">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       
       {/* Universal Top Header */}
-      <header className="sticky top-0 z-40 bg-[hsl(var(--color-surface,0,0%,100%))] border-b border-[hsl(var(--color-border,0,0%,90%))] px-4 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="w-8 h-8 rounded bg-accent text-white flex items-center justify-center text-sm font-bold">eB</span>
-          <h1 className="text-lg font-bold text-[hsl(var(--color-text,0,0%,10%))]">eBPLS Liliw</h1>
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center shadow-sm">
+            <span className="text-white text-xs font-bold">eB</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-extrabold text-gray-900 leading-tight tracking-tight">eBPLS</span>
+            <span className="text-[10px] font-medium text-gray-400 leading-tight">Municipality of Liliw</span>
+          </div>
         </div>
         <button 
           onClick={handleLogout} 
-          className="p-2 text-[hsl(var(--color-text-muted,0,0%,40%))] hover:text-red-600 transition-colors"
+          className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
           title="Sign Out"
         >
-          <LogOut size={20} />
+          <LogOut size={18} />
         </button>
       </header>
 
       {/* Main Scrollable Content */}
       <main className="flex-1 overflow-y-auto pb-[var(--bottom-nav-height,4rem)]">
-        <div className="max-w-4xl mx-auto p-4 md:p-8">
+        <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-8">
           
           {/* Autosave Resume Prompt */}
           <DraftResumePrompt 

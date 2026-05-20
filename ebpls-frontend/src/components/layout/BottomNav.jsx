@@ -52,11 +52,9 @@ const BottomNav = () => {
       className={[
         'fixed bottom-0 left-0 right-0',
         'flex items-stretch',
-        'bg-[hsl(var(--color-surface-raised))]',
-        'border-t border-border',
-        'shadow-[0_-2px_8px_rgba(0,0,0,0.06)]',
+        'bg-white/90 backdrop-blur-xl',
+        'border-t border-gray-200/50',
         'z-[var(--z-sticky)]',
-        // Safe area padding for iOS home indicator
         'pb-safe',
       ].join(' ')}
       style={{ height: 'var(--bottom-nav-height)' }}
@@ -69,17 +67,16 @@ const BottomNav = () => {
           className={({ isActive }) =>
             [
               'flex-1 flex flex-col items-center justify-center gap-1',
-              'text-xs font-medium',
-              'transition-[color,border-color] duration-200 ease-in-out',
+              'text-[11px] font-semibold',
+              'transition-all duration-200',
               'relative',
-              // Active indicator: top border line in accent color
               isActive
                 ? [
-                    'text-accent',
-                    'after:absolute after:top-0 after:left-4 after:right-4',
-                    'after:h-0.5 after:rounded-full after:bg-accent',
+                    'text-gray-900',
+                    'after:absolute after:top-0 after:left-6 after:right-6',
+                    'after:h-0.5 after:rounded-full after:bg-gray-900',
                   ].join(' ')
-                : 'text-[hsl(var(--color-text-muted))] hover:text-[hsl(var(--color-text))]',
+                : 'text-gray-400 hover:text-gray-600',
             ].join(' ')
           }
           aria-label={tab.label}

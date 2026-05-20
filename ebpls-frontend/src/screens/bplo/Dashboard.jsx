@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Inbox, AlertTriangle, ArrowUpDown, RefreshCcw } from 'lucide-react';
+import { Inbox, AlertTriangle, ArrowUpDown, RefreshCcw, FileSearch, Users, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -17,21 +17,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const formatSubmittedLabel = (submittedAt) => {
   if (!submittedAt) return 'Not submitted';
-
   const submittedDate = new Date(submittedAt);
   const now = new Date();
   const diffMs = now.getTime() - submittedDate.getTime();
-
-  if (Number.isNaN(submittedDate.getTime()) || diffMs < 0) {
-    return 'Recently submitted';
-  }
-
+  if (Number.isNaN(submittedDate.getTime()) || diffMs < 0) return 'Recently submitted';
   const minutes = Math.floor(diffMs / (60 * 1000));
   if (minutes < 60) return `${minutes}m ago`;
-
   const hours = Math.floor(diffMs / (60 * 60 * 1000));
   if (hours < 24) return `${hours}h ago`;
-
   const days = Math.floor(diffMs / DAY_MS);
   return `${days}d ago`;
 };
@@ -91,112 +84,142 @@ const BPLODashboard = () => {
       if (!app.submittedAt) return false;
       return (Date.now() - new Date(app.submittedAt).getTime()) >= (2 * DAY_MS);
     }).length;
-
     return { pendingCount, underReviewCount, urgentCount };
   }, [applications]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-text))]">BPLO Dashboard</h1>
-        <p className="text-sm text-[hsl(var(--color-text-muted))] mt-1">
-          Pending application queue sorted by submission date.
-        </p>
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+            BPLO Dashboard
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Pending application queue sorted by submission date.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={<RefreshCcw size={16} />}
+            onClick={loadQueue}
+            isLoading={isLoading}
+          >
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: 'Pending Review', value: stats.pendingCount, color: 'text-[hsl(var(--color-status-pending))]' },
-          { label: 'Under Review', value: stats.underReviewCount, color: 'text-[hsl(var(--color-status-under-review))]' },
-          { label: 'Urgent (2+ days)', value: stats.urgentCount, color: 'text-[hsl(var(--color-status-returned))]' },
-        ].map((stat) => (
-          <Card key={stat.label} padding="md" className="text-center">
-            <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-            <p className="text-xs text-[hsl(var(--color-text-muted))] mt-1">{stat.label}</p>
-          </Card>
-        ))}
-      </div>
-
-      <Card padding="none">
-        <Card.Header>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Inbox size={16} className="text-[hsl(var(--color-text-muted))]" />
-              <p className="text-sm font-semibold text-[hsl(var(--color-text))]">Application Queue</p>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+        <div className="group bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-default">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+              <Inbox size={20} />
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                leftIcon={<ArrowUpDown size={14} />}
-                onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-              >
-                {sortDirection === 'asc' ? 'Oldest first' : 'Newest first'}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                leftIcon={<RefreshCcw size={14} />}
-                onClick={loadQueue}
-                isLoading={isLoading}
-              >
-                Refresh
-              </Button>
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending Review</p>
+              <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.pendingCount}</p>
             </div>
           </div>
-        </Card.Header>
+        </div>
 
-        <Card.Body className="!p-0">
-          {isLoading ? (
-            <p className="text-sm text-[hsl(var(--color-text-muted))] px-4 py-8 text-center">
-              Loading applications...
-            </p>
-          ) : sortedApplications.length === 0 ? (
-            <p className="text-sm text-[hsl(var(--color-text-muted))] px-4 py-8 text-center">
-              No pending applications found.
-            </p>
-          ) : (
-            <div className="divide-y divide-border">
-              {sortedApplications.map((app) => {
-                const ageMs = app.submittedAt ? Date.now() - new Date(app.submittedAt).getTime() : 0;
-                const urgent = ageMs >= (2 * DAY_MS);
+        <div className="group bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-default">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+              <FileSearch size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Under Review</p>
+              <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.underReviewCount}</p>
+            </div>
+          </div>
+        </div>
 
-                return (
-                  <div
-                    key={app.id}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-surface-tint transition-colors duration-150"
-                  >
-                    <div className="flex items-center gap-3">
-                      {urgent && (
-                        <AlertTriangle size={15} className="text-[hsl(var(--color-status-pending))] shrink-0" />
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-[hsl(var(--color-text))]">{app.business}</p>
-                        <p className="text-xs text-[hsl(var(--color-text-muted))]">
-                          {app.id} &middot; {formatSubmittedLabel(app.submittedAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge status={app.status} />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const verifierRoute = ROUTES.BPLO_VERIFIER.replace(':appNo', app.id);
-                          navigate(verifierRoute);
-                        }}
-                      >
-                        Review
-                      </Button>
+        <div className="group bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-default">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+              <Clock size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Urgent (2+ days)</p>
+              <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.urgentCount}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Application Queue Table */}
+      <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+        {/* Table Header */}
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="font-bold text-gray-900 flex items-center gap-2">
+            <Users size={18} className="text-gray-400" />
+            Application Queue
+          </h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            leftIcon={<ArrowUpDown size={14} />}
+            onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+          >
+            {sortDirection === 'asc' ? 'Oldest first' : 'Newest first'}
+          </Button>
+        </div>
+
+        {/* Table Body */}
+        {isLoading ? (
+          <div className="px-6 py-12 text-center">
+            <p className="text-sm text-gray-400">Loading applications...</p>
+          </div>
+        ) : sortedApplications.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <Inbox size={32} className="text-gray-200 mx-auto mb-3" />
+            <p className="text-sm text-gray-400">No pending applications found.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {sortedApplications.map((app) => {
+              const ageMs = app.submittedAt ? Date.now() - new Date(app.submittedAt).getTime() : 0;
+              const urgent = ageMs >= (2 * DAY_MS);
+
+              return (
+                <div
+                  key={app.id}
+                  className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors group"
+                >
+                  <div className="flex items-center gap-4">
+                    {urgent && (
+                      <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                    )}
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">{app.business}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {app.id} &middot; {formatSubmittedLabel(app.submittedAt)}
+                      </p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </Card.Body>
-      </Card>
+                  <div className="flex items-center gap-3">
+                    <Badge status={app.status} />
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        const verifierRoute = ROUTES.BPLO_VERIFIER.replace(':appNo', app.id);
+                        navigate(verifierRoute);
+                      }}
+                    >
+                      Review
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

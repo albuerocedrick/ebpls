@@ -5,6 +5,7 @@ import useApplicationStore from '../../../store/applicationStore';
 import { Building, Tag, Info } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 import { API_ENDPOINTS } from '../../../utils/constants';
+import Select from '../../../components/ui/Select';
 
 // Lookup data seeded from DB (seed.sql)
 const APP_TYPES = [
@@ -61,8 +62,8 @@ const Step1_BasicInfo = () => {
     }
   };
 
-  const inputClasses = "w-full px-3 py-2 bg-[hsl(var(--color-surface,0,0%,100%))] border border-[hsl(var(--color-border,0,0%,80%))] rounded-md text-sm text-[hsl(var(--color-text,0,0%,10%))] focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors";
-  const labelClasses = "block text-xs font-semibold text-[hsl(var(--color-text,0,0%,10%))] mb-1.5";
+  const inputClasses = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 focus:outline-none focus:border-gray-400 focus:ring-4 focus:ring-gray-100 focus:bg-white transition-all cursor-pointer";
+  const labelClasses = "block text-sm font-semibold text-gray-700 mb-2";
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -75,22 +76,32 @@ const Step1_BasicInfo = () => {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className={labelClasses}>Application Type <span className="text-red-500">*</span></label>
-            <select name="type_id" value={data.type_id || ''} onChange={handleChange} className={inputClasses}>
+            <Select
+              label="Application Type"
+              required
+              name="type_id"
+              value={data.type_id || ''}
+              onChange={handleChange}
+            >
               <option value="" disabled>Select application type</option>
               {APP_TYPES.map(type => (
                 <option key={type.id} value={type.id}>{type.name}</option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
-            <label className={labelClasses}>Payment Mode <span className="text-red-500">*</span></label>
-            <select name="payment_mode_id" value={data.payment_mode_id || ''} onChange={handleChange} className={inputClasses}>
+            <Select
+              label="Payment Mode"
+              required
+              name="payment_mode_id"
+              value={data.payment_mode_id || ''}
+              onChange={handleChange}
+            >
               <option value="" disabled>Select payment mode</option>
               {PAYMENT_MODES.map(mode => (
                 <option key={mode.id} value={mode.id}>{mode.name}</option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       </div>
@@ -130,13 +141,18 @@ const Step1_BasicInfo = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className={labelClasses}>Organization Type <span className="text-red-500">*</span></label>
-              <select name="org_type_id" value={data.org_type_id || ''} onChange={handleChange} className={inputClasses}>
+              <Select
+                label="Organization Type"
+                required
+                name="org_type_id"
+                value={data.org_type_id || ''}
+                onChange={handleChange}
+              >
                 <option value="" disabled>Select organization type</option>
                 {orgTypes.map(org => (
                   <option key={org.id} value={org.id}>{org.name}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className={labelClasses}>DTI / SEC / CDA Registration No.</label>

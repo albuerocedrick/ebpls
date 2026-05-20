@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Database, Server, RefreshCw } from 'lucide-react';
+import { Activity, Database, Server, RefreshCw, ArrowUpRight, ArrowDown, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import apiClient from '../../utils/apiClient';
 import { API_ENDPOINTS } from '../../utils/constants';
 import toast from 'react-hot-toast';
@@ -25,179 +25,171 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchHealth();
-
-    // Poll the health endpoint every 60 seconds (aligned with backend TTL)
-    const interval = setInterval(() => {
-      fetchHealth(false, true);
-    }, 60000);
-
+    const interval = setInterval(() => fetchHealth(false, true), 60000);
     return () => clearInterval(interval);
   }, []);
 
   const formatBytes = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
+    if (!bytes || bytes === 0) return '0 B';
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
+  const dbPct = healthData ? Math.round((healthData.activeConnections / (healthData.maxConnections || 100)) * 100) : 0;
+  const storagePct = healthData ? ((healthData.storageSize / (1024 * 1024 * 1024)) * 100) : 0;
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="max-w-7xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">System Health</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Real-time monitoring of eBPLS backend infrastructure.
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">System Health</h1>
+          <p className="text-sm text-gray-500 mt-1">Real-time monitoring of eBPLS backend infrastructure.</p>
         </div>
-        <button
-          onClick={() => fetchHealth(true)}
-          disabled={loading}
-          className="flex items-center gap-2 bg-white px-4 py-2 rounded-md shadow-sm border text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
-        >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-400 bg-white border border-gray-200 px-3 py-2 rounded-2xl">
+            <Clock size={13} />
+            <span>Auto-refresh: 60s</span>
+          </div>
+          <button
+            onClick={() => fetchHealth(true)}
+            disabled={loading}
+            className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-2xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-all shadow-sm"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {loading && !healthData ? (
-        <div className="animate-pulse grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="h-32 bg-gray-200 rounded-xl w-full"></div>
-          <div className="h-32 bg-gray-200 rounded-xl w-full"></div>
-          <div className="h-32 bg-gray-200 rounded-xl w-full"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="h-44 bg-white rounded-3xl border border-gray-100 animate-pulse" />
+          ))}
         </div>
       ) : healthData ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* DB Connections Card */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-500">DB Connections Capacity</h3>
-              <Database size={20} className="text-blue-500" />
-            </div>
-            <div>
-              <div className="flex justify-between items-baseline mb-2">
-                <span className="text-3xl font-bold text-gray-900">
-                  {healthData.activeConnections}
-                </span>
-                <span className="text-sm text-gray-500">
-                  / {healthData.maxConnections || 100} limit
-                </span>
+        <>
+          {/* Top Row: Key Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+            {/* API Status — Hero Card */}
+            <div className="group bg-gray-900 p-6 rounded-3xl hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.3)] transition-all duration-300 relative overflow-hidden">
+              <div className="absolute -bottom-8 -right-8 opacity-5">
+                <Activity size={120} />
               </div>
-              {/* Connection progress bar */}
+              <div className="relative z-10">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">System Status</p>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="flex h-2.5 w-2.5">
+                    <span className="inline-flex rounded-full h-2.5 w-2.5 bg-white" />
+                  </span>
+                  <span className="text-2xl font-extrabold text-white">All Systems Online</span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Last checked: {new Date(healthData.timestamp).toLocaleTimeString()}
+                </p>
+              </div>
+            </div>
+
+            {/* DB Connections */}
+            <div className="group bg-white p-6 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300">
+              <div className="flex items-start justify-between mb-5">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">DB Connections</p>
+                <div className="h-10 w-10 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-600 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+                  <Database size={17} />
+                </div>
+              </div>
+              <div className="flex items-baseline gap-1.5 mb-4">
+                <span className="text-3xl font-extrabold text-gray-900">{healthData.activeConnections}</span>
+                <span className="text-sm text-gray-400 font-medium">/ {healthData.maxConnections || 100}</span>
+              </div>
               <div className="w-full bg-gray-100 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all duration-500 ${
-                    (healthData.activeConnections / (healthData.maxConnections || 100)) > 0.8
-                      ? 'bg-red-500'
-                      : (healthData.activeConnections / (healthData.maxConnections || 100)) > 0.5
-                      ? 'bg-yellow-500'
-                      : 'bg-green-500'
-                  }`}
-                  style={{
-                    width: `${Math.min(
-                      ((healthData.activeConnections / (healthData.maxConnections || 100)) * 100),
-                      100
-                    )}%`,
-                  }}
-                ></div>
+                <div className="h-2 rounded-full bg-gray-800 transition-all duration-700" style={{ width: `${Math.min(dbPct, 100)}%` }} />
               </div>
+              <p className="text-[11px] text-gray-400 mt-2.5 font-medium">{dbPct}% pool capacity used</p>
             </div>
-            <p className="text-xs text-gray-500">
-              {Math.round((healthData.activeConnections / (healthData.maxConnections || 100)) * 100)}% active connections pool capacity
-            </p>
-          </div>
 
-          {/* Storage Capacity Card */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-500">Storage Plan Capacity</h3>
-              <Server size={20} className="text-purple-500" />
-            </div>
-            <div>
-              <div className="flex justify-between items-baseline mb-2">
-                <span className="text-3xl font-bold text-gray-900">
-                  {formatBytes(healthData.storageSize)}
-                </span>
-                <span className="text-sm text-gray-500">
-                  / 1.00 GB plan quota
-                </span>
+            {/* Storage */}
+            <div className="group bg-white p-6 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300">
+              <div className="flex items-start justify-between mb-5">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Storage</p>
+                <div className="h-10 w-10 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-600 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+                  <Server size={17} />
+                </div>
               </div>
-              {/* Storage progress bar */}
+              <div className="flex items-baseline gap-1.5 mb-4">
+                <span className="text-3xl font-extrabold text-gray-900">{formatBytes(healthData.storageSize)}</span>
+                <span className="text-sm text-gray-400 font-medium">/ 1 GB</span>
+              </div>
               <div className="w-full bg-gray-100 rounded-full h-2">
-                <div
-                  className="h-2 rounded-full bg-purple-500 transition-all duration-500"
-                  style={{
-                    width: `${Math.min(
-                      (healthData.storageSize / (1024 * 1024 * 1024)) * 100,
-                      100
-                    )}%`,
-                  }}
-                ></div>
+                <div className="h-2 rounded-full bg-gray-800 transition-all duration-700" style={{ width: `${Math.min(storagePct, 100)}%` }} />
               </div>
+              <p className="text-[11px] text-gray-400 mt-2.5 font-medium">{storagePct.toFixed(1)}% of free tier used</p>
             </div>
-            <p className="text-xs text-gray-500">
-              {((healthData.storageSize / (1024 * 1024 * 1024)) * 100).toFixed(2)}% of 1 GB Free Tier limit used
-            </p>
           </div>
 
-          {/* API Status Card */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-500">API Status</h3>
-              <Activity size={20} className="text-green-500 animate-pulse" />
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-              </span>
-              <div className="text-3xl font-bold text-gray-900">Online</div>
-            </div>
-            <p className="text-xs text-gray-500">
-              Last check: {new Date(healthData.timestamp).toLocaleTimeString()}
-            </p>
-          </div>
+          {/* Bottom Row: Secondary Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
-          {/* Traffic Volume Card */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-500">API Traffic Volume</h3>
-              <Activity size={20} className="text-blue-500" />
-            </div>
-            <div className="flex justify-between items-end">
-              <div>
-                <p className="text-xs text-gray-400 mb-1">Reads (GET)</p>
-                <div className="text-3xl font-bold text-gray-900">{healthData.apiReads || 0}</div>
+            {/* API Traffic */}
+            <div className="group bg-white p-6 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">API Traffic Volume</p>
+                  <p className="text-xs text-gray-400 mt-1">Since last server restart</p>
+                </div>
+                <div className="h-10 w-10 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-600 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+                  <ArrowUpRight size={17} />
+                </div>
               </div>
-              <div className="h-8 w-px bg-gray-200"></div>
-              <div className="text-right">
-                <p className="text-xs text-gray-400 mb-1">Writes (Mutations)</p>
-                <div className="text-3xl font-bold text-gray-900">{healthData.apiWrites || 0}</div>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Reads (GET)</p>
+                  <span className="text-2xl font-extrabold text-gray-900">{healthData.apiReads || 0}</span>
+                </div>
+                <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Writes (POST)</p>
+                  <span className="text-2xl font-extrabold text-gray-900">{healthData.apiWrites || 0}</span>
+                </div>
               </div>
             </div>
-            <p className="text-xs text-gray-500">
-              Total requests handled since last server restart
-            </p>
-          </div>
 
-          {/* Application Errors Card */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-500">Application Error Rate</h3>
-              <Activity size={20} className={(healthData.errorRate || 0) > 0 ? "text-red-500" : "text-green-500"} />
+            {/* Error Rate */}
+            <div className="group bg-white p-6 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Error Rate</p>
+                  <p className="text-xs text-gray-400 mt-1">Application exceptions</p>
+                </div>
+                <div className="h-10 w-10 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-600 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+                  <AlertTriangle size={17} />
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${(healthData.errorRate || 0) === 0 ? 'bg-gray-50' : 'bg-red-50'}`}>
+                  {(healthData.errorRate || 0) === 0
+                    ? <CheckCircle size={24} className="text-gray-400" />
+                    : <AlertTriangle size={24} className="text-red-500" />
+                  }
+                </div>
+                <div>
+                  <span className="text-3xl font-extrabold text-gray-900">{healthData.errorRate || 0}</span>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {(healthData.errorRate || 0) === 0 ? 'No exceptions. System healthy.' : 'Exceptions caught. Review logs.'}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className={`text-3xl font-bold ${(healthData.errorRate || 0) > 0 ? "text-red-600" : "text-gray-900"}`}>
-              {healthData.errorRate || 0}
-            </div>
-            <p className="text-xs text-gray-500">
-              {(healthData.errorRate || 0) === 0 ? 'Zero server exceptions logged. System healthy.' : 'Exceptions caught. Review logs.'}
-            </p>
+
           </div>
-        </div>
+        </>
       ) : (
-        <div className="text-center py-10 bg-white rounded-xl border border-dashed">
-          <p className="text-gray-500">No data available.</p>
+        <div className="text-center py-16 bg-white rounded-3xl border border-gray-200">
+          <Activity size={32} className="text-gray-200 mx-auto mb-3" />
+          <p className="text-sm text-gray-400">Unable to load system health data.</p>
         </div>
       )}
     </div>

@@ -20,15 +20,14 @@ import React from 'react';
 const VARIANT_CLASSES = {
   // Default white card on the neutral canvas
   default: [
-    'bg-[hsl(var(--color-surface-raised))]',
-    'border border-border',
+    'bg-white',
+    'border border-gray-100',
   ].join(' '),
 
   // Slightly tinted — use as the "inner" element inside a default card
-  // This is the correct way to create visual hierarchy without double-layer identical bg.
   tinted: [
-    'bg-surface-tint',
-    'border border-border',
+    'bg-gray-50',
+    'border border-gray-100',
   ].join(' '),
 
   // No border, no bg — transparent wrapper for grouping with spacing only
@@ -69,15 +68,15 @@ const Card = ({
   return (
     <div
       className={[
-        'rounded-lg overflow-hidden',
+        'rounded-3xl overflow-hidden',
         VARIANT_CLASSES[variant],
         PADDING_CLASSES[padding],
         // Shadow — base at rest; hover lift if hoverable
         variant !== 'ghost' && 'shadow-sm',
         hoverable && [
           'cursor-pointer',
-          'transition-[box-shadow,transform] duration-200 ease-in-out',
-          'hover:shadow-md hover:-translate-y-0.5',
+          'transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          'hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.15)] hover:-translate-y-0.5',
         ].join(' '),
         fullHeight && 'h-full',
         className,
@@ -101,7 +100,7 @@ const Card = ({
 Card.Header = function CardHeader({ className = '', children, ...props }) {
   return (
     <div
-      className={`px-4 py-3 border-b border-border ${className}`}
+      className={`px-6 py-4 border-b border-gray-100 bg-gray-50/50 ${className}`}
       {...props}
     >
       {children}
@@ -114,7 +113,7 @@ Card.Header = function CardHeader({ className = '', children, ...props }) {
  */
 Card.Body = function CardBody({ className = '', children, ...props }) {
   return (
-    <div className={`p-4 ${className}`} {...props}>
+    <div className={`p-6 ${className}`} {...props}>
       {children}
     </div>
   );
@@ -126,7 +125,7 @@ Card.Body = function CardBody({ className = '', children, ...props }) {
 Card.Footer = function CardFooter({ className = '', children, ...props }) {
   return (
     <div
-      className={`px-4 py-3 border-t border-border bg-surface-tint ${className}`}
+      className={`px-6 py-4 border-t border-gray-100 bg-gray-50/50 shrink-0 ${className}`}
       {...props}
     >
       {children}

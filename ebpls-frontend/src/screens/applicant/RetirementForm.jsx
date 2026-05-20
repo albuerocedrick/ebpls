@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Calendar, DollarSign, FileText, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import Select from '../../components/ui/Select';
 import apiClient from '../../utils/apiClient';
 import { ROUTES } from '../../utils/constants';
 import toast from 'react-hot-toast';
@@ -101,26 +102,26 @@ const RetirementForm = () => {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="max-w-2xl mx-auto p-4 sm:p-6">
+    <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <button
           onClick={() => navigate(ROUTES.APPLICANT_DASHBOARD)}
-          className="flex items-center gap-1 text-sm text-[hsl(var(--color-text-muted))] hover:text-[hsl(var(--color-text))] transition-colors mb-4"
+          className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-900 transition-colors mb-4 font-medium"
         >
           <ArrowLeft size={16} />
           Back to Dashboard
         </button>
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-text))]">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
           Business Retirement Application
         </h1>
-        <p className="text-sm text-[hsl(var(--color-text-muted))] mt-1">
+        <p className="text-sm text-gray-500 mt-1">
           Submit a request to officially retire/close a registered business.
         </p>
       </div>
 
       {/* Info Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex gap-3">
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex gap-3">
         <AlertCircle size={20} className="text-amber-600 shrink-0 mt-0.5" />
         <div className="text-sm text-amber-800">
           <p className="font-medium">Important:</p>
@@ -136,25 +137,25 @@ const RetirementForm = () => {
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Business Selection */}
         <div>
-          <label htmlFor="business_id" className="block text-sm font-medium text-[hsl(var(--color-text))] mb-1.5">
+          <label htmlFor="business_id" className="block text-sm font-medium text-gray-900 mb-1.5">
             <Building2 size={14} className="inline mr-1" />
             Select Business to Retire
           </label>
           {isLoadingBiz ? (
-            <div className="flex items-center gap-2 text-sm text-[hsl(var(--color-text-muted))]">
+            <div className="flex items-center gap-2 text-sm text-gray-400">
               <Loader2 size={14} className="animate-spin" /> Loading businesses...
             </div>
           ) : businesses.length === 0 ? (
-            <p className="text-sm text-[hsl(var(--color-text-muted))]">
+            <p className="text-sm text-gray-400">
               No active businesses found. You can only retire businesses you own that are not already retired.
             </p>
           ) : (
-            <select
+            <Select
               id="business_id"
               name="business_id"
               value={formData.business_id}
               onChange={handleChange}
-              className="w-full px-3 py-2.5 rounded-lg border border-[hsl(var(--color-border))] bg-[hsl(var(--color-surface))] text-[hsl(var(--color-text))] text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+              error={errors.business_id}
             >
               <option value="">-- Select a business --</option>
               {businesses.map((biz) => (
@@ -162,16 +163,13 @@ const RetirementForm = () => {
                   {biz.business_name} {biz.trade_name ? `(${biz.trade_name})` : ''}
                 </option>
               ))}
-            </select>
-          )}
-          {errors.business_id && (
-            <p className="text-xs text-red-500 mt-1">{errors.business_id}</p>
+            </Select>
           )}
         </div>
 
         {/* Reason */}
         <div>
-          <label htmlFor="reason" className="block text-sm font-medium text-[hsl(var(--color-text))] mb-1.5">
+          <label htmlFor="reason" className="block text-sm font-medium text-gray-900 mb-1.5">
             <FileText size={14} className="inline mr-1" />
             Reason for Retirement
           </label>
@@ -182,7 +180,7 @@ const RetirementForm = () => {
             onChange={handleChange}
             rows={4}
             placeholder="e.g., Business closure due to relocation, financial reasons, owner decision..."
-            className="w-full px-3 py-2.5 rounded-lg border border-[hsl(var(--color-border))] bg-[hsl(var(--color-surface))] text-[hsl(var(--color-text))] text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none"
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 text-sm focus:outline-none focus:ring-4 focus:ring-gray-100 focus:bg-white focus:border-gray-400 transition-all resize-none"
           />
           {errors.reason && (
             <p className="text-xs text-red-500 mt-1">{errors.reason}</p>
@@ -191,7 +189,7 @@ const RetirementForm = () => {
 
         {/* Cessation Date */}
         <div>
-          <label htmlFor="cessation_date" className="block text-sm font-medium text-[hsl(var(--color-text))] mb-1.5">
+          <label htmlFor="cessation_date" className="block text-sm font-medium text-gray-900 mb-1.5">
             <Calendar size={14} className="inline mr-1" />
             Date Business Stopped Operating
           </label>
@@ -202,7 +200,7 @@ const RetirementForm = () => {
             value={formData.cessation_date}
             onChange={handleChange}
             max={today}
-            className="w-full px-3 py-2.5 rounded-lg border border-[hsl(var(--color-border))] bg-[hsl(var(--color-surface))] text-[hsl(var(--color-text))] text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 text-sm focus:outline-none focus:ring-4 focus:ring-gray-100 focus:bg-white focus:border-gray-400 transition-all"
           />
           {errors.cessation_date && (
             <p className="text-xs text-red-500 mt-1">{errors.cessation_date}</p>
@@ -211,7 +209,7 @@ const RetirementForm = () => {
 
         {/* Final Gross Sales */}
         <div>
-          <label htmlFor="final_gross_sales" className="block text-sm font-medium text-[hsl(var(--color-text))] mb-1.5">
+          <label htmlFor="final_gross_sales" className="block text-sm font-medium text-gray-900 mb-1.5">
             <DollarSign size={14} className="inline mr-1" />
             Final Gross Sales (PHP)
           </label>
@@ -224,9 +222,9 @@ const RetirementForm = () => {
             min="0"
             step="0.01"
             placeholder="0.00"
-            className="w-full px-3 py-2.5 rounded-lg border border-[hsl(var(--color-border))] bg-[hsl(var(--color-surface))] text-[hsl(var(--color-text))] text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 text-sm focus:outline-none focus:ring-4 focus:ring-gray-100 focus:bg-white focus:border-gray-400 transition-all"
           />
-          <p className="text-xs text-[hsl(var(--color-text-muted))] mt-1">
+          <p className="text-xs text-gray-400 mt-1">
             This will be used by Treasury to compute your final tax liability.
           </p>
           {errors.final_gross_sales && (
@@ -239,7 +237,7 @@ const RetirementForm = () => {
           <button
             type="submit"
             disabled={isSubmitting || businesses.length === 0}
-            className="w-full py-3 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3 px-4 rounded-2xl bg-gray-900 hover:bg-gray-800 text-white font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
           >
             {isSubmitting ? (
               <>

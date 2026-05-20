@@ -1,33 +1,14 @@
 /**
  * Navbar.jsx
- * Top navigation bar for desktop-first role layouts.
- * Used by: BPLOLayout, TreasuryLayout, BarangayLayout, AdminLayout.
- *
- * ApplicantLayout uses BottomNav instead — this Navbar is simplified for
- * desktop contexts (no bottom tabs needed).
- *
- * @policy  All icon usage via lucide-react. No emojis.
- * @policy  Height fixed at var(--navbar-height) = 3.5rem so layouts
- *          can offset their content area reliably.
- * @policy  The brand mark uses the accent token for the color dot only (10% rule).
+ * Glass-style top navigation bar for desktop-first role layouts.
  */
 
 import React from 'react';
-import { Bell, ChevronDown, Menu, X, LogOut } from 'lucide-react';
+import { Bell, Menu, X, LogOut, Building2 } from 'lucide-react';
 import useUIStore from '../../store/UIStore';
 import useAuthStore from '../../store/authStore';
 import useAuth from '../../hooks/useAuth';
-import Button from '../ui/Button';
 
-// =========================================
-// Component
-// =========================================
-
-/**
- * @param {object}  props
- * @param {string}  props.portalLabel   - Role label shown next to the logo (e.g. "BPLO Portal")
- * @param {boolean} [props.showSidebarToggle=true]
- */
 const Navbar = ({
   portalLabel = 'eBPLS',
   showSidebarToggle = true,
@@ -38,94 +19,75 @@ const Navbar = ({
 
   return (
     <header
-      className={[
-        'fixed top-0 left-0 right-0',
-        'flex items-center justify-between',
-        'px-4 border-b border-border',
-        'bg-[hsl(var(--color-surface-raised))]',
-        'shadow-sm z-[var(--z-sticky)]',
-      ].join(' ')}
+      className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 lg:px-6 border-b border-gray-200/50 bg-white/80 backdrop-blur-xl z-[var(--z-sticky)]"
       style={{ height: 'var(--navbar-height)' }}
     >
-      {/* Left: Sidebar toggle + brand */}
+      {/* Left: Toggle + Brand */}
       <div className="flex items-center gap-3">
         {showSidebarToggle && (
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={toggleSidebar}
+            className="p-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-all lg:hidden"
             aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-            className="!p-2"
           >
-            {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
-          </Button>
+            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         )}
 
-        <div className="flex items-center gap-2">
-          {/* Brand accent dot — 10% accent rule, not a rainbow */}
-          <span
-            className="w-2.5 h-2.5 rounded-full bg-accent shrink-0"
-            aria-hidden="true"
-          />
-          <span className="font-semibold text-sm text-[hsl(var(--color-text))] leading-none">
-            eBPLS
-          </span>
-          <span
-            className="text-xs text-[hsl(var(--color-text-muted))] leading-none hidden sm:block"
-            aria-label={`Current portal: ${portalLabel}`}
-          >
-            / {portalLabel}
-          </span>
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center shadow-sm">
+            <Building2 size={16} className="text-white" />
+          </div>
+          <div className="hidden sm:flex flex-col">
+            <span className="text-sm font-extrabold text-gray-900 leading-tight tracking-tight">
+              eBPLS
+            </span>
+            <span className="text-[10px] font-medium text-gray-400 leading-tight">
+              {portalLabel}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Right: Notifications + User */}
-      <div className="flex items-center gap-1">
-        {/* Notifications — wired in Phase 2 */}
-        <Button
-          variant="ghost"
-          size="sm"
+      {/* Right: Actions */}
+      <div className="flex items-center gap-1.5">
+        {/* Notifications */}
+        <button
+          className="relative p-2.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all"
           aria-label="Notifications"
-          className="!p-2 relative"
         >
-          <Bell size={18} />
-          {/* Notification dot placeholder */}
-          <span
-            aria-hidden="true"
-            className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent"
-          />
-        </Button>
+          <Bell size={18} strokeWidth={2} />
+          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+        </button>
 
-        {/* User chip */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex items-center gap-2 !px-2"
-          aria-label="User menu"
-        >
-          {/* Avatar placeholder — replaced with real avatar in Phase 2 */}
-          <span
-            className="w-7 h-7 rounded-full bg-[hsl(var(--color-accent-subtle))] text-accent flex items-center justify-center text-xs font-semibold shrink-0"
-            aria-hidden="true"
-          >
-            {user?.firstName ? user.firstName.charAt(0).toUpperCase() : 'U'}
-          </span>
-          <span className="text-sm font-medium text-[hsl(var(--color-text))] hidden md:block max-w-[120px] truncate">
-            {user?.firstName || 'Guest'}
-          </span>
-          <ChevronDown size={14} className="text-[hsl(var(--color-text-muted))] hidden md:block shrink-0" />
-        </Button>
+        {/* Divider */}
+        <div className="hidden sm:block h-6 w-px bg-gray-200 mx-1.5" />
 
-        {/* Logout Button */}
-        <Button
-          variant="ghost"
-          size="sm"
+        {/* User */}
+        <div className="flex items-center gap-2.5 pl-1">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-600 to-gray-900 flex items-center justify-center shadow-sm">
+            <span className="text-white text-xs font-bold">
+              {user?.firstName ? user.firstName.charAt(0).toUpperCase() : 'U'}
+            </span>
+          </div>
+          <div className="hidden md:flex flex-col">
+            <span className="text-sm font-semibold text-gray-900 leading-tight max-w-[100px] truncate">
+              {user?.firstName || 'Guest'}
+            </span>
+            <span className="text-[10px] text-gray-400 leading-tight">
+              {user?.role || portalLabel}
+            </span>
+          </div>
+        </div>
+
+        {/* Logout */}
+        <button
           onClick={logout}
+          className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all ml-1"
           aria-label="Log out"
-          className="!p-2 text-[hsl(var(--color-danger))]"
         >
-          <LogOut size={18} />
-        </Button>
+          <LogOut size={17} strokeWidth={2} />
+        </button>
       </div>
     </header>
   );

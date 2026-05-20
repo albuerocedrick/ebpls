@@ -1,62 +1,106 @@
 /**
  * AuthLayout.jsx
- * Centered card layout for public auth screens: Login, Register, ForgotPassword.
- *
- * Structure: Full-viewport centered flex container with a branded header
- * and a Card panel that wraps the auth form content.
- *
- * @policy  No Sidebar or BottomNav — auth pages are public, role-free.
- * @policy  Background uses --color-surface-tint for a subtle depth effect
- *          behind the white card (avoids flat white-on-white).
- * @policy  The brand accent is a single colored dot — 10% rule enforced.
+ * Split-screen auth layout — left branding panel + right form panel.
+ * Everything centered and aligned.
  */
 
 import React from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
+import { Building2, Shield, FileCheck, Banknote } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import { ROUTES, ROLE_DASHBOARDS } from '../utils/constants';
 
 const AuthLayout = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const user            = useAuthStore((s) => s.user);
-  const role            = user?.roleName;
+  const user = useAuthStore((s) => s.user);
+  const role = user?.roleName;
 
-  // Guest Guard: If already logged in, redirect to the correct dashboard
   if (isAuthenticated) {
     const destination = ROLE_DASHBOARDS[role] ?? ROUTES.HOME;
     return <Navigate to={destination} replace />;
   }
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
-      style={{ backgroundColor: 'hsl(var(--color-surface-tint))' }}
-    >
-      {/* Brand header */}
-      <div className="flex items-center gap-2 mb-8">
-        <span
-          className="w-3 h-3 rounded-full bg-accent"
-          aria-hidden="true"
-        />
-        <span className="text-lg font-bold text-[hsl(var(--color-text))]">
-          eBPLS
-        </span>
-        <span className="text-sm text-[hsl(var(--color-text-muted))]">
-          Municipality of Liliw
-        </span>
+    <div className="min-h-screen flex">
+      {/* Left Panel — Branding (hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-[45%] xl:w-[40%] bg-gray-900 relative overflow-hidden items-center justify-center">
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
+        
+        {/* Gradient overlay */}
+        <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-gray-900 to-transparent" />
+
+        {/* Centered content */}
+        <div className="relative z-10 px-10 xl:px-14 text-center flex flex-col items-center gap-10">
+          {/* Logo */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-center">
+              <Building2 size={24} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-extrabold text-white tracking-tight">eBPLS</h1>
+              <p className="text-xs text-gray-400 font-medium mt-1">Municipality of Liliw, Laguna</p>
+            </div>
+          </div>
+
+          {/* Tagline */}
+          <div className="space-y-3">
+            <h2 className="text-3xl font-extrabold text-white leading-tight tracking-tight">
+              Business Permits<br />Made Simple.
+            </h2>
+            <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
+              Apply, track, and manage your business permits online. No more long queues.
+            </p>
+          </div>
+
+          {/* Features */}
+          <div className="space-y-3 w-full max-w-xs">
+            {[
+              { icon: <FileCheck size={16} />, text: 'Submit applications online 24/7' },
+              { icon: <Shield size={16} />, text: 'Real-time status tracking' },
+              { icon: <Banknote size={16} />, text: 'Pay via OTC or online (GCash/Card)' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3 text-left">
+                <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 shrink-0">
+                  {item.icon}
+                </div>
+                <span className="text-sm text-gray-300 font-medium">{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom copyright */}
+        <div className="absolute bottom-6 left-0 right-0 text-center">
+          <p className="text-xs text-gray-600">
+            © {new Date().getFullYear()} Municipality of Liliw
+          </p>
+        </div>
       </div>
 
-      {/* Auth card — white surface on tinted canvas (no double-layer violation) */}
-      <div
-        className="w-full max-w-md bg-[hsl(var(--color-surface-raised))] rounded-xl border border-border shadow-sm"
-      >
-        <Outlet />
-      </div>
+      {/* Right Panel — Form (centered) */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-gray-50">
+        {/* Mobile logo (shown only on small screens) */}
+        <div className="lg:hidden flex items-center gap-2.5 mb-8">
+          <div className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/20">
+            <Building2 size={18} className="text-white" />
+          </div>
+          <div>
+            <span className="text-lg font-extrabold text-gray-900 tracking-tight block leading-tight">eBPLS</span>
+            <span className="text-[10px] text-gray-400 font-medium">Municipality of Liliw</span>
+          </div>
+        </div>
 
-      {/* Footer note */}
-      <p className="mt-6 text-xs text-[hsl(var(--color-text-muted))] text-center">
-        eBPLS — BOSS &amp; E-Resibo &nbsp;&middot;&nbsp; OTC Payments Only
-      </p>
+        {/* Form card */}
+        <div className="w-full max-w-[420px] bg-white rounded-3xl border border-gray-100 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)]">
+          <Outlet />
+        </div>
+
+        {/* Footer */}
+        <p className="mt-8 text-[11px] text-gray-400 text-center">
+          Electronic Business Permits & Licensing System
+        </p>
+      </div>
     </div>
   );
 };
