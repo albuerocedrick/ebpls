@@ -288,7 +288,6 @@ const getApplicationForEdit = async (req, res, next) => {
         application_no,
         status,
         type_id,
-        payment_mode_id,
         return_remarks,
         businesses!inner (
           taxpayer_id,
@@ -376,7 +375,7 @@ const getApplicationForEdit = async (req, res, next) => {
         // Pre-fill data for the wizard
         step1: {
           type_id: app.type_id,
-          payment_mode_id: app.payment_mode_id,
+          // payment_mode_id removed — payment is always annual (migration 033)
           business_name: biz.business_name,
           trade_name: biz.trade_name,
           org_type_id: biz.org_type_id,

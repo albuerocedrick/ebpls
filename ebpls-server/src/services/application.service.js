@@ -306,7 +306,7 @@ const submitApplication = async (taxpayerId, payload) => {
     application_no: appNo,
     business_id: businessId,
     type_id: payload.type_id,
-    payment_mode_id: payload.payment_mode_id,
+    // payment_mode_id removed — payment is always annual (migration 033)
     status: STATUSES.PENDING,
     submitted_at: new Date().toISOString(),
     return_remarks: null, // Clear remarks on resubmission

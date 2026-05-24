@@ -14,11 +14,7 @@ const APP_TYPES = [
   { id: 3, name: 'Additional Line of Business' }
 ];
 
-const PAYMENT_MODES = [
-  { id: 1, name: 'Annually' },
-  { id: 2, name: 'Bi-Annually' },
-  { id: 3, name: 'Quarterly' }
-];
+// payment_mode_id removed — payment is always annual (migration 033)
 
 const FALLBACK_ORG_TYPES = [
   { id: 1, name: 'Sole Proprietorship' },
@@ -51,7 +47,7 @@ const Step1_BasicInfo = () => {
     const val = type === 'checkbox' ? checked : value;
     
     // Convert numeric IDs to actual numbers instead of strings for DB compatibility
-    const numericFields = ['type_id', 'payment_mode_id', 'org_type_id'];
+    const numericFields = ['type_id', 'org_type_id'];
     const finalVal = numericFields.includes(name) && val !== '' ? Number(val) : val;
 
     setFormField('step1', name, finalVal);
@@ -74,7 +70,7 @@ const Step1_BasicInfo = () => {
           <Tag size={18} className="text-accent" />
           Application Details
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <div>
             <Select
               label="Application Type"
@@ -86,20 +82,6 @@ const Step1_BasicInfo = () => {
               <option value="" disabled>Select application type</option>
               {APP_TYPES.map(type => (
                 <option key={type.id} value={type.id}>{type.name}</option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Select
-              label="Payment Mode"
-              required
-              name="payment_mode_id"
-              value={data.payment_mode_id || ''}
-              onChange={handleChange}
-            >
-              <option value="" disabled>Select payment mode</option>
-              {PAYMENT_MODES.map(mode => (
-                <option key={mode.id} value={mode.id}>{mode.name}</option>
               ))}
             </Select>
           </div>

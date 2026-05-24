@@ -9,7 +9,7 @@ const initialFormState = {
   step1: {
     // Reference: applications table & lookups
     type_id: '',               // New, Renewal, Additional
-    payment_mode_id: '',       // Annually, Bi-Annually, Quarterly
+    // payment_mode_id removed — payment is always annual (migration 033)
     // Reference: businesses table
     business_name: '',
     trade_name: '',

@@ -51,13 +51,10 @@ INSERT INTO public.application_types (name) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- =================================================================
--- 4. PAYMENT MODES (OTC installment options)
+-- 4. PAYMENT MODES — REMOVED
+-- The payment_modes table has been dropped (migration 033).
+-- Payment is always annual; no installment options.
 -- =================================================================
-INSERT INTO public.payment_modes (name) VALUES
-    ('Annually'),
-    ('Bi-Annually'),
-    ('Quarterly')
-ON CONFLICT (name) DO NOTHING;
 
 -- =================================================================
 -- 5. DOCUMENT REQUIREMENT TYPES (BPLO Verification Checklist)

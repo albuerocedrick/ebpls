@@ -29,7 +29,7 @@ const UAFSubmissionPayloadSchema = z.object({
   // Application Data
   application_no: z.string().optional(),
   type_id: z.coerce.number().int().positive("Application type ID is required"),
-  payment_mode_id: z.coerce.number().int().positive().optional(),
+  // payment_mode_id removed — payment is always annual (migration 033)
 
   // Business Data
   business_name: z.string().min(1, "Business name is required"),

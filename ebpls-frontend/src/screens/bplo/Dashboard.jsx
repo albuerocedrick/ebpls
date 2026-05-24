@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Inbox, AlertTriangle, ArrowUpDown, RefreshCcw, FileSearch, Users, Clock } from 'lucide-react';
+import { Inbox, AlertTriangle, ArrowUpDown, RefreshCcw, FileSearch, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -13,7 +13,6 @@ import { apiClient } from '../../utils/apiClient';
 import { API_ENDPOINTS, APP_STATUS, ROUTES } from '../../utils/constants';
 import useUIStore, { TOAST_TYPE } from '../../store/UIStore';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const formatSubmittedLabel = (submittedAt) => {
   if (!submittedAt) return 'Not submitted';
@@ -80,11 +79,8 @@ const BPLODashboard = () => {
   const stats = useMemo(() => {
     const pendingCount = applications.filter((app) => app.status === APP_STATUS.PENDING).length;
     const underReviewCount = applications.filter((app) => app.status === APP_STATUS.UNDER_REVIEW).length;
-    const urgentCount = applications.filter((app) => {
-      if (!app.submittedAt) return false;
-      return (Date.now() - new Date(app.submittedAt).getTime()) >= (2 * DAY_MS);
-    }).length;
-    return { pendingCount, underReviewCount, urgentCount };
+    const totalCount = applications.length;
+    return { pendingCount, underReviewCount, totalCount };
   }, [applications]);
 
   return (
@@ -141,11 +137,11 @@ const BPLODashboard = () => {
         <div className="group bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-default">
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
-              <Clock size={20} />
+              <Users size={20} />
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Urgent (2+ days)</p>
-              <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.urgentCount}</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Applicants</p>
+              <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.totalCount}</p>
             </div>
           </div>
         </div>
@@ -183,7 +179,7 @@ const BPLODashboard = () => {
           <div className="divide-y divide-gray-100">
             {sortedApplications.map((app) => {
               const ageMs = app.submittedAt ? Date.now() - new Date(app.submittedAt).getTime() : 0;
-              const urgent = ageMs >= (2 * DAY_MS);
+              const urgent = ageMs >= (2 * 24 * 60 * 60 * 1000); // 2 days in ms
 
               return (
                 <div

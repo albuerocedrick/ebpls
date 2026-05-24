@@ -177,7 +177,7 @@ const UAFWizardScreen = () => {
       const payload = {
         application_no: editAppNo || undefined,
         type_id: Number(formData.step1.type_id),
-        payment_mode_id: formData.step1.payment_mode_id ? Number(formData.step1.payment_mode_id) : undefined,
+        // payment_mode_id removed — payment is always annual (migration 033)
         business_name: formData.step1.business_name,
         trade_name: formData.step1.trade_name || undefined,
         org_type_id: Number(formData.step1.org_type_id),
