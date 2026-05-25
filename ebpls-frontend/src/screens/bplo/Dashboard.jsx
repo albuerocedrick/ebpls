@@ -14,6 +14,8 @@ import { API_ENDPOINTS, APP_STATUS, ROUTES } from '../../utils/constants';
 import useUIStore, { TOAST_TYPE } from '../../store/UIStore';
 
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 const formatSubmittedLabel = (submittedAt) => {
   if (!submittedAt) return 'Not submitted';
   const submittedDate = new Date(submittedAt);
@@ -179,7 +181,7 @@ const BPLODashboard = () => {
           <div className="divide-y divide-gray-100">
             {sortedApplications.map((app) => {
               const ageMs = app.submittedAt ? Date.now() - new Date(app.submittedAt).getTime() : 0;
-              const urgent = ageMs >= (2 * 24 * 60 * 60 * 1000); // 2 days in ms
+              const urgent = ageMs >= 2 * DAY_MS; // 2 days in ms
 
               return (
                 <div
