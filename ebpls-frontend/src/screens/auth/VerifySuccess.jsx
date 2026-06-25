@@ -28,7 +28,7 @@ const VerifySuccess = () => {
           Email Verified!
         </h1>
         <p className="text-sm text-[hsl(var(--color-text-muted))] leading-relaxed max-w-xs">
-          Your account has been successfully activated. You can now access all the features of the eBPLS system.
+          Your account has been successfully activated. You can now access all the features of the BOSS system.
         </p>
       </div>
 

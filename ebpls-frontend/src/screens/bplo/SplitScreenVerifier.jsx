@@ -70,8 +70,8 @@ const PASS_STATUSES = [DOC_STATUS.YES, DOC_STATUS.NOT_NEEDED];
 // Dropdown options for BPLO officer
 const STATUS_OPTIONS = [
   { value: DOC_STATUS.PENDING, label: 'Pending', color: 'text-gray-500' },
-  { value: DOC_STATUS.YES, label: 'Yes', color: 'text-green-600' },
-  { value: DOC_STATUS.NO, label: 'No', color: 'text-red-500' },
+  { value: DOC_STATUS.YES, label: 'Yes', color: 'text-gray-900' },
+  { value: DOC_STATUS.NO, label: 'No', color: 'text-gray-700' },
   { value: DOC_STATUS.NOT_NEEDED, label: 'Not Needed', color: 'text-gray-400' },
 ];
 
@@ -82,13 +82,13 @@ const STATUS_OPTIONS = [
 const iconForStatus = (status) => {
   switch (status) {
     case DOC_STATUS.YES:
-      return <CheckCircle2 size={16} className="text-green-600 shrink-0" />;
+      return <CheckCircle2 size={16} className="text-gray-900 shrink-0" />;
     case DOC_STATUS.NOT_NEEDED:
       return <MinusCircle size={16} className="text-gray-400 shrink-0" />;
     case DOC_STATUS.NO:
-      return <XCircle size={16} className="text-red-500 shrink-0" />;
+      return <XCircle size={16} className="text-gray-600 shrink-0" />;
     case DOC_STATUS.AWAITING_ISSUANCE:
-      return <Clock size={16} className="text-amber-500 shrink-0" />;
+      return <Clock size={16} className="text-gray-500 shrink-0" />;
     default:
       return <AlertCircle size={16} className="text-gray-400 shrink-0" />;
   }
@@ -96,11 +96,11 @@ const iconForStatus = (status) => {
 
 const statusBgColor = (status) => {
   switch (status) {
-    case DOC_STATUS.YES: return 'bg-green-50 border-green-200 text-green-700';
-    case DOC_STATUS.NO: return 'bg-red-50 border-red-200 text-red-700';
-    case DOC_STATUS.NOT_NEEDED: return 'bg-gray-50 border-gray-200 text-gray-600';
-    case DOC_STATUS.AWAITING_ISSUANCE: return 'bg-amber-50 border-amber-200 text-amber-700';
-    default: return 'bg-white border-gray-200 text-gray-700';
+    case DOC_STATUS.YES: return 'bg-gray-900 text-white';
+    case DOC_STATUS.NO: return 'bg-gray-800 text-gray-200';
+    case DOC_STATUS.NOT_NEEDED: return 'bg-gray-200 text-gray-700';
+    case DOC_STATUS.AWAITING_ISSUANCE: return 'bg-gray-100 text-gray-600';
+    default: return 'bg-gray-50 text-gray-500';
   }
 };
 
@@ -666,7 +666,7 @@ const SplitScreenVerifier = () => {
 
                         {/* Status dropdown */}
                         {isLocked ? (
-                          <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded shrink-0">
+                          <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded shrink-0">
                             Awaiting Issuance
                           </span>
                         ) : (
@@ -689,7 +689,7 @@ const SplitScreenVerifier = () => {
                             value={item.remarks || ''}
                             onChange={(e) => handleChecklistRemarks(item.requirementId, e.target.value)}
                             placeholder="Reason for rejection (required)..."
-                            className="w-full text-xs px-2.5 py-1.5 rounded border border-red-200 bg-red-50/50 text-[hsl(var(--color-text))] outline-none focus:ring-1 focus:ring-red-300 placeholder:text-red-300"
+                            className="w-full text-xs px-2.5 py-1.5 rounded border border-gray-200 bg-gray-50 text-[hsl(var(--color-text))] outline-none focus:ring-1 focus:ring-gray-300 placeholder:text-gray-400"
                           />
                         </div>
                       )}
@@ -733,8 +733,8 @@ const SplitScreenVerifier = () => {
           </div>
 
           {isAdminView ? (
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded-md flex items-center justify-center">
-              <p className="text-sm text-blue-700 font-medium">
+            <div className="bg-gray-50 border border-gray-200 p-4 rounded-md flex items-center justify-center">
+              <p className="text-sm text-gray-600 font-medium">
                 You are viewing this application in Read-Only Administrator Mode. Actions are disabled.
               </p>
             </div>

@@ -7,14 +7,14 @@ import toast from 'react-hot-toast';
 
 
 const ACTION_COLORS = {
-  APPLICATION_VERIFIED: 'text-blue-600 bg-blue-50',
-  APPLICATION_RETURNED: 'text-orange-600 bg-orange-50',
-  APPLICATION_STATUS_UPDATED: 'text-purple-600 bg-purple-50',
-  FEE_ASSESSED: 'text-indigo-600 bg-indigo-50',
-  FEE_OVERRIDE: 'text-red-600 bg-red-50',
-  OTC_PAYMENT_RECORDED: 'text-green-600 bg-green-50',
-  ONLINE_PAYMENT_INITIATED: 'text-teal-600 bg-teal-50',
-  REQUIREMENT_UPLOADED: 'text-cyan-600 bg-cyan-50',
+  APPLICATION_VERIFIED: 'text-gray-700 bg-gray-200',
+  APPLICATION_RETURNED: 'text-gray-200 bg-gray-800',
+  APPLICATION_STATUS_UPDATED: 'text-gray-600 bg-gray-100',
+  FEE_ASSESSED: 'text-gray-700 bg-gray-200',
+  FEE_OVERRIDE: 'text-gray-400 bg-gray-100',
+  OTC_PAYMENT_RECORDED: 'text-white bg-gray-900',
+  ONLINE_PAYMENT_INITIATED: 'text-gray-800 bg-gray-300',
+  REQUIREMENT_UPLOADED: 'text-gray-600 bg-gray-100',
 };
 
 const getPaymentAmount = (log) => {

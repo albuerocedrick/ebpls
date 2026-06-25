@@ -3,6 +3,7 @@ import { Database, Plus, Edit2, Save, X, Loader2, CheckCircle2, Trash2, Lock } f
 import apiClient from '../../utils/apiClient';
 import toast from 'react-hot-toast';
 import Card from '../../components/ui/Card';
+import Select from '../../components/ui/Select';
 
 const TABLES = [
   { id: 'fee_types', name: 'Fee Types', columns: ['name', 'description', 'computation_basis', 'fixed_amount', 'percentage_value', 'percentage_of_id', 'is_active'] },
@@ -152,46 +153,46 @@ const MasterData = () => {
     if (col === 'is_active') {
       const boolVal = value === undefined ? true : value; // default true
       return (
-        <select 
+        <Select 
           value={boolVal ? 'true' : 'false'} 
           onChange={(e) => onChange(col, e.target.value === 'true')}
           disabled={disabled}
-          className={`w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all bg-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          size="sm"
         >
           <option value="true">Yes</option>
           <option value="false">No</option>
-        </select>
+        </Select>
       );
     }
     if (col === 'computation_basis') {
       return (
-        <select 
+        <Select 
           value={value || 'Fixed'} 
           onChange={(e) => onChange(col, e.target.value)}
           disabled={disabled}
-          className={`w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all bg-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          size="sm"
         >
           <option value="Fixed">Fixed</option>
           <option value="Gross_Sales">Gross_Sales</option>
           <option value="Percentage">Percentage</option>
-        </select>
+        </Select>
       );
     }
     if (col === 'percentage_of_id') {
       // Exclude the current editing item to prevent self-dependence loops
       const otherFees = data.filter(item => item.id !== editingId);
       return (
-        <select
-          value={value || ''}
+        <Select
+          value={value ? String(value) : ''}
           onChange={(e) => onChange(col, e.target.value === '' ? null : Number(e.target.value))}
           disabled={disabled}
-          className={`w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all bg-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          size="sm"
         >
           <option value="">None (Select dependency)</option>
           {otherFees.map(fee => (
-            <option key={fee.id} value={fee.id}>{fee.name}</option>
+            <option key={fee.id} value={String(fee.id)}>{fee.name}</option>
           ))}
-        </select>
+        </Select>
       );
     }
     if (col === 'fixed_amount' || col === 'percentage_value') {
@@ -224,7 +225,7 @@ const MasterData = () => {
       return value ? (
         <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-700">Active</span>
       ) : (
-        <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-red-50 text-red-600">Inactive</span>
+        <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gray-50 text-gray-400">Inactive</span>
       );
     }
     if (col === 'computation_basis') {

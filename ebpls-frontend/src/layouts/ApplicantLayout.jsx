@@ -57,7 +57,7 @@ const ApplicantLayout = () => {
             <span className="text-white text-xs font-bold">eB</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-extrabold text-gray-900 leading-tight tracking-tight">eBPLS</span>
+            <span className="text-sm font-extrabold text-gray-900 leading-tight tracking-tight">BOSS</span>
             <span className="text-[10px] font-medium text-gray-400 leading-tight">Municipality of Liliw</span>
           </div>
         </div>

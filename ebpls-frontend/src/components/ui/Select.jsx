@@ -91,8 +91,8 @@ const Select = ({
 
   const sizeClasses = {
     sm: 'py-2 pl-3 pr-8 text-sm',
-    md: 'py-3 pl-4 pr-9 text-sm',
-    lg: 'py-3.5 pl-4 pr-9 text-base',
+    md: 'py-2.5 pl-3 pr-9 text-sm',
+    lg: 'py-3 pl-4 pr-9 text-base',
   };
 
   return (
@@ -112,11 +112,11 @@ const Select = ({
           disabled={disabled}
           onClick={() => !disabled && setIsOpen(!isOpen)}
           className={[
-            'w-full text-left rounded-2xl border font-medium',
+            'w-full text-left rounded-xl border font-medium',
             'transition-all duration-200 cursor-pointer',
-            'focus:outline-none focus:ring-4',
+            'focus:outline-none focus:ring-2',
             sizeClasses[size],
-            isOpen ? 'bg-white border-gray-400 ring-4 ring-gray-100 shadow-sm' : 'bg-gray-50 border-gray-200',
+            isOpen ? 'bg-white border-gray-400 ring-2 ring-gray-900/5 shadow-sm' : 'bg-gray-50 border-gray-200',
             !hasError && !isOpen && 'hover:border-gray-300',
             hasError && 'border-red-300 focus:ring-red-50 focus:border-red-400',
             disabled && 'opacity-60 cursor-not-allowed',
@@ -137,8 +137,8 @@ const Select = ({
         {isOpen && (
           <div
             className={[
-              'absolute z-50 mt-2 w-full bg-white border border-gray-100 rounded-2xl shadow-[0_12px_28px_-4px_rgba(0,0,0,0.12)]',
-              'py-1.5 max-h-60 overflow-y-auto',
+              'absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg',
+              'py-1 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200',
               'animate-in fade-in slide-in-from-top-1 duration-150',
             ].join(' ')}
           >
@@ -151,15 +151,15 @@ const Select = ({
                   disabled={opt.disabled}
                   onClick={() => handleSelect(opt.value)}
                   className={[
-                    'w-full text-left px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-between gap-2',
-                    'mx-1.5 rounded-xl',
+                    'w-full text-left px-3 py-2 text-sm font-medium transition-colors flex items-center justify-between gap-2',
+                    'mx-1 rounded-lg',
                     'first:mt-0 last:mb-0',
                     isSelected
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900',
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                     opt.disabled && 'opacity-40 cursor-not-allowed',
                   ].filter(Boolean).join(' ')}
-                  style={{ width: 'calc(100% - 12px)' }}
+                  style={{ width: 'calc(100% - 8px)' }}
                 >
                   <span className="truncate">{opt.label}</span>
                   {isSelected && <Check size={14} className="shrink-0 opacity-75" />}

@@ -6,9 +6,10 @@
 
 import React from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
-import { Building2, Shield, FileCheck, Banknote } from 'lucide-react';
+import { Shield, FileCheck, Banknote } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import { ROUTES, ROLE_DASHBOARDS } from '../utils/constants';
+import logo from '../assets/logo.png';
 
 const AuthLayout = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -33,12 +34,12 @@ const AuthLayout = () => {
         {/* Centered content */}
         <div className="relative z-10 px-10 xl:px-14 text-center flex flex-col items-center gap-10">
           {/* Logo */}
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-center">
-              <Building2 size={24} className="text-white" />
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-2.5 shadow-2xl flex items-center justify-center transition-transform hover:scale-105 duration-300">
+              <img src={logo} alt="BOSS Logo" className="w-full h-full object-contain drop-shadow-md" />
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold text-white tracking-tight">eBPLS</h1>
+              <h1 className="text-2xl font-extrabold text-white tracking-tight">BOSS</h1>
               <p className="text-xs text-gray-400 font-medium mt-1">Municipality of Liliw, Laguna</p>
             </div>
           </div>
@@ -81,12 +82,12 @@ const AuthLayout = () => {
       {/* Right Panel — Form (centered) */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-gray-50">
         {/* Mobile logo (shown only on small screens) */}
-        <div className="lg:hidden flex items-center gap-2.5 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/20">
-            <Building2 size={18} className="text-white" />
+        <div className="lg:hidden flex items-center gap-3 mb-10">
+          <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg shadow-blue-900/5 p-2 border border-gray-100">
+            <img src={logo} alt="BOSS Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <span className="text-lg font-extrabold text-gray-900 tracking-tight block leading-tight">eBPLS</span>
+            <span className="text-lg font-extrabold text-gray-900 tracking-tight block leading-tight">BOSS</span>
             <span className="text-[10px] text-gray-400 font-medium">Municipality of Liliw</span>
           </div>
         </div>

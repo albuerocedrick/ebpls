@@ -19,68 +19,29 @@ import { APP_STATUS } from '../../utils/constants';
 // =========================================
 
 const STATUS_STYLES = {
-  [APP_STATUS.DRAFT]: {
-    bg: 'bg-[hsl(var(--color-status-draft-bg))]',
-    text: 'text-[hsl(var(--color-status-draft))]',
-    ring: 'ring-[hsl(var(--color-status-draft))]',
-  },
-  [APP_STATUS.PENDING]: {
-    bg: 'bg-[hsl(var(--color-status-pending-bg))]',
-    text: 'text-[hsl(var(--color-status-pending))]',
-    ring: 'ring-[hsl(var(--color-status-pending))]',
-  },
-  [APP_STATUS.UNDER_REVIEW]: {
-    bg: 'bg-[hsl(var(--color-status-under-review-bg))]',
-    text: 'text-[hsl(var(--color-status-under-review))]',
-    ring: 'ring-[hsl(var(--color-status-under-review))]',
-  },
-  [APP_STATUS.RETURNED]: {
-    bg: 'bg-[hsl(var(--color-status-returned-bg))]',
-    text: 'text-[hsl(var(--color-status-returned))]',
-    ring: 'ring-[hsl(var(--color-status-returned))]',
-  },
-  [APP_STATUS.VERIFIED]: {
-    bg: 'bg-[hsl(var(--color-status-verified-bg))]',
-    text: 'text-[hsl(var(--color-status-verified))]',
-    ring: 'ring-[hsl(var(--color-status-verified))]',
-  },
-  [APP_STATUS.FOR_ASSESSMENT]: {
-    bg: 'bg-[hsl(var(--color-status-for-assessment-bg))]',
-    text: 'text-[hsl(var(--color-status-for-assessment))]',
-    ring: 'ring-[hsl(var(--color-status-for-assessment))]',
-  },
-  [APP_STATUS.ASSESSED]: {
-    bg: 'bg-[hsl(var(--color-status-assessed-bg))]',
-    text: 'text-[hsl(var(--color-status-assessed))]',
-    ring: 'ring-[hsl(var(--color-status-assessed))]',
-  },
-  [APP_STATUS.FOR_PAYMENT]: {
-    bg: 'bg-[hsl(var(--color-status-for-payment-bg))]',
-    text: 'text-[hsl(var(--color-status-for-payment))]',
-    ring: 'ring-[hsl(var(--color-status-for-payment))]',
-  },
-  [APP_STATUS.PAID]: {
-    bg: 'bg-[hsl(var(--color-status-paid-bg))]',
-    text: 'text-[hsl(var(--color-status-paid))]',
-    ring: 'ring-[hsl(var(--color-status-paid))]',
-  },
-  [APP_STATUS.COMPLETED]: {
-    bg: 'bg-[hsl(var(--color-status-completed-bg))]',
-    text: 'text-[hsl(var(--color-status-completed))]',
-    ring: 'ring-[hsl(var(--color-status-completed))]',
-  },
-  [APP_STATUS.PAYMENT_PROCESSING]: {
-    bg: 'bg-amber-500/10',
-    text: 'text-amber-500',
-    ring: 'ring-amber-500/30',
-  },
+  [APP_STATUS.DRAFT]: { bg: 'bg-gray-50', text: 'text-gray-500', ring: '' },
+  [APP_STATUS.PENDING]: { bg: 'bg-gray-50', text: 'text-gray-500', ring: '' },
+  [APP_STATUS.UNDER_REVIEW]: { bg: 'bg-gray-100', text: 'text-gray-600', ring: '' },
+  [APP_STATUS.RETURNED]: { bg: 'bg-gray-800', text: 'text-gray-200', ring: '' },
+  [APP_STATUS.VERIFIED]: { bg: 'bg-gray-200', text: 'text-gray-700', ring: '' },
+  [APP_STATUS.FOR_ASSESSMENT]: { bg: 'bg-gray-100', text: 'text-gray-600', ring: '' },
+  [APP_STATUS.ASSESSED]: { bg: 'bg-gray-200', text: 'text-gray-700', ring: '' },
+  [APP_STATUS.FOR_PAYMENT]: { bg: 'bg-gray-200', text: 'text-gray-700', ring: '' },
+  [APP_STATUS.PAID]: { bg: 'bg-gray-300', text: 'text-gray-800', ring: '' },
+  [APP_STATUS.COMPLETED]: { bg: 'bg-gray-900', text: 'text-white', ring: '' },
+  [APP_STATUS.PAYMENT_PROCESSING]: { bg: 'bg-gray-100', text: 'text-gray-600', ring: '' },
+  // Retirements
+  [APP_STATUS.RETIREMENT_PENDING]: { bg: 'bg-gray-50', text: 'text-gray-500', ring: '' },
+  [APP_STATUS.RETIREMENT_ASSESSED]: { bg: 'bg-gray-200', text: 'text-gray-700', ring: '' },
+  [APP_STATUS.RETIREMENT_PAID]: { bg: 'bg-gray-300', text: 'text-gray-800', ring: '' },
+  [APP_STATUS.RETIRED]: { bg: 'bg-gray-900', text: 'text-white', ring: '' },
 };
 
 // Fallback for unknown statuses
 const DEFAULT_STYLE = {
-  bg: 'bg-surface-tint',
-  text: 'text-[hsl(var(--color-text-muted))]',
-  ring: 'ring-border',
+  bg: 'bg-gray-100',
+  text: 'text-gray-600',
+  ring: '',
 };
 
 const SIZE_CLASSES = {
@@ -119,7 +80,7 @@ const Badge = ({
         style.bg,
         style.text,
         SIZE_CLASSES[size],
-        withRing && `ring-1 ${style.ring}`,
+        withRing && style.ring && `ring-1 ${style.ring}`,
         className,
       ]
         .filter(Boolean)

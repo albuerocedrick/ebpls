@@ -8,10 +8,10 @@ import apiClient from '../../utils/apiClient';
 import toast from 'react-hot-toast';
 
 const STATUS_COLORS = {
-  Pending: 'bg-yellow-100 text-yellow-800',
-  Assessed: 'bg-blue-100 text-blue-800',
-  Paid: 'bg-green-100 text-green-800',
-  Completed: 'bg-gray-100 text-gray-600',
+  Pending: 'bg-gray-50 text-gray-500',
+  Assessed: 'bg-gray-200 text-gray-700',
+  Paid: 'bg-gray-300 text-gray-800',
+  Completed: 'bg-gray-900 text-white',
 };
 
 const RetirementQueue = () => {

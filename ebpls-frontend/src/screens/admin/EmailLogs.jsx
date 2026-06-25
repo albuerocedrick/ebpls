@@ -7,9 +7,9 @@ import { API_ENDPOINTS } from '../../utils/constants';
 import toast from 'react-hot-toast';
 
 const STATUS_CONFIG = {
-  Pending: { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-  Sent: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50' },
-  Failed: { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-50' },
+  Pending: { icon: Clock, color: 'text-gray-500', bg: 'bg-gray-50' },
+  Sent: { icon: CheckCircle, color: 'text-gray-900', bg: 'bg-gray-100' },
+  Failed: { icon: AlertCircle, color: 'text-gray-600', bg: 'bg-gray-50' },
   Skipped: { icon: AlertCircle, color: 'text-gray-500', bg: 'bg-gray-50' },
 };
 
