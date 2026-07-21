@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { gsap } from "../../lib/gsap";
 import { Link } from "react-router-dom";
 import { ROUTES } from "../../utils/constants";
+import logo from "../../assets/logo.png";
 
 
 export default function Navbar() {
@@ -45,8 +46,10 @@ export default function Navbar() {
           onClick={scrollToTop}
           className="flex items-center gap-3 cursor-pointer group"
         >
-          <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all" />
-          <span className="font-black text-slate-900 text-xl tracking-tight">EBPLS</span>
+          <div className="w-10 h-10 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+            <img src={logo} alt="BOSS Logo" className="w-full h-full object-contain drop-shadow-md" />
+          </div>
+          <span className="font-black text-slate-900 text-xl tracking-tight">BOSS</span>
         </div>
 
         {/* NAV LINKS */}

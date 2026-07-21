@@ -1,16 +1,18 @@
 // src/screens/treasury/RetirementAssess.jsx
 // Treasury Officer — Assess & Record Payment for Business Retirements (Phase 7)
 
-import React, { useState, useEffect } from 'react';
-import { Building2, DollarSign, Loader2, CheckCircle, Clock, RefreshCw, Plus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Building2, DollarSign, Loader2, CheckCircle, Clock, RefreshCw, Plus, Trash2, ChevronDown } from 'lucide-react';
 import apiClient from '../../utils/apiClient';
 import toast from 'react-hot-toast';
 
+import Select from '../../components/ui/Select';
+
 const STATUS_COLORS = {
-  Pending: 'bg-yellow-100 text-yellow-800',
-  Assessed: 'bg-blue-100 text-blue-800',
-  Paid: 'bg-green-100 text-green-800',
-  Completed: 'bg-gray-100 text-gray-600',
+  Pending: 'bg-gray-50 text-gray-500',
+  Assessed: 'bg-gray-200 text-gray-700',
+  Paid: 'bg-gray-300 text-gray-800',
+  Completed: 'bg-gray-900 text-white',
 };
 
 const RetirementAssess = () => {
@@ -175,8 +177,8 @@ const RetirementAssess = () => {
               key={item.id}
               className="border border-gray-200 rounded-lg p-4 bg-white"
             >
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                <div className="flex-1 space-y-1">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1 space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-900">
                       {item.businesses?.business_name || 'Unknown'}
@@ -198,7 +200,7 @@ const RetirementAssess = () => {
                   {item.status === 'Pending' && (
                     <button
                       onClick={() => openAssessModal(item.id)}
-                      className="px-4 py-2 rounded-2xl bg-gray-900 hover:bg-gray-800 text-gray-900 text-sm font-medium transition-colors flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-2xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium transition-colors flex items-center gap-1.5"
                     >
                       <DollarSign size={14} />
                       Assess
@@ -232,30 +234,28 @@ const RetirementAssess = () => {
             <h2 className="text-lg font-bold text-gray-900 mb-4">Assess Retirement</h2>
             <p className="text-sm text-gray-500 mb-4">Add fee line items for the final tax computation.</p>
 
-            <div className="space-y-3 max-h-60 overflow-y-auto">
+            <div className="space-y-3">
               {lineItems.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <select
-                    value={item.fee_type_id}
+                <div key={idx} className="flex items-center gap-2 relative" style={{ zIndex: 50 - idx }}>
+                  <Select
+                    value={String(item.fee_type_id)}
                     onChange={(e) => updateLineItem(idx, 'fee_type_id', e.target.value)}
-                    className="flex-1 px-2 py-2 rounded-2xl bg-gray-50 border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all appearance-none cursor-pointer"
-                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
                   >
-                    <option value="1" className="bg-gray-50 text-gray-900">Mayor&#39;s Permit Fee</option>
-                    <option value="2" className="bg-gray-50 text-gray-900">Business Tax</option>
-                    <option value="3" className="bg-gray-50 text-gray-900">Sanitary Inspection Fee</option>
-                    <option value="4" className="bg-gray-50 text-gray-900">Zoning / Occupancy Fee</option>
-                    <option value="5" className="bg-gray-50 text-gray-900">Garbage Collection Fee</option>
-                    <option value="6" className="bg-gray-50 text-gray-900">Environmental Fee</option>
-                    <option value="7" className="bg-gray-50 text-gray-900">Weight and Measures Fee</option>
-                    <option value="8" className="bg-gray-50 text-gray-900">Fire Safety Inspection Fee</option>
-                  </select>
+                    <option value="1">Mayor's Permit Fee</option>
+                    <option value="2">Business Tax</option>
+                    <option value="3">Sanitary Inspection Fee</option>
+                    <option value="4">Zoning / Occupancy Fee</option>
+                    <option value="5">Garbage Collection Fee</option>
+                    <option value="6">Environmental Fee</option>
+                    <option value="7">Weight and Measures Fee</option>
+                    <option value="8">Fire Safety Inspection Fee</option>
+                  </Select>
                   <input
                     type="number"
-                    placeholder="₱ Amount"
+                    placeholder="₱"
                     value={item.amount}
                     onChange={(e) => updateLineItem(idx, 'amount', e.target.value)}
-                    className="w-28 px-2 py-2 rounded-2xl bg-gray-50 border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-4 focus:ring-gray-100 focus:border-gray-400 transition-all placeholder:text-gray-900/40"
+                    className="w-32 px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/5 focus:border-gray-400 transition-all placeholder:text-gray-400"
                     min="0"
                     step="0.01"
                   />
@@ -270,7 +270,7 @@ const RetirementAssess = () => {
 
             <button
               onClick={addLineItem}
-              className="mt-3 text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
+              className="mt-3 text-sm text-gray-900 hover:text-black font-medium flex items-center gap-1"
             >
               <Plus size={14} /> Add Line Item
             </button>
@@ -285,7 +285,7 @@ const RetirementAssess = () => {
               <button
                 onClick={handleAssess}
                 disabled={actionLoading === assessingId}
-                className="px-4 py-2 rounded-2xl bg-gray-900 hover:bg-gray-800 text-gray-900 text-sm font-medium disabled:opacity-50 flex items-center gap-1.5"
+                className="px-4 py-2 rounded-2xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-1.5"
               >
                 {actionLoading === assessingId ? <Loader2 size={14} className="animate-spin" /> : <DollarSign size={14} />}
                 Confirm Assessment
@@ -327,14 +327,13 @@ const RetirementAssess = () => {
 
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Payment Type</label>
-                <select
+                <Select
                   value={paymentForm.tendered_type}
                   onChange={(e) => setPaymentForm((p) => ({ ...p, tendered_type: e.target.value }))}
-                  className="w-full px-3 py-2 rounded bg-gray-100 border border-gray-200 text-gray-900 text-sm"
                 >
                   <option value="Cash">Cash</option>
                   <option value="Manager Check">Manager Check</option>
-                </select>
+                </Select>
               </div>
 
               {paymentForm.tendered_type === 'Manager Check' && (

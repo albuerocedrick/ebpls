@@ -224,14 +224,7 @@ const ApplicantDashboard = () => {
                     </div>
                   </div>
                 </div>
-                <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                  ret.status === 'Completed' ? 'bg-gray-100 text-gray-600' :
-                  ret.status === 'Paid' ? 'bg-green-50 text-green-700 border border-green-200' :
-                  ret.status === 'Assessed' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                  'bg-amber-50 text-amber-700 border border-amber-200'
-                }`}>
-                  {ret.status}
-                </span>
+                <StatusBadge status={ret.status} size="sm" />
               </div>
             ))}
           </div>

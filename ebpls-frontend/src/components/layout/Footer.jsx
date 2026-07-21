@@ -36,7 +36,7 @@ export default function Footer() {
         <div ref={(el) => (contentRef.current[0] = el)} className="md:col-span-2">
           <h3 className="text-2xl font-black text-white tracking-tight mb-4 flex items-center gap-2">
             <div className="w-6 h-6 bg-blue-500 rounded-lg"></div>
-            EBPLS
+            BOSS
           </h3>
           <p className="text-slate-400 leading-relaxed max-w-sm">
             Streamlining administrative workflows and centralizing public records with state-of-the-art digital infrastructure.
@@ -71,7 +71,7 @@ export default function Footer() {
         className="max-w-7xl mx-auto px-6 pt-8 border-t border-slate-800/50 flex flex-col md:flex-row items-center justify-between gap-4"
       >
         <p className="text-sm text-slate-500 font-medium">
-          © {new Date().getFullYear()} EBPLS Portal. All rights reserved.
+          © {new Date().getFullYear()} BOSS Portal. All rights reserved.
         </p>
         <div className="flex gap-6 text-sm text-slate-500 font-medium">
           <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>

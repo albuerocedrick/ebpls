@@ -7,6 +7,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import useUIStore from '../../store/UIStore';
 import useAuthStore from '../../store/authStore';
+import logo from '../../assets/logo.png';
 
 // =========================================
 // Nav Item
@@ -85,25 +86,13 @@ const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
           zIndex: 'var(--z-sticky)',
         }}
       >
-        {/* User Profile Section */}
-        <div className="p-5 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-800 border-2 border-gray-700 flex items-center justify-center">
-                <span className="text-white text-sm font-bold">
-                  {user?.firstName ? user.firstName.charAt(0).toUpperCase() : 'U'}
-                </span>
-              </div>
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full" />
+        {/* Brand Logo Section */}
+        <div className="p-5 pb-4 lg:pl-6 border-b border-gray-800/50 flex items-center justify-center lg:justify-start">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 flex items-center justify-center drop-shadow-sm">
+              <img src={logo} alt="BOSS Logo" className="w-full h-full object-contain" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate">
-                {user?.firstName || 'User'}
-              </p>
-              <p className="text-[11px] text-gray-400 truncate">
-                {user?.email || 'Active'}
-              </p>
-            </div>
+            <h1 className="text-lg font-bold text-white tracking-wide">BOSS</h1>
           </div>
         </div>
 

@@ -7,23 +7,25 @@ import React from 'react';
  * Just colored text on a subtle background with rounded corners.
  */
 const STATUS_CONFIG = {
-  'Draft': { text: 'text-gray-600', bg: 'bg-gray-100' },
-  'Pending': { text: 'text-amber-700', bg: 'bg-amber-50' },
-  'Under Review': { text: 'text-blue-700', bg: 'bg-blue-50' },
-  'Returned': { text: 'text-red-700', bg: 'bg-red-50' },
-  'Verified': { text: 'text-emerald-700', bg: 'bg-emerald-50' },
-  'For Assessment': { text: 'text-purple-700', bg: 'bg-purple-50' },
-  'Assessed': { text: 'text-indigo-700', bg: 'bg-indigo-50' },
-  'For Payment': { text: 'text-amber-800', bg: 'bg-amber-50' },
-  'PaymentProcessing': { text: 'text-violet-700', bg: 'bg-violet-50', label: 'Processing' },
-  'Paid': { text: 'text-teal-700', bg: 'bg-teal-50' },
-  'Completed': { text: 'text-green-700', bg: 'bg-green-50' },
+  'Draft': 'bg-gray-50 text-gray-500',
+  'Pending': 'bg-gray-50 text-gray-500',
+  'Under Review': 'bg-gray-100 text-gray-600',
+  'For Assessment': 'bg-gray-100 text-gray-600',
+  'PaymentProcessing': 'bg-gray-100 text-gray-600',
+  'Verified': 'bg-gray-200 text-gray-700',
+  'Assessed': 'bg-gray-200 text-gray-700',
+  'For Payment': 'bg-gray-200 text-gray-700',
+  'Paid': 'bg-gray-300 text-gray-800',
+  'Completed': 'bg-gray-900 text-white',
+  'Issued': 'bg-gray-900 text-white',
+  'Returned': 'bg-gray-800 text-gray-200',
+  'Payment Failed': 'bg-gray-100 text-gray-400 line-through',
 };
 
-const DEFAULT_CONFIG = { text: 'text-gray-600', bg: 'bg-gray-100' };
+const DEFAULT_CONFIG = 'bg-gray-100 text-gray-600';
 
 const StatusBadge = ({ status, size = 'sm', className = '' }) => {
-  const config = STATUS_CONFIG[status] || DEFAULT_CONFIG;
+  const configClasses = STATUS_CONFIG[status] || DEFAULT_CONFIG;
 
   const sizeClasses = {
     sm: 'px-2.5 py-1 text-[11px]',
@@ -35,13 +37,12 @@ const StatusBadge = ({ status, size = 'sm', className = '' }) => {
     <span
       className={[
         'inline-flex items-center font-semibold rounded-lg',
-        config.bg,
-        config.text,
+        configClasses,
         sizeClasses[size],
         className,
       ].join(' ')}
     >
-      {config.label || status || 'Unknown'}
+      {status === 'PaymentProcessing' ? 'Processing' : status || 'Unknown'}
     </span>
   );
 };
