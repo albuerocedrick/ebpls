@@ -6,6 +6,7 @@
 // =================================================================
 
 const applicationService = require('../services/application.service');
+const requirementService = require('../services/requirement.service');
 const storageService     = require('../services/storage.service');
 const validators         = require('../utils/validators');
 const { createError }    = require('../middlewares/error.middleware');
@@ -302,7 +303,8 @@ const getApplicationForEdit = async (req, res, next) => {
           city,
           province,
           latitude,
-          longitude
+          longitude,
+          is_renting
         )
       `)
       .eq('application_no', app_no)
@@ -351,19 +353,7 @@ const getApplicationForEdit = async (req, res, next) => {
     const brgyReq = (docRows || []).find(d => d.requirement_types?.name === 'Barangay Business Clearance');
     const isBrgyRequested = brgyReq ? !brgyReq.file_path : false;
 
-    // 6. Map requirement names back to doc_types for the wizard
-    const REQ_NAME_TO_TYPE = {
-      'DTI / SEC / CDA Registration':           'DTI_SEC_CDA',
-      'Fire Safety Inspection Certificate':     'FIRE_SAFETY',
-      'Sanitary Permit':                         'SANITARY_PERMIT',
-      'Zoning Clearance':                        'ZONING_CLEARANCE',
-      'Lease Contract / TCT':                    'LEASE_TCT',
-      'Barangay Business Clearance':             'BARANGAY_CLEARANCE',
-      'Community Tax Certificate':               'CTC',
-      "Owner's Valid ID (Front)":               'VALID_ID_FRONT',
-      "Owner's Valid ID (Back)":                'VALID_ID_BACK',
-      "Sketch of Location":                     'SKETCH_LOCATION',
-    };
+    // 6. Map requirement names back to doc_types for the wizard is removed (Phase 3)
 
     const biz = app.businesses;
 
@@ -390,6 +380,7 @@ const getApplicationForEdit = async (req, res, next) => {
           province: biz.province,
           latitude: biz.latitude,
           longitude: biz.longitude,
+          is_renting: biz.is_renting,
         },
         step3: {
           lineOfBusinesses: (activities || []).map((a) => ({
@@ -402,11 +393,11 @@ const getApplicationForEdit = async (req, res, next) => {
           request_barangay_clearance: isBrgyRequested,
           documents: (docRows || [])
             .filter(d => d.file_path)
-            .map(d => ({
-              doc_type: REQ_NAME_TO_TYPE[d.requirement_types?.name] || `REQ_${d.requirement_id}`,
-              file_path: d.file_path,
-              file_name: d.file_path.split('/').pop() // approximation
-            }))
+            .flatMap(d => d.file_path.split(',').map(path => ({
+              requirement_id: d.requirement_id,
+              file_path: path,
+              file_name: path.split('/').pop() // approximation
+            })))
         },
         // BPLO feedback — so applicant knows what to fix
         feedback: {
@@ -475,6 +466,39 @@ const getUafLookups = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/applications/requirements
+ * Dynamically resolves the applicable requirements based on application parameters.
+ */
+const getApplicableRequirements = async (req, res, next) => {
+  try {
+    const { type_id, org_type_id, activity_names, is_renting } = req.query;
+
+    if (!type_id) {
+      throw createError('type_id is required', 400, ERROR_CODES.VALIDATION_ERROR);
+    }
+
+    const typeIdInt = parseInt(type_id, 10);
+    const orgTypeIdInt = org_type_id ? parseInt(org_type_id, 10) : null;
+    const activityNamesArr = activity_names ? activity_names.split(',').map(a => a.trim()).filter(Boolean) : [];
+    const isRentingBool = is_renting === 'true';
+
+    const requirements = await requirementService.resolveApplicableRequirements({
+      application_type_id: typeIdInt,
+      org_type_id: orgTypeIdInt,
+      activity_names: activityNamesArr,
+      is_renting: isRentingBool,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: requirements,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDraft,
   saveDraft,
@@ -486,4 +510,5 @@ module.exports = {
   getApplicationForEdit,
   getActiveBarangays,
   getUafLookups,
+  getApplicableRequirements,
 };

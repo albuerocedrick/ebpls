@@ -64,6 +64,12 @@ router.get(
   applicationController.getActiveBarangays
 );
 
+router.get(
+  '/requirements',
+  authenticate,
+  applicationController.getApplicableRequirements
+);
+
 router.post(
   '/upload',
   authenticate,

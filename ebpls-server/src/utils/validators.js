@@ -42,11 +42,14 @@ const UAFSubmissionPayloadSchema = z.object({
 
   // Barangay Clearance — Phase 3C
   request_barangay_clearance: z.boolean().default(false),
+  
+  // Rental Status - Phase 3
+  is_renting: z.boolean().default(false),
 
-  // Uploaded documents — array of { doc_type, file_path, file_name }
+  // Uploaded documents — array of { requirement_id, file_path, file_name }
   documents: z.array(
     z.object({
-      doc_type: z.string().min(1),
+      requirement_id: z.coerce.number().int().positive(),
       file_path: z.string().min(1),
       file_name: z.string().optional().default(''),
     })

@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import useApplicationStore from '../../../store/applicationStore';
 import InteractiveLocationPin from '../../../components/shared/InteractiveLocationPin';
-import { MapPin, Building2, Lock } from 'lucide-react';
+import { MapPin, Building2, Lock, Home, CheckCircle2 } from 'lucide-react';
 import { BARANGAYS_LILIW, API_ENDPOINTS } from '../../../utils/constants';
 import apiClient from '../../../utils/apiClient';
 import Select from '../../../components/ui/Select';
 
 const Step2_Location = () => {
   const data = useApplicationStore((state) => state.formData.step2);
+  const isRenting = data.is_renting ?? false;
   const setFormField = useApplicationStore((state) => state.setFormField);
   const [barangayList, setBarangayList] = useState(BARANGAYS_LILIW);
 
@@ -41,6 +42,10 @@ const Step2_Location = () => {
   const handleBarangayChange = (e) => {
     const selectedName = e.target.value;
     setFormField('step2', 'barangay', selectedName);
+  };
+
+  const handleRentalToggle = (value) => {
+    setFormField('step2', 'is_renting', value);
   };
 
   const inputClasses = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 focus:outline-none focus:border-gray-400 focus:ring-4 focus:ring-gray-100 focus:bg-white transition-all cursor-pointer";
@@ -129,6 +134,90 @@ const Step2_Location = () => {
           onChange={handleLocationChange}
         />
         
+      </div>
+
+      {/* Section 3: Business Location Ownership (Rental Status) */}
+      <div className="border-2 border-[hsl(var(--color-border,0,0%,85%))] rounded-xl overflow-hidden">
+        
+        {/* Section Header */}
+        <div className="bg-[hsl(var(--color-surface-raised,0,0%,96%))] px-5 py-4 border-b border-[hsl(var(--color-border,0,0%,90%))] flex items-center gap-3">
+          <div className="p-1.5 bg-accent/10 text-accent rounded-md">
+            <Home size={18} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-[hsl(var(--color-text,0,0%,10%))]">
+              Business Location Ownership
+            </h3>
+            <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,45%))] mt-0.5">
+              Indicate whether you own or rent the business premises.
+            </p>
+          </div>
+        </div>
+
+        {/* Two-option toggle */}
+        <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          
+          {/* Option A — I am renting */}
+          <button
+            type="button"
+            onClick={() => handleRentalToggle(true)}
+            className={`relative flex flex-col gap-2 p-4 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer
+              ${isRenting
+                ? 'border-accent bg-accent/5 shadow-sm shadow-accent/10'
+                : 'border-[hsl(var(--color-border,0,0%,88%))] bg-white hover:border-accent/40 hover:bg-accent/3'
+              }`}
+          >
+            {isRenting && (
+              <CheckCircle2
+                size={18}
+                className="absolute top-3 right-3 text-accent"
+                aria-hidden="true"
+              />
+            )}
+            <div className={`p-2 w-fit rounded-lg ${isRenting ? 'bg-accent/15 text-accent' : 'bg-[hsl(var(--color-surface-raised,0,0%,94%))] text-[hsl(var(--color-text-muted,0,0%,40%))]'}`}>
+              <Home size={18} />
+            </div>
+            <div>
+              <p className={`text-sm font-bold ${isRenting ? 'text-accent' : 'text-[hsl(var(--color-text,0,0%,15%))]'}`}>
+                I am renting this location
+              </p>
+              <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,45%))] mt-1 leading-relaxed">
+                You lease or rent the business premises from a property owner or lessor.
+              </p>
+            </div>
+          </button>
+
+          {/* Option B — I own this property */}
+          <button
+            type="button"
+            onClick={() => handleRentalToggle(false)}
+            className={`relative flex flex-col gap-2 p-4 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer
+              ${!isRenting
+                ? 'border-accent bg-accent/5 shadow-sm shadow-accent/10'
+                : 'border-[hsl(var(--color-border,0,0%,88%))] bg-white hover:border-accent/40 hover:bg-accent/3'
+              }`}
+          >
+            {!isRenting && (
+              <CheckCircle2
+                size={18}
+                className="absolute top-3 right-3 text-accent"
+                aria-hidden="true"
+              />
+            )}
+            <div className={`p-2 w-fit rounded-lg ${!isRenting ? 'bg-accent/15 text-accent' : 'bg-[hsl(var(--color-surface-raised,0,0%,94%))] text-[hsl(var(--color-text-muted,0,0%,40%))]'}`}>
+              <Building2 size={18} />
+            </div>
+            <div>
+              <p className={`text-sm font-bold ${!isRenting ? 'text-accent' : 'text-[hsl(var(--color-text,0,0%,15%))]'}`}>
+                I own this property
+              </p>
+              <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,45%))] mt-1 leading-relaxed">
+                You are the property owner of the business premises.
+              </p>
+            </div>
+          </button>
+
+        </div>
       </div>
 
     </div>

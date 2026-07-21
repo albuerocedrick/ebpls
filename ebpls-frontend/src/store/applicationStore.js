@@ -26,6 +26,7 @@ const initialFormState = {
     province: 'Laguna',        // Enforced default based on DB schema
     latitude: null,            // Decimal (from Leaflet)
     longitude: null,           // Decimal (from Leaflet)
+    is_renting: false,
   },
   step3: {
     // Array to hold multiple Line of Business activities
@@ -37,7 +38,7 @@ const initialFormState = {
     // false = applicant will upload their own existing barangay clearance document
     request_barangay_clearance: false,
     // Array to hold uploaded document pre-signed URLs or path references
-    documents: [],             // Expected: { doc_type, file_path, file_name }
+    documents: [],             // Expected: { requirement_id, file_path, file_name }
   },
   step5: {
     // Attestation and final review confirmation

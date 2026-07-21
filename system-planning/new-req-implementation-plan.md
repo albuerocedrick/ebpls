@@ -106,7 +106,12 @@ Add flat standalone activities for conditional requirement matching:
 | Real Property Tax Receipt | ✗ | ✓ | Yes | business_activity | 1 | 22 |
 | DOE Certificate (LPG Dealer/Retailer) | ✗ | ✓ | Yes | business_activity | 1 | 23 |
 
-**Step 1.8 — Insert `requirement_conditions` seed data** for every conditional requirement (e.g., "DTI Registration" → `match_value = 'Sole Proprietorship'`, "Real Property Tax Receipt" → 16 activity match values).
+**Step 1.8 — Insert `requirement_conditions` seed data** for every conditional requirement:
+- **DTI Registration** $\rightarrow$ `Sole Proprietorship`
+- **SEC Registration** $\rightarrow$ `Corporation`, `Partnership`, `Non-Governmental Organization`, `Government-Owned or Controlled Corporation`
+- **CDA Registration** $\rightarrow$ `Cooperative`
+- **Valid Government ID** $\rightarrow$ `Sole Proprietorship`
+- **Real Property Tax Receipt** $\rightarrow$ 16 activity match values (Hotel/Hostel, Apartment, Resort, Event's Place, Storage, Piggery, Poultry, Hatchery, Gasoline Station, Cemetery, Parking, Space Rental, Banks, Mini Mart, Groceries)
 
 **Step 1.9 — Add RLS policy** for `requirement_conditions` (read-only for authenticated users).
 
@@ -399,9 +404,10 @@ Update system planning documentation and run comprehensive end-to-end tests to v
 | 8 | New + Sole Prop + Lambanog Industry | DTI Registration, Valid Government ID, FDA Registration, Fire Safety, Sanitary, Laboratories, Realty Tax, Barangay Clearance |
 | 9 | Backward compat: existing in-progress app | Old checklist shows in BPLO verifier, no errors, completes lifecycle normally |
 | 10 | BPLO return + resubmission | Applicant sees correct dynamic checklist with BPLO feedback on returned requirements |
+| 11 | New + NGO / GOCC | SEC Registration, Fire Safety, Sanitary, Laboratories, Realty Tax, Barangay Clearance |
 
 ### Acceptance Criteria
-- [ ] All 10 E2E test scenarios pass
+- [ ] All 11 E2E test scenarios pass
 - [ ] System planning documents are updated
 - [ ] No regressions in existing functionality (payment, barangay clearance, retirement)
 - [ ] Admin can manage all new requirement data

@@ -6,6 +6,7 @@
 // =================================================================
 
 const { supabaseAdmin } = require('../config/supabase');
+const requirementService = require('./requirement.service');
 const { createError }   = require('../middlewares/error.middleware');
 const { ERROR_CODES, STATUSES, VALID_TRANSITIONS } = require('../utils/constants');
 
@@ -275,6 +276,7 @@ const submitApplication = async (taxpayerId, payload) => {
     province: payload.province,
     latitude: payload.latitude,
     longitude: payload.longitude,
+    is_renting: payload.is_renting ?? false,
   };
 
   if (isUpdate && businessId) {
@@ -380,64 +382,52 @@ const submitApplication = async (taxpayerId, payload) => {
     );
   }
 
-  // 6. Create doc_verifications rows for all uploaded standard documents.
-  if (payload.documents && payload.documents.length > 0) {
-    const DOC_TYPE_TO_REQUIREMENT = {
-      'DTI_SEC_CDA':        'DTI / SEC / CDA Registration',
-      'FIRE_SAFETY':        'Fire Safety Inspection Certificate',
-      'SANITARY_PERMIT':    'Sanitary Permit',
-      'ZONING_CLEARANCE':   'Zoning Clearance',
-      'LEASE_TCT':          'Lease Contract / TCT',
-      'BARANGAY_CLEARANCE': 'Barangay Business Clearance',
-      'CTC':                'Community Tax Certificate',
-      'VALID_ID_FRONT':     "Owner's Valid ID (Front)",
-      'VALID_ID_BACK':      "Owner's Valid ID (Back)",
-      'SKETCH_LOCATION':    "Sketch of Location",
-    };
+  // 6. Create doc_verifications rows for ALL applicable requirements
+  const activityNames = payload.activities ? payload.activities.map(a => a.name) : [];
+  const applicableRequirements = await requirementService.resolveApplicableRequirements({
+    application_type_id: payload.type_id,
+    org_type_id: payload.org_type_id,
+    activity_names: activityNames,
+    is_renting: payload.is_renting ?? false,
+  });
 
-    for (const doc of payload.documents) {
-      const requirementName = DOC_TYPE_TO_REQUIREMENT[doc.doc_type];
-      if (!requirementName) {
-        console.warn(`[submitApp] Unknown doc_type "${doc.doc_type}" — skipping doc_verifications insert.`);
-        continue;
-      }
+  const submittedDocs = payload.documents || [];
 
-      // Look up the requirement_id by name
-      const { data: reqData, error: reqError } = await supabaseAdmin
-        .from('requirement_types')
-        .select('id')
-        .eq('name', requirementName)
-        .single();
-
-      if (reqError || !reqData) {
-        console.warn(`[submitApp] Requirement type "${requirementName}" not found in DB — skipping.`);
-        continue;
-      }
-
-      // Skip if this is the Barangay clearance (already handled by the RPC above)
-      if (reqData.id === requirementId && doc.doc_type === 'BARANGAY_CLEARANCE') {
-        // Update the existing row with the file_path instead
+  for (const req of applicableRequirements) {
+    const matchingDocs = submittedDocs.filter(d => d.requirement_id === req.id);
+    
+    // Skip if this is the Barangay clearance (already handled by the RPC above)
+    // We only update the file_path if a document was uploaded instead of requested
+    if (req.id === requirementId) {
+      if (matchingDocs.length > 0) {
+        const combinedPath = matchingDocs.map(d => d.file_path).join(',');
         await supabaseAdmin
           .from('doc_verifications')
-          .update({ file_path: doc.file_path })
+          .update({ file_path: combinedPath })
           .eq('application_no', appNo)
           .eq('requirement_id', requirementId);
-        continue;
       }
+      continue;
+    }
 
-      // Insert doc_verifications row with file_path
-      const { error: docInsertError } = await supabaseAdmin
-        .from('doc_verifications')
-        .upsert({
-          application_no: appNo,
-          requirement_id: reqData.id,
-          status: 'Pending',
-          file_path: doc.file_path,
-        }, { onConflict: 'application_no, requirement_id' });
+    // Determine the file path(s) to save (comma-separated for multi-file requirements)
+    let combinedPath = null;
+    if (matchingDocs.length > 0) {
+      combinedPath = matchingDocs.map(d => d.file_path).join(',');
+    }
 
-      if (docInsertError) {
-        console.warn(`[submitApp] Failed to insert doc_verifications for ${doc.doc_type}:`, docInsertError.message);
-      }
+    // Insert doc_verifications row
+    const { error: docInsertError } = await supabaseAdmin
+      .from('doc_verifications')
+      .upsert({
+        application_no: appNo,
+        requirement_id: req.id,
+        status: 'Pending',
+        file_path: combinedPath,
+      }, { onConflict: 'application_no, requirement_id' });
+
+    if (docInsertError) {
+      console.warn(`[submitApp] Failed to insert doc_verifications for req_id ${req.id}:`, docInsertError.message);
     }
   }
 
