@@ -3,8 +3,15 @@
 **eBPLS (Electronic Business Permits and Licensing System)**
 BOSS & E-Resibo — Municipality of Liliw
 
-**Version 3.0** | Updated with PayMongo Online Payment Integration
+**Version 4.0** | Updated to align with current codebase (Migrations 019-033)
 
+> **What changed in v4.0**
+> 1. Payment modes (Annually, Bi-Annually, Quarterly) have been completely removed.
+> 2. Added "Owner's Valid ID" (Back-to-back) to requirement types.
+> 3. Added `fixed_amount` to `fee_types`.
+> 4. Added Admin module setup, health check RPCs, and system settings lookup.
+> 5. Added logic to reset clearance status on application resubmission.
+>
 > **What changed in v3.0**
 > PayMongo online payment has been added as an optional payment channel alongside the existing OTC flow. The `transactions` table has been extended, a new `payment_gateway_logs` audit table has been added, and the application state machine now includes a `PaymentProcessing` intermediate state for the online path. All OTC logic is unchanged.
 
@@ -121,7 +128,7 @@ BOSS & E-Resibo — Municipality of Liliw
 
 All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enforced at the database level.
 
-> **This section reflects the authoritative schema including all migrations through `018_paymongo_payment.sql`.**
+> **This section reflects the authoritative schema including all migrations through `033_remove_payment_modes.sql`.**
 
 ### 4.1 Authentication & Authorization
 
@@ -202,7 +209,6 @@ All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enfo
 | application_no | VARCHAR | PK | System-generated |
 | business_id | UUID | FK → businesses | |
 | type_id | INT | FK → application_types | New / Renewal / Additional LOB |
-| payment_mode_id | INT | FK → payment_modes | Annually / Bi-Annually / Quarterly |
 | status | ENUM (application_status) | NOT NULL | See state machine |
 | last_updated_by | UUID | FK → users | |
 | return_remarks | TEXT | | BPLO return remarks |
@@ -265,9 +271,10 @@ All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enfo
 | Column | Type | Description |
 |---|---|---|
 | id | INT | PK |
-| name | VARCHAR | DTI/SEC/CDA Reg., Barangay Clearance, Fire Safety, Sanitary Permit, Zoning, Lease/TCT, CTC, Prior Year Permit |
+| name | VARCHAR | DTI/SEC/CDA Reg., Barangay Clearance, Fire Safety, Sanitary Permit, Zoning, Lease/TCT, CTC, Prior Year Permit, Owner's Valid ID |
 | description | TEXT | |
 | is_active | BOOLEAN | Default: true |
+| fixed_amount | NUMERIC | Flat rate amount charged when computation_basis = Fixed |
 
 **Table: barangay_clearances**
 
@@ -339,12 +346,6 @@ All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enfo
 | cashier_id | UUID | FK → users (null for online-initiated payments) |
 | paid_at | TIMESTAMP | Default: NOW() |
 
-**Table: payment_modes**
-
-| Column | Type | Description |
-|---|---|---|
-| id | INT | PK |
-| name | VARCHAR | Annually / Bi-Annually / Quarterly |
 
 ### 4.6 Payment Gateway Audit *(New in v3.0)*
 
@@ -488,7 +489,7 @@ Completed → [*]
 | Pending | Returned | BPLO Officer | Missing / incorrect documents or data |
 | UnderReview | Verified | BPLO Officer | All `doc_verifications` = 'Yes' or 'Not Needed' AND all `application_data_reviews` = 'Verified' AND (if exists) `barangay_clearances.status` = 'Issued' |
 | UnderReview | Returned | BPLO Officer | Discrepancy found; remarks required |
-| Returned | Pending | Applicant | Resubmission with corrections |
+| Returned | Pending | Applicant | Resubmission with corrections (resets clearance status to Pending) |
 | Verified | ForAssessment | System | Auto on Verified transition |
 | ForAssessment | Assessed | Treasury Officer | TOP generated and finalized |
 | Assessed | ForPayment | System | Auto on TOP generation |
@@ -551,7 +552,15 @@ Completed → [*]
 | POST | `/api/retirements/:id/assess` | Compute final taxes |
 | PUT | `/api/retirements/:id/complete` | Mark business as retired |
 
-### Module F — Reporting & Documents
+### Module F — Admin Health & Settings
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| RPC | `admin_health_check()` | Database health check |
+| RPC | `get_max_connections()` | Database connection limit |
+| RPC | `get_system_settings()` | Retrieve system settings |
+
+### Module G — Reporting & Documents
 
 | Method | Endpoint | Purpose |
 |---|---|---|
@@ -744,5 +753,5 @@ PAYMONGO_CANCEL_URL=https://your-domain.com/payment/cancel
 
 ---
 
-*eBPLS SDD v3.0 — Municipality of Liliw*
-*Previous version: SDD v2.0 (OTC-only). This version adds PayMongo as an optional online payment channel.*
+*eBPLS SDD v4.0 — Municipality of Liliw*
+*Previous version: SDD v3.0 (PayMongo). This version adds PayMongo as an optional online payment channel.*
