@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Bell, Menu, X, LogOut } from 'lucide-react';
+import { Menu, X, LogOut } from 'lucide-react';
 import useUIStore from '../../store/UIStore';
 import useAuthStore from '../../store/authStore';
 import useAuth from '../../hooks/useAuth';
@@ -67,15 +67,6 @@ const Navbar = ({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 pr-1">
-          {/* Notifications */}
-          <button
-            className="relative w-10 h-10 flex items-center justify-center bg-[#E4E6EB] hover:bg-[#D8DADF] text-[#050505] rounded-full transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell size={20} strokeWidth={2} />
-            <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-[#E41E3F] rounded-full ring-2 ring-white" />
-          </button>
-
           {/* User Profile */}
           <button className="flex items-center gap-2 p-1 pr-3 bg-transparent hover:bg-gray-100 rounded-full transition-colors">
             <div className="w-8 h-8 rounded-full overflow-hidden border border-black/5">
@@ -86,11 +77,13 @@ const Navbar = ({
               />
             </div>
             <div className="hidden sm:flex flex-col text-left pl-1">
-              <span className="text-[11px] text-gray-500 font-medium leading-tight">
-                {user?.roleName || user?.role || portalLabel}
-              </span>
-              <span className="text-[14px] font-bold text-[#050505] leading-none mt-0.5">
-                {user?.firstName || 'User'}
+              {user?.roleName !== 'Applicant' && user?.role !== 'Applicant' && (
+                <span className="text-[11px] text-gray-500 font-medium leading-tight capitalize">
+                  {(user?.roleName || user?.role || portalLabel)?.replace(/_/g, ' ')}
+                </span>
+              )}
+              <span className="text-[14px] font-bold text-[#050505] leading-none mt-0.5" title={user?.email}>
+                {user?.email || 'User'}
               </span>
             </div>
           </button>
