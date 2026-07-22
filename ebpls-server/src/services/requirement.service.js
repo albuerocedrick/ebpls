@@ -39,7 +39,7 @@ async function resolveApplicableRequirements({ application_type_id, org_type_id,
 
     if (application_type_id === 1) { // New
       query = query.eq('applies_to_new', true);
-    } else if (application_type_id === 2) { // Renewal
+    } else if (application_type_id === 2 || application_type_id === 3) { // Renewal & Additional Line
       query = query.eq('applies_to_renewal', true);
     } else {
        throw createError('Invalid application type', 400, ERROR_CODES.VALIDATION_ERROR);
