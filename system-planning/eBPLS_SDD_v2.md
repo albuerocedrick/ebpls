@@ -3,8 +3,14 @@
 **eBPLS (Electronic Business Permits and Licensing System)**
 BOSS & E-Resibo — Municipality of Liliw
 
-**Version 4.0** | Updated to align with current codebase (Migrations 019-033)
+**Version 5.0** | Revised Requirements System (Phase 8 completion)
 
+> **What changed in v5.0**
+> 1. Overhauled Requirements Checklist to be dynamic and conditional.
+> 2. Added `requirement_conditions` table and updated `requirement_types` schema.
+> 3. Added `is_renting` to `businesses` table.
+> 4. Added Requirement Resolution Algorithm and API documentation.
+>
 > **What changed in v4.0**
 > 1. Payment modes (Annually, Bi-Annually, Quarterly) have been completely removed.
 > 2. Added "Owner's Valid ID" (Back-to-back) to requirement types.
@@ -188,6 +194,7 @@ All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enfo
 | province | VARCHAR | DEFAULT 'Laguna' | |
 | latitude | NUMERIC | | |
 | longitude | NUMERIC | | |
+| is_renting | BOOLEAN | DEFAULT false | |
 | is_retired | BOOLEAN | DEFAULT false | |
 | retired_at | TIMESTAMP | | |
 | created_at | TIMESTAMP | DEFAULT NOW() | |
@@ -271,10 +278,26 @@ All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enfo
 | Column | Type | Description |
 |---|---|---|
 | id | INT | PK |
-| name | VARCHAR | DTI/SEC/CDA Reg., Barangay Clearance, Fire Safety, Sanitary Permit, Zoning, Lease/TCT, CTC, Prior Year Permit, Owner's Valid ID |
+| name | VARCHAR | DTI, SEC, CDA, Valid Government ID, etc. |
 | description | TEXT | |
 | is_active | BOOLEAN | Default: true |
+| applies_to_new | BOOLEAN | Default: true |
+| applies_to_renewal | BOOLEAN | Default: true |
+| is_conditional | BOOLEAN | Default: false |
+| condition_type | VARCHAR | 'none', 'org_type', 'business_activity', 'rental_status' |
+| condition_description | TEXT | e.g. "Required for Sole Proprietorship" |
+| sort_order | INT | Default: 0 |
+| max_files | INT | Default: 1 (Supports multi-file requirements) |
 | fixed_amount | NUMERIC | Flat rate amount charged when computation_basis = Fixed |
+
+**Table: requirement_conditions**
+
+| Column | Type | Description |
+|---|---|---|
+| id | SERIAL | PK |
+| requirement_id | INT | FK → requirement_types |
+| match_value | VARCHAR | Value to match (e.g. 'Sole Proprietorship', 'Piggery') |
+| *Constraint* | | `UNIQUE(requirement_id, match_value)` |
 
 **Table: barangay_clearances**
 
@@ -418,6 +441,8 @@ All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enfo
 | created_at | TIMESTAMP | |
 | updated_at | TIMESTAMP | Auto-updated via trigger |
 
+> **Backward Compatibility:** Existing in-progress applications retain their original `doc_verifications` rows and are unaffected by the new schema.
+
 ### 4.9 System Tables
 
 **Table: email_notifications**
@@ -510,9 +535,23 @@ Completed → [*]
 | POST | `/api/applications/drafts` | Create/update draft (autosave) |
 | GET | `/api/applications/drafts/:taxpayer_id` | Retrieve saved draft |
 | DELETE | `/api/applications/drafts/:draft_id` | Delete draft on submission |
+| GET | `/api/applications/requirements` | Fetch applicable dynamic requirements checklist |
 | POST | `/api/applications/uaf` | Final UAF submission |
 | POST | `/api/applications/upload` | Secure upload via pre-signed URL |
 | GET | `/api/applications/:app_no/status` | Poll current status |
+
+**UAF Submission Payload Structure (`/api/applications/uaf`)**
+- Includes `is_renting: boolean` for location details.
+- `documents` array is structured as `[{ requirement_id: integer, file_path, file_name }]`.
+- Multi-file uploads (e.g., max_files = 2 or 3) should include each file as a separate object matching the `requirement_id`.
+
+**Requirement Resolution Algorithm (for `/api/applications/requirements`)**
+1. Fetch all active `requirement_types` filtered by `applies_to_new` or `applies_to_renewal`.
+2. Non-conditional requirements → always included.
+3. Conditional by `org_type` → match org type name against `requirement_conditions.match_value`.
+4. Conditional by `business_activity` → match any activity name against `requirement_conditions.match_value`.
+5. Conditional by `rental_status` → include only if `is_renting = true`.
+6. Sort by `sort_order` ascending.
 
 ### Module B — BPLO (Verify & Process)
 
@@ -753,5 +792,5 @@ PAYMONGO_CANCEL_URL=https://your-domain.com/payment/cancel
 
 ---
 
-*eBPLS SDD v4.0 — Municipality of Liliw*
-*Previous version: SDD v3.0 (PayMongo). This version adds PayMongo as an optional online payment channel.*
+*eBPLS SDD v5.0 — Municipality of Liliw*
+*Previous version: SDD v4.0. This version overhauls the documentary requirements system to use dynamic, conditional checklists based on application profiles.*

@@ -1,8 +1,11 @@
 # eBPLS System Architecture
 
 **Electronic Business Permits and Licensing System — BOSS & E-Resibo**
-Municipality of Liliw | Architecture Document v3.0
+Municipality of Liliw | Architecture Document v4.0
 
+> **What changed in v4.0**
+> Revised Requirements system. Dynamic, conditional checklists based on org type, business activities, and rental status.
+>
 > **What changed in v3.0**
 > PayMongo added as an optional online payment channel. Updated: architecture diagram, tech stack, Module C API surface, state machine, DB table groups, permission matrix, deployment topology, and explicit exclusions.
 
@@ -318,7 +321,7 @@ erDiagram
 | **Auth & Identity** | `roles`, `users` | Authentication, JWT, RBAC |
 | **Profiles** | `taxpayers`, `businesses`, `organization_types` | Taxpayer & business registration |
 | **Applications** | `applications`, `application_drafts`, `application_types`, `payment_modes` | UAF workflow, draft persistence |
-| **Verification** | `doc_verifications`, `application_data_reviews`, `requirement_types`, `clearance_types` | BPLO document & data verification |
+| **Verification** | `doc_verifications`, `application_data_reviews`, `requirement_types`, `requirement_conditions`, `clearance_types` | BPLO document & data verification |
 | **Barangay** | `barangay_clearances` | Integrated clearance issuance |
 | **Treasury** | `assessments`, `assessment_line_items`, `fee_types`, `transactions`, `payment_modes` | Fee calculation, OTC + online payment |
 | **Payment Audit** | `payment_gateway_logs` | Webhook audit trail, idempotency checks |
@@ -555,5 +558,43 @@ graph TB
 
 ---
 
-*eBPLS System Architecture v3.0 — Municipality of Liliw*
+## 12. Official Liliw LGU Requirements Checklists
+
+### New Business Permit
+| Requirement Name | Applies To | Conditional | Condition Type | Max Files |
+|---|---|---|---|---|
+| Laboratories (Photocopy of X-ray Result) | New | No | none | 1 |
+| Realty Tax (OR-Amilyar) | New | No | none | 1 |
+| Lessor's Permit | New | Yes | rental_status | 1 |
+| Latest Water Analysis Result | New | Yes | business_activity | 1 |
+| DTI Registration | New | Yes | org_type | 1 |
+| SEC Registration | New | Yes | org_type | 1 |
+| CDA Registration | New | Yes | org_type | 1 |
+| Valid Government ID | New | Yes | org_type | 2 |
+| PCAB License | New | Yes | business_activity | 1 |
+| Lease Contract | New | Yes | rental_status | 1 |
+| Building Permit / Locational Clearance | New | Yes | business_activity | 1 |
+| ECC or CNC, LLDA Clearance | New | Yes | business_activity | 1 |
+| BSP Certificate / Authority to Operate | New | Yes | business_activity | 1 |
+| Chainsaw Registration | New | Yes | business_activity | 1 |
+| FDA Registration | New | Yes | business_activity | 1 |
+
+### Renewal Business Permit
+| Requirement Name | Applies To | Conditional | Condition Type | Max Files |
+|---|---|---|---|---|
+| Laboratories (Photocopy of X-ray Result) | Renewal | No | none | 1 |
+| Realty Tax (OR-Amilyar) | Renewal | No | none | 1 |
+| Lessor's Permit | Renewal | Yes | rental_status | 1 |
+| Latest Water Analysis Result | Renewal | Yes | business_activity | 1 |
+| Previous Business Permit and Receipt | Renewal | No | none | 1 |
+| Audited Financial Statement / VAT Returns / Gross Sales | Renewal | No | none | 3 |
+| Previous FSIC Issued (BFP) | Renewal | No | none | 1 |
+| Real Property Tax Receipt | Renewal | Yes | business_activity | 1 |
+| DOE Certificate (LPG Dealer/Retailer) | Renewal | Yes | business_activity | 1 |
+
+> Note: Requirements such as 'Zoning Clearance', 'Community Tax Certificate (CTC)', 'Owner's Valid ID (Front/Back)' (separate) have been retired (`is_active = false`).
+
+---
+
+*eBPLS System Architecture v4.0 — Municipality of Liliw*
 *Previous version: Architecture v2.0 (OTC-only). This version integrates PayMongo as an optional online payment channel.*
