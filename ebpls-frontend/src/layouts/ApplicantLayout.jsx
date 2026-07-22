@@ -5,6 +5,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import BottomNav from '../components/layout/BottomNav';
 import DraftResumePrompt from '../components/shared/DraftResumePrompt';
+import LogoutConfirmModal from '../components/shared/LogoutConfirmModal';
 import useApplicationStore from '../store/applicationStore';
 import apiClient from '../utils/apiClient';
 import { API_ENDPOINTS, ROUTES } from '../utils/constants';
@@ -18,6 +19,7 @@ const ApplicantLayout = () => {
   const draft_id = useApplicationStore((state) => state.draft_id);
   const loadDraft = useApplicationStore((state) => state.loadDraft);
   const [isPromptOpen, setIsPromptOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     const fetchExistingDraft = async () => {
@@ -43,12 +45,20 @@ const ApplicantLayout = () => {
     }
   }, []); // Run only once on mount
 
-  const handleLogout = () => {
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
     logout(ROUTES.REGISTER);
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
+
+      {/* Logout confirmation modal */}
+      <LogoutConfirmModal
+        isOpen={showLogoutModal}
+        onConfirm={handleLogoutConfirm}
+        onCancel={() => setShowLogoutModal(false)}
+      />
       
       {/* Universal Top Header */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 px-4 py-3 flex items-center justify-between">
@@ -62,7 +72,8 @@ const ApplicantLayout = () => {
           </div>
         </div>
         <button 
-          onClick={handleLogout} 
+          id="applicant-logout-btn"
+          onClick={() => setShowLogoutModal(true)}
           className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
           title="Sign Out"
         >
