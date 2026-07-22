@@ -12,6 +12,7 @@ import { formatDateTime } from '../../utils/formatters';
 import { ROUTES, API_ENDPOINTS } from '../../utils/constants';
 import apiClient from '../../utils/apiClient';
 import Button from '../../components/ui/Button';
+import useApplicableRequirements from '../../hooks/useApplicableRequirements';
 
 import Step1_BasicInfo from './uaf-steps/Step1_BasicInfo';
 import Step2_Location from './uaf-steps/Step2_Location';
@@ -31,7 +32,7 @@ const WIZARD_STEPS = [
 // Per-step validation rules
 // Returns an array of human-readable error strings (empty = valid).
 // -----------------------------------------------------------------
-const validateStep = (step, formData) => {
+const validateStep = (step, formData, requirements = []) => {
   const errors = [];
 
   if (step === 1) {
@@ -70,12 +71,36 @@ const validateStep = (step, formData) => {
 
   if (step === 4) {
     const s = formData.step4;
+    const brgyReq = requirements.find(r => r.name === 'Barangay Business Clearance');
+
     // PATH B: applicant uploads their own clearance — must actually upload it
-    if (!s.request_barangay_clearance) {
-      const hasClearance = (s.documents || []).some((d) => d.doc_type === 'BARANGAY_CLEARANCE');
+    if (!s.request_barangay_clearance && brgyReq) {
+      const hasClearance = (s.documents || []).some((d) => d.requirement_id === brgyReq.id);
       if (!hasClearance)
         errors.push('Please upload your Barangay Business Clearance, or choose "Request via Municipality" instead.');
     }
+
+    // Validate all other requirements
+    requirements.forEach(req => {
+      if (req.name === 'Barangay Business Clearance') return;
+      
+      const doc = (s.documents || []).find(d => d.requirement_id === req.id);
+      const files = doc?.files ? doc.files : (doc ? [doc] : []);
+
+      if (req.name === 'Valid Government ID') {
+        if (files.length !== 2) {
+          errors.push('Please upload both the front and back of your Government ID.');
+        }
+      } else if (req.name === 'Audited Financial Statement / VAT Returns / Gross Sales') {
+        if (files.length === 0) {
+          errors.push('Please upload at least one financial document (Audited Financial Statement, VAT Returns, or Gross Sales).');
+        }
+      } else {
+        if (files.length === 0) {
+          errors.push(`Please upload: ${req.name}.`);
+        }
+      }
+    });
   }
 
   return errors;
@@ -98,6 +123,7 @@ const UAFWizardScreen = () => {
   const isAttestationAgreed = useApplicationStore((state) => state.formData.step5.attestation_agreed);
 
   const { isSaving, lastSavedAt } = useAutosave();
+  const { requirements } = useApplicableRequirements();
 
   // ─── Load existing application data when editing a returned app ──
   useEffect(() => {
@@ -155,7 +181,7 @@ const UAFWizardScreen = () => {
   }, [editAppNo, setFormField]);
 
   const handleNext = () => {
-    const errors = validateStep(current_step, formData);
+    const errors = validateStep(current_step, formData, requirements);
     if (errors.length > 0) {
       setStepErrors(errors);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -187,13 +213,16 @@ const UAFWizardScreen = () => {
         // Phase 3C — tells the backend which clearance path to create
         request_barangay_clearance: formData.step4.request_barangay_clearance ?? false,
         // Uploaded documents — only include docs that have a valid file_path
-        documents: (formData.step4.documents || [])
-          .filter((doc) => doc.file_path && doc.doc_type)
-          .map((doc) => ({
-            doc_type: doc.doc_type,
-            file_path: doc.file_path,
-            file_name: doc.file_name || '',
-          })),
+        documents: (formData.step4.documents || []).flatMap((doc) => {
+          const files = doc.files ? doc.files : [doc];
+          return files
+            .filter((f) => f.file_path)
+            .map((f) => ({
+              requirement_id: doc.requirement_id,
+              file_path: f.file_path,
+              file_name: f.file_name || '',
+            }));
+        }),
         // Line of Business activities from Step 3
         activities: (formData.step3.lineOfBusinesses || [])
           .filter((lob) => lob.name)
@@ -209,6 +238,7 @@ const UAFWizardScreen = () => {
         province: formData.step2.province,
         latitude: formData.step2.latitude,
         longitude: formData.step2.longitude,
+        is_renting: formData.step2.is_renting ?? false,
       };
 
       const response = await apiClient.post(API_ENDPOINTS.APPLICATIONS_SUBMIT, payload);

@@ -2,7 +2,8 @@
 
 import React from 'react';
 import useApplicationStore from '../../../store/applicationStore';
-import { CheckSquare, AlertTriangle, FileText, Building2, MapPin, Store, CheckCircle2, Upload } from 'lucide-react';
+import { CheckSquare, AlertTriangle, FileText, Building2, MapPin, Store, CheckCircle2, Upload, Loader2, AlertCircle } from 'lucide-react';
+import useApplicableRequirements from '../../../hooks/useApplicableRequirements';
 
 const Step5_Review = () => {
   const formData = useApplicationStore((state) => state.formData);
@@ -10,7 +11,25 @@ const Step5_Review = () => {
 
   const { step1, step2, step3, step4, step5 } = formData;
   const requestClearance = step4.request_barangay_clearance ?? false;
-  const barangayClearanceDoc = step4.documents?.find((d) => d.doc_type === 'BARANGAY_CLEARANCE');
+
+  const { requirements, loading: reqLoading } = useApplicableRequirements();
+
+  // Helper to get uploaded files for a specific requirement_id
+  const getUploadedFiles = (reqId) => {
+    const doc = step4.documents?.find((d) => d.requirement_id === reqId);
+    if (!doc) return [];
+    if (doc.files && Array.isArray(doc.files)) return doc.files;
+    return [doc];
+  };
+
+  const getBarangayClearanceDoc = () => {
+    const brgyReq = requirements.find(r => r.name === 'Barangay Business Clearance');
+    if (!brgyReq) return null;
+    const files = getUploadedFiles(brgyReq.id);
+    return files.length > 0 ? files[0] : null;
+  };
+
+  const barangayClearanceDoc = getBarangayClearanceDoc();
 
   const handleAttestation = (e) => {
     setFormField('step5', 'attestation_agreed', e.target.checked);
@@ -81,6 +100,16 @@ const Step5_Review = () => {
               <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,50%))] uppercase font-semibold">Barangay / City</p>
               <p className="text-sm font-medium text-[hsl(var(--color-text,0,0%,10%))]">
                 {step2.barangay ? `${step2.barangay}, ` : ''}{step2.city}, {step2.province}
+              </p>
+            </div>
+            <div className="pt-2 border-t border-[hsl(var(--color-border,0,0%,90%))]">
+              <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,50%))] uppercase font-semibold">Ownership Status</p>
+              <p className="text-sm font-medium text-[hsl(var(--color-text,0,0%,10%))] flex items-center gap-1.5 mt-0.5">
+                {step2.is_renting ? (
+                  <>Business Location: Renting</>
+                ) : (
+                  <>Business Location: Own Property</>
+                )}
               </p>
             </div>
           </div>
@@ -158,16 +187,57 @@ const Step5_Review = () => {
           </div>
 
           {/* Other uploaded documents */}
-          {step4.documents?.filter((d) => d.doc_type !== 'BARANGAY_CLEARANCE').length > 0 ? (
-            <ul className="list-disc list-inside text-sm text-[hsl(var(--color-text,0,0%,10%))] space-y-1">
-              {step4.documents
-                .filter((d) => d.doc_type !== 'BARANGAY_CLEARANCE')
-                .map((doc, i) => (
-                  <li key={i}>{doc.file_name}</li>
-                ))}
+          {reqLoading ? (
+             <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+               <Loader2 size={14} className="animate-spin" /> Loading requirements...
+             </div>
+          ) : requirements.filter(r => r.name !== 'Barangay Business Clearance').length > 0 ? (
+            <ul className="space-y-3">
+              {requirements
+                .filter(r => r.name !== 'Barangay Business Clearance')
+                .map((req, i) => {
+                  const files = getUploadedFiles(req.id);
+                  const isUploaded = files.length > 0;
+                  
+                  return (
+                    <li key={i} className="flex items-start gap-3 py-1">
+                      <div className={`p-1.5 rounded-md mt-0.5 shrink-0 ${isUploaded ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
+                        {isUploaded ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,20%))]">
+                          {req.name}
+                        </p>
+                        {req.is_conditional && req.condition_description && (
+                          <p className="text-[10px] text-gray-500 mt-0.5 uppercase tracking-wide">
+                            {req.condition_description}
+                          </p>
+                        )}
+                        <div className="mt-1">
+                          {isUploaded ? (
+                            req.max_files > 1 ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                {files.length} file{files.length !== 1 ? 's' : ''} uploaded
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full truncate max-w-full">
+                                <Upload size={10} className="shrink-0" />
+                                <span className="truncate">{files[0].file_name}</span>
+                              </span>
+                            )
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">
+                              Not uploaded
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
             </ul>
           ) : (
-            <p className="text-sm text-red-500 font-medium">No other documents uploaded. Please go back to Step 4.</p>
+            <p className="text-sm text-red-500 font-medium">No other requirements found.</p>
           )}
         </div>
       </div>
