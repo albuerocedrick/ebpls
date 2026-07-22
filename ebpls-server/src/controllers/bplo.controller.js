@@ -326,7 +326,9 @@ const getApplicationDetails = async (req, res, next) => {
         remarks,
         file_path,
         requirement_types (
-          name
+          name,
+          max_files,
+          condition_description
         )
       `)
       .eq('application_no', applicationNo);
@@ -340,7 +342,9 @@ const getApplicationDetails = async (req, res, next) => {
           status,
           remarks,
           requirement_types (
-            name
+            name,
+            max_files,
+            condition_description
           )
         `)
         .eq('application_no', applicationNo);
@@ -378,9 +382,15 @@ const getApplicationDetails = async (req, res, next) => {
     const formattedChecklist = await Promise.all(
       checklist.map(async (item) => {
         let signedUrl = null;
+        let fileUrls = [];
         if (item.file_path) {
           try {
-            signedUrl = await generatePresignedDownloadUrl(item.file_path);
+            const paths = item.file_path.split(',');
+            for (const p of paths) {
+              const url = await generatePresignedDownloadUrl(p.trim());
+              fileUrls.push(url);
+            }
+            if (fileUrls.length > 0) signedUrl = fileUrls[0];
           } catch (err) {
             // Non-fatal: log and continue without the URL
             console.warn(`[bplo.controller] Could not generate signed URL for ${item.file_path}:`, err.message);
@@ -392,7 +402,10 @@ const getApplicationDetails = async (req, res, next) => {
           status: item.status,
           remarks: item.remarks,
           filePath: item.file_path || null,
-          fileUrl: signedUrl,
+          fileUrl: signedUrl, // First URL for backward compatibility
+          fileUrls: fileUrls, // All generated URLs for multi-file viewer
+          maxFiles: item.requirement_types?.max_files || 1,
+          conditionDescription: item.requirement_types?.condition_description || null,
         };
       })
     );
@@ -758,10 +771,17 @@ const getDocumentUrl = async (req, res, next) => {
     }
 
     filePath = docRow.file_path;
-    const signedUrl = await generatePresignedDownloadUrl(filePath);
+    const paths = filePath.split(',');
+    const fileUrls = [];
+    for (const p of paths) {
+      fileUrls.push(await generatePresignedDownloadUrl(p.trim()));
+    }
 
     return res.status(200).json(
-      successResponse('Document URL generated successfully.', { fileUrl: signedUrl })
+      successResponse('Document URL generated successfully.', { 
+        fileUrl: fileUrls[0] || null,
+        fileUrls: fileUrls
+      })
     );
   } catch (err) {
     return next(err);

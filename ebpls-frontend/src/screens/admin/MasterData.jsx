@@ -7,7 +7,8 @@ import Select from '../../components/ui/Select';
 
 const TABLES = [
   { id: 'fee_types', name: 'Fee Types', columns: ['name', 'description', 'computation_basis', 'fixed_amount', 'percentage_value', 'percentage_of_id', 'is_active'] },
-  { id: 'requirement_types', name: 'Requirement Types', columns: ['name', 'description', 'is_active'] },
+  { id: 'requirement_types', name: 'Requirement Types', columns: ['name', 'description', 'applies_to_new', 'applies_to_renewal', 'is_conditional', 'condition_type', 'condition_description', 'sort_order', 'max_files', 'is_active'] },
+  { id: 'requirement_conditions', name: 'Requirement Conditions', columns: ['requirement_id', 'match_value'] },
   { id: 'clearance_types', name: 'Clearance Types', columns: ['name'] },
   { id: 'barangays', name: 'Barangays', columns: ['name', 'is_active'] },
   { id: 'business_activities', name: 'Business Activities', columns: ['name', 'description', 'is_active'] },
@@ -150,8 +151,8 @@ const MasterData = () => {
         disabled = true;
       }
     }
-    if (col === 'is_active') {
-      const boolVal = value === undefined ? true : value; // default true
+    if (col === 'is_active' || col === 'applies_to_new' || col === 'applies_to_renewal' || col === 'is_conditional') {
+      const boolVal = value === undefined ? (col === 'is_conditional' ? false : true) : value; // default true for all except is_conditional
       return (
         <Select 
           value={boolVal ? 'true' : 'false'} 
@@ -195,12 +196,12 @@ const MasterData = () => {
         </Select>
       );
     }
-    if (col === 'fixed_amount' || col === 'percentage_value') {
+    if (col === 'fixed_amount' || col === 'percentage_value' || col === 'sort_order' || col === 'max_files' || col === 'requirement_id') {
       return (
         <input
           type="number"
-          step="0.01"
-          placeholder={`Enter ${col.replace('_', ' ')}`}
+          step={col === 'sort_order' || col === 'max_files' || col === 'requirement_id' ? "1" : "0.01"}
+          placeholder={`Enter ${col.replace(/_/g, ' ')}`}
           value={value === undefined || value === null ? '' : value}
           onChange={(e) => onChange(col, e.target.value === '' ? null : Number(e.target.value))}
           disabled={disabled}
@@ -226,6 +227,13 @@ const MasterData = () => {
         <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-700">Active</span>
       ) : (
         <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gray-50 text-gray-400">Inactive</span>
+      );
+    }
+    if (col === 'applies_to_new' || col === 'applies_to_renewal' || col === 'is_conditional') {
+      return value ? (
+        <span className="text-sm font-medium text-gray-700">Yes</span>
+      ) : (
+        <span className="text-sm text-gray-500">No</span>
       );
     }
     if (col === 'computation_basis') {

@@ -201,9 +201,11 @@ const INITIAL_CHECKLIST = [
 // =========================================
 // Helper: detect if URL points to an image
 // =========================================
-const isImageUrl = (url, filePath) => {
-  const combined = (url || '') + (filePath || '');
-  return /\.(jpg|jpeg|png|gif|webp)/i.test(combined);
+const isImageUrl = (url) => {
+  if (!url) return false;
+  // Supabase signed URLs contain the file path before query params
+  const urlWithoutQuery = url.split('?')[0];
+  return /\.(jpg|jpeg|png|gif|webp)$/i.test(urlWithoutQuery);
 };
 
 // =========================================
@@ -220,7 +222,8 @@ const SplitScreenVerifier = () => {
 
   const [checklist, setChecklist] = useState(INITIAL_CHECKLIST);
   const [selectedDocId, setSelectedDocId] = useState(null);
-  const [docViewerUrl, setDocViewerUrl] = useState(null);
+  const [docViewerUrls, setDocViewerUrls] = useState([]);
+  const [docViewerIndex, setDocViewerIndex] = useState(0);
   const [isLoadingDoc, setIsLoadingDoc] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [leftPaneMode, setLeftPaneMode] = useState('doc'); // 'doc' | 'map'
@@ -310,18 +313,23 @@ const SplitScreenVerifier = () => {
     );
   }, []);
 
-  // ─── Select document for viewing ─────────────────────────────
   const handleViewDoc = useCallback(async (requirementId) => {
     setSelectedDocId(requirementId);
-    setDocViewerUrl(null);
+    setDocViewerUrls([]);
+    setDocViewerIndex(0);
     setZoomLevel(100);
 
     const item = checklist.find((i) => i.requirementId === requirementId);
     if (!item) return;
 
-    // If the item already has a fileUrl from the initial load, use it
-    if (item.fileUrl) {
-      setDocViewerUrl(item.fileUrl);
+    // If the item already has fileUrls from the initial load, use them
+    if (item.fileUrls && item.fileUrls.length > 0) {
+      setDocViewerUrls(item.fileUrls);
+      setDocViewerIndex(0);
+      return;
+    } else if (item.fileUrl) {
+      setDocViewerUrls([item.fileUrl]);
+      setDocViewerIndex(0);
       return;
     }
 
@@ -337,8 +345,12 @@ const SplitScreenVerifier = () => {
         API_ENDPOINTS.BPLO_DOCUMENT_URL(appNo, requirementId)
       );
       const data = response.data || response;
-      if (data?.fileUrl) {
-        setDocViewerUrl(data.fileUrl);
+      if (data?.fileUrls && data.fileUrls.length > 0) {
+        setDocViewerUrls(data.fileUrls);
+        setDocViewerIndex(0);
+      } else if (data?.fileUrl) {
+        setDocViewerUrls([data.fileUrl]);
+        setDocViewerIndex(0);
       }
     } catch (err) {
       console.warn('[SplitScreenVerifier] Could not load document URL:', err.message);
@@ -423,6 +435,8 @@ const SplitScreenVerifier = () => {
     }
   };
 
+  const docViewerUrl = docViewerUrls[docViewerIndex] || null;
+
   // ─── Barangay Badge Helper ────────────────────────────────────
   const barangayBadgeStatus = useMemo(() => {
     if (!barangayStatus) return null;
@@ -432,6 +446,82 @@ const SplitScreenVerifier = () => {
       default: return APP_STATUS.PENDING;
     }
   }, [barangayStatus]);
+
+  // ─── Render Checklist Helper ──────────────────────────────────
+  const renderChecklistItem = (item) => {
+    const isLocked = item.status === DOC_STATUS.AWAITING_ISSUANCE;
+    const isSelected = selectedDocId === item.requirementId;
+    const showRemarks = item.status === DOC_STATUS.NO;
+    return (
+      <div
+        key={item.requirementId}
+        className={[
+          'px-4 py-2.5 transition-colors',
+          isSelected ? 'bg-[hsl(var(--color-accent-subtle))]' : '',
+        ].join(' ')}
+      >
+        <div className="flex items-center gap-3">
+          {/* Icon */}
+          {iconForStatus(item.status)}
+
+          {/* Label */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            <span className="text-sm text-[hsl(var(--color-text))] truncate">
+              {item.label}
+            </span>
+            {item.conditionDescription && (
+              <span className="text-[10px] text-gray-400 truncate mt-0.5 font-medium">
+                Required for: {item.conditionDescription}
+              </span>
+            )}
+          </div>
+
+          {/* View button */}
+          <button
+            type="button"
+            onClick={() => handleViewDoc(item.requirementId)}
+            className="p-1.5 rounded hover:bg-surface-tint transition-colors shrink-0"
+            aria-label={`View ${item.label}`}
+            title="View document"
+          >
+            <Eye size={14} className="text-accent" />
+          </button>
+
+          {/* Status dropdown */}
+          {isLocked ? (
+            <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded shrink-0">
+              Awaiting Issuance
+            </span>
+          ) : (
+            <StatusDropdown
+              disabled={isAdminView}
+              value={item.status}
+              onChange={(val) => handleStatusChange(item.requirementId, val)}
+              options={STATUS_OPTIONS}
+              statusBgColor={statusBgColor}
+              label={item.label}
+            />
+          )}
+        </div>
+
+        {/* Remarks input — shown when document is marked "No" */}
+        {showRemarks && (
+          <div className="mt-2 ml-7">
+            <input
+              type="text"
+              value={item.remarks || ''}
+              onChange={(e) => handleChecklistRemarks(item.requirementId, e.target.value)}
+              placeholder="Reason for rejection (required)..."
+              className="w-full text-xs px-2.5 py-1.5 rounded border border-gray-200 bg-gray-50 text-[hsl(var(--color-text))] outline-none focus:ring-1 focus:ring-gray-300 placeholder:text-gray-400"
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const standardRequirements = checklist.filter(item => !item.conditionDescription);
+  const conditionalRequirements = checklist.filter(item => item.conditionDescription);
 
   // ─── Render ───────────────────────────────────────────────────
   return (
@@ -573,35 +663,56 @@ const SplitScreenVerifier = () => {
                       <p className="text-xs text-[hsl(var(--color-text-muted))]">Loading document...</p>
                     </div>
                   ) : docViewerUrl ? (
-                    isImageUrl(docViewerUrl, selectedDoc?.filePath) ? (
-                      <img
-                        key={docViewerUrl}
-                        src={docViewerUrl}
-                        alt={selectedDoc?.label || 'Document'}
-                        className="max-w-full h-auto object-contain"
-                      />
-                    ) : (
-                      <object
-                        key={docViewerUrl}
-                        data={docViewerUrl}
-                        type="application/pdf"
-                        className="w-full min-h-[550px]"
-                        aria-label={selectedDoc?.label || 'PDF Document'}
-                      >
-                        <div className="flex flex-col items-center gap-3 py-12 px-6">
-                          <FileSearch size={32} className="text-[hsl(var(--color-text-muted))]" />
-                          <p className="text-sm text-[hsl(var(--color-text))] text-center">PDF cannot be displayed inline.</p>
-                          <a
-                            href={docViewerUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-accent underline underline-offset-2 hover:opacity-80"
+                    <div className="relative w-full h-full flex flex-col items-center justify-center">
+                      {isImageUrl(docViewerUrl) ? (
+                        <img
+                          key={docViewerUrl}
+                          src={docViewerUrl}
+                          alt={selectedDoc?.label || 'Document'}
+                          className="max-w-full h-auto object-contain flex-1 min-h-[450px]"
+                        />
+                      ) : (
+                        <object
+                          key={docViewerUrl}
+                          data={docViewerUrl}
+                          type="application/pdf"
+                          className="w-full min-h-[550px]"
+                          aria-label={selectedDoc?.label || 'PDF Document'}
+                        >
+                          <div className="flex flex-col items-center gap-3 py-12 px-6">
+                            <FileSearch size={32} className="text-[hsl(var(--color-text-muted))]" />
+                            <p className="text-sm text-[hsl(var(--color-text))] text-center">PDF cannot be displayed inline.</p>
+                            <a
+                              href={docViewerUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-accent underline underline-offset-2 hover:opacity-80"
+                            >
+                              Open PDF in new tab
+                            </a>
+                          </div>
+                        </object>
+                      )}
+                      {docViewerUrls.length > 1 && (
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-900/80 text-white px-3 py-1.5 rounded-full flex items-center gap-3 backdrop-blur-sm z-10 text-sm">
+                          <button 
+                            onClick={() => setDocViewerIndex(prev => Math.max(0, prev - 1))}
+                            disabled={docViewerIndex === 0}
+                            className="p-1 hover:bg-white/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                           >
-                            Open PDF in new tab
-                          </a>
+                            <ChevronLeft size={16} />
+                          </button>
+                          <span className="font-medium font-mono text-xs">File {docViewerIndex + 1} of {docViewerUrls.length}</span>
+                          <button 
+                            onClick={() => setDocViewerIndex(prev => Math.min(docViewerUrls.length - 1, prev + 1))}
+                            disabled={docViewerIndex === docViewerUrls.length - 1}
+                            className="p-1 hover:bg-white/20 rounded disabled:opacity-30 disabled:cursor-not-allowed transform rotate-180"
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
                         </div>
-                      </object>
-                    )
+                      )}
+                    </div>
                   ) : selectedDoc ? (
                     <div className="text-center px-6 py-12">
                       <FileSearch size={32} className="text-[hsl(var(--color-text-muted))] mx-auto mb-3" />
@@ -631,71 +742,20 @@ const SplitScreenVerifier = () => {
               </p>
             </Card.Header>
             <Card.Body className="!p-0">
-              <div className="divide-y divide-border">
-                {checklist.map((item) => {
-                  const isLocked = item.status === DOC_STATUS.AWAITING_ISSUANCE;
-                  const isSelected = selectedDocId === item.requirementId;
-                  const showRemarks = item.status === DOC_STATUS.NO;
-                  return (
-                    <div
-                      key={item.requirementId}
-                      className={[
-                        'px-4 py-2.5 transition-colors',
-                        isSelected ? 'bg-[hsl(var(--color-accent-subtle))]' : '',
-                      ].join(' ')}
-                    >
-                      <div className="flex items-center gap-3">
-                        {/* Icon */}
-                        {iconForStatus(item.status)}
-
-                        {/* Label */}
-                        <span className="text-sm text-[hsl(var(--color-text))] flex-1 min-w-0 truncate">
-                          {item.label}
-                        </span>
-
-                        {/* View button */}
-                        <button
-                          type="button"
-                          onClick={() => handleViewDoc(item.requirementId)}
-                          className="p-1.5 rounded hover:bg-surface-tint transition-colors shrink-0"
-                          aria-label={`View ${item.label}`}
-                          title="View document"
-                        >
-                          <Eye size={14} className="text-accent" />
-                        </button>
-
-                        {/* Status dropdown */}
-                        {isLocked ? (
-                          <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded shrink-0">
-                            Awaiting Issuance
-                          </span>
-                        ) : (
-                          <StatusDropdown
-                            disabled={isAdminView}
-                            value={item.status}
-                            onChange={(val) => handleStatusChange(item.requirementId, val)}
-                            options={STATUS_OPTIONS}
-                            statusBgColor={statusBgColor}
-                            label={item.label}
-                          />
-                        )}
-                      </div>
-
-                      {/* Remarks input — shown when document is marked "No" */}
-                      {showRemarks && (
-                        <div className="mt-2 ml-7">
-                          <input
-                            type="text"
-                            value={item.remarks || ''}
-                            onChange={(e) => handleChecklistRemarks(item.requirementId, e.target.value)}
-                            placeholder="Reason for rejection (required)..."
-                            className="w-full text-xs px-2.5 py-1.5 rounded border border-gray-200 bg-gray-50 text-[hsl(var(--color-text))] outline-none focus:ring-1 focus:ring-gray-300 placeholder:text-gray-400"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="flex flex-col">
+                <div className="divide-y divide-border">
+                  {standardRequirements.map((item) => renderChecklistItem(item))}
+                </div>
+                
+                {conditionalRequirements.length > 0 && (
+                  <div className="px-4 py-2 bg-gray-50 border-y border-border">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Conditional Requirements</p>
+                  </div>
+                )}
+                
+                <div className="divide-y divide-border">
+                  {conditionalRequirements.map((item) => renderChecklistItem(item))}
+                </div>
               </div>
             </Card.Body>
           </Card>

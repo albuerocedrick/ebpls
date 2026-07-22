@@ -415,7 +415,7 @@ const updateUserRole = async (req, res, next) => {
   }
 };
 
-const ALLOWED_MASTER_TABLES = ['fee_types', 'requirement_types', 'clearance_types', 'barangays', 'business_activities', 'organization_types', 'system_settings'];
+const ALLOWED_MASTER_TABLES = ['fee_types', 'requirement_types', 'requirement_conditions', 'clearance_types', 'barangays', 'business_activities', 'organization_types', 'system_settings'];
 const PROTECTED_NAMES = [
   'Business Clearance',
   'DTI / SEC / CDA Registration',
