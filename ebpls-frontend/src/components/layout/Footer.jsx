@@ -1,81 +1,107 @@
-import { useEffect, useRef } from "react";
-import { gsap } from "../../lib/gsap";
+import React from "react";
+import { Link } from "react-router-dom";
+import { ROUTES } from "../../utils/constants";
+import logo from "../../assets/logo.png";
+import { ArrowUp } from "lucide-react";
+
+const SERVICES = [
+  { label: "New business filing", route: ROUTES.REGISTER },
+  { label: "Permit renewal", route: ROUTES.LOGIN },
+  { label: "Tax assessment", route: ROUTES.LOGIN },
+  { label: "Business retirement", route: ROUTES.LOGIN },
+];
 
 export default function Footer() {
-  const footerRef = useRef();
-  const contentRef = useRef([]);
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      // Staggered reveal for footer columns
-      gsap.fromTo(contentRef.current, 
-        { y: 40, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 1,
-          stagger: 0.15,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: footerRef.current,
-            start: "top 90%",
-            toggleActions: "play reverse play reverse",
-          },
-        }
-      );
-    }, footerRef);
-
-    return () => ctx.revert();
-  }, []);
-
   return (
-    <footer ref={footerRef} className="w-full bg-slate-950 text-slate-300 pt-24 pb-8 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-        
-        {/* Brand Column */}
-        <div ref={(el) => (contentRef.current[0] = el)} className="md:col-span-2">
-          <h3 className="text-2xl font-black text-white tracking-tight mb-4 flex items-center gap-2">
-            <div className="w-6 h-6 bg-blue-500 rounded-lg"></div>
-            BOSS
-          </h3>
-          <p className="text-slate-400 leading-relaxed max-w-sm">
-            Streamlining administrative workflows and centralizing public records with state-of-the-art digital infrastructure.
-          </p>
+    <footer className="flex min-h-svh flex-col bg-zinc-950 text-zinc-400">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-4 py-20 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
+          <img
+            src={logo}
+            alt="Official seal of Liliw, Laguna"
+            className="h-10 w-10 object-contain"
+          />
+          <span className="text-base font-semibold tracking-tight text-white">
+            Pamahalaang Bayan ng Liliw
+          </span>
         </div>
 
-        {/* Links Column 1 */}
-        <div ref={(el) => (contentRef.current[1] = el)}>
-          <h4 className="font-bold text-white mb-6 tracking-wide text-sm uppercase">Platform</h4>
-          <ul className="space-y-4 text-sm font-medium">
-            <li><a href="#" className="text-slate-400 hover:text-white transition-colors">New Application</a></li>
-            <li><a href="#" className="text-slate-400 hover:text-white transition-colors">Track Status</a></li>
-            <li><a href="#" className="text-slate-400 hover:text-white transition-colors">Renewals</a></li>
-            <li><a href="#" className="text-slate-400 hover:text-white transition-colors">Dashboard</a></li>
-          </ul>
-        </div>
+        <h2 className="mt-10 max-w-2xl text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl">
+          Apply for your business permit online
+        </h2>
+        <p className="mt-5 max-w-xl text-base leading-relaxed">
+          The official business permits and licensing portal of the Municipality
+          of Liliw, Laguna.
+        </p>
+        <Link
+          to={ROUTES.REGISTER}
+          className="mt-8 inline-flex w-fit rounded-lg bg-white px-6 py-3 text-sm font-medium text-zinc-900 transition-all duration-200 ease-out hover:bg-zinc-200 active:scale-[0.98] motion-reduce:transition-none"
+        >
+          Apply online
+        </Link>
 
-        {/* Links Column 2 */}
-        <div ref={(el) => (contentRef.current[2] = el)}>
-          <h4 className="font-bold text-white mb-6 tracking-wide text-sm uppercase">Support</h4>
-          <ul className="space-y-4 text-sm font-medium">
-            <li><a href="#" className="text-slate-400 hover:text-white transition-colors">Help Center</a></li>
-            <li><a href="#" className="text-slate-400 hover:text-white transition-colors">Contact Directory</a></li>
-            <li><a href="#" className="text-slate-400 hover:text-white transition-colors">System Status</a></li>
-          </ul>
+        <div className="mt-20 grid gap-12 border-t border-zinc-800 pt-12 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <h3 className="text-sm font-semibold text-white">Services</h3>
+            <ul className="mt-5 flex flex-col gap-3">
+              {SERVICES.map((service) => (
+                <li key={service.label}>
+                  <Link
+                    to={service.route}
+                    className="text-sm transition-colors duration-200 hover:text-white"
+                  >
+                    {service.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-white">
+              Municipal office
+            </h3>
+            <address className="mt-5 flex flex-col gap-3 text-sm leading-relaxed not-italic">
+              <p>M.H. del Pilar St., Liliw, 4004 Laguna</p>
+              <a
+                href="tel:+63495631201"
+                className="transition-colors duration-200 hover:text-white"
+              >
+                (049) 563-1201
+              </a>
+              <a
+                href="mailto:bplo@liliwlaguna.gov.ph"
+                className="transition-colors duration-200 hover:text-white"
+              >
+                bplo@liliwlaguna.gov.ph
+              </a>
+            </address>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-white">Office hours</h3>
+            <p className="mt-5 text-sm leading-relaxed">
+              Monday to Friday
+              <br />
+              8:00 AM to 5:00 PM
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Bottom Bar */}
-      <div 
-        ref={(el) => (contentRef.current[3] = el)}
-        className="max-w-7xl mx-auto px-6 pt-8 border-t border-slate-800/50 flex flex-col md:flex-row items-center justify-between gap-4"
-      >
-        <p className="text-sm text-slate-500 font-medium">
-          © {new Date().getFullYear()} BOSS Portal. All rights reserved.
-        </p>
-        <div className="flex gap-6 text-sm text-slate-500 font-medium">
-          <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-          <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-4 border-t border-zinc-800 py-7 text-xs sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            © {new Date().getFullYear()} Pamahalaang Bayan ng Liliw. All rights
+            reserved.
+          </p>
+          <a
+            href="#hero"
+            className="group inline-flex items-center gap-1.5 transition-colors duration-200 hover:text-white"
+          >
+            Back to top
+            <ArrowUp className="h-3 w-3 transition-transform duration-200 ease-out group-hover:-translate-y-0.5 motion-reduce:transition-none" />
+          </a>
         </div>
       </div>
     </footer>

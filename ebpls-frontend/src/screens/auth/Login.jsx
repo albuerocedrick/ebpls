@@ -18,19 +18,19 @@ const Login = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-8 sm:p-10 flex flex-col gap-8">
+    <form onSubmit={handleSubmit} className="p-7 sm:p-8 flex flex-col gap-6">
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
-          Welcome back
+      <div className="space-y-1">
+        <h1 className="text-xl font-semibold text-zinc-900 tracking-tight">
+          Sign in to your account
         </h1>
-        <p className="text-sm text-gray-500 leading-relaxed">
-          Enter your credentials to access your account.
+        <p className="text-xs text-zinc-500 leading-relaxed font-normal">
+          Enter your credentials below to access the e-BPLS portal.
         </p>
       </div>
 
       {/* Fields */}
-      <div className="space-y-5">
+      <div className="space-y-4">
         <Input
           label="Email Address"
           type="email"
@@ -38,7 +38,7 @@ const Login = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          leftElement={<Mail size={16} />}
+          leftElement={<Mail size={15} className="text-zinc-400" />}
         />
         <div>
           <Input
@@ -48,12 +48,12 @@ const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            leftElement={<Lock size={16} />}
+            leftElement={<Lock size={15} className="text-zinc-400" />}
           />
-          <div className="flex justify-end mt-2.5">
+          <div className="flex justify-end mt-2">
             <Link
               to={ROUTES.FORGOT_PASSWORD}
-              className="text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors"
+              className="text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
             >
               Forgot password?
             </Link>
@@ -61,33 +61,34 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Submit */}
+      {/* Submit Button */}
       <Button
         variant="primary"
         fullWidth
         type="submit"
         size="lg"
-        leftIcon={<LogIn size={17} />}
+        leftIcon={<LogIn size={16} />}
         isLoading={isLoading}
         disabled={!email || !password}
+        className="bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-xl py-3 shadow-xs transition-all"
       >
         Sign In
       </Button>
 
       {/* Divider */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 h-px bg-gray-100" />
-        <span className="text-xs text-gray-400 font-medium">New here?</span>
-        <div className="flex-1 h-px bg-gray-100" />
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-zinc-200" />
+        <span className="text-[11px] text-zinc-400 font-mono">New here?</span>
+        <div className="flex-1 h-px bg-zinc-200" />
       </div>
 
-      {/* Register link */}
+      {/* Register Link */}
       <Link
         to={ROUTES.REGISTER}
-        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all"
+        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-zinc-200/90 text-xs font-semibold text-zinc-800 hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-2xs"
       >
         Create an account
-        <ArrowRight size={15} />
+        <ArrowRight size={14} />
       </Link>
     </form>
   );

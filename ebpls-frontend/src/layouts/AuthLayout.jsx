@@ -1,15 +1,16 @@
 /**
  * AuthLayout.jsx
- * Split-screen auth layout — left branding panel + right form panel.
- * Everything centered and aligned.
+ * Split-screen auth layout — left Cula-style municipal branding panel + right form panel.
+ * Synced with Landing Page UI while keeping all authentication logic intact.
  */
 
 import React from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
-import { Shield, FileCheck, Banknote } from 'lucide-react';
+import { ShieldCheck, FileCheck, Banknote } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import { ROUTES, ROLE_DASHBOARDS } from '../utils/constants';
 import logo from '../assets/logo.png';
+import liliwHall from '../assets/events/liliw_municipal_hall.jpg';
 
 const AuthLayout = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -22,86 +23,102 @@ const AuthLayout = () => {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel — Branding (hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-[45%] xl:w-[40%] bg-gray-900 relative overflow-hidden items-center justify-center">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
+    <div className="min-h-screen flex bg-zinc-50 font-sans text-zinc-900">
+      
+      {/* Left Panel — Branding & Town Hall Background (hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-[46%] xl:w-[42%] bg-zinc-950 relative overflow-hidden items-center justify-center border-r border-zinc-800">
         
-        {/* Gradient overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-gray-900 to-transparent" />
+        {/* Full-width Municipal Hall Background Image */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={liliwHall}
+            alt="Bahay Pamahalaan ng Liliw"
+            className="w-full h-full object-cover opacity-35 filter brightness-90 contrast-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-zinc-950/60" />
+        </div>
 
-        {/* Centered content */}
-        <div className="relative z-10 px-10 xl:px-14 text-center flex flex-col items-center gap-10">
-          {/* Logo */}
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-2.5 shadow-2xl flex items-center justify-center transition-transform hover:scale-105 duration-300">
-              <img src={logo} alt="BOSS Logo" className="w-full h-full object-contain drop-shadow-md" />
-            </div>
+        {/* Centered Cula-Style Content */}
+        <div className="relative z-10 px-10 xl:px-12 flex flex-col items-start text-left gap-8 max-w-lg">
+          
+          {/* Official Seal Header Badge */}
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="Bayan ng Liliw Seal" className="w-10 h-10 object-contain rounded-full border border-white/20 p-0.5 bg-white/10" />
             <div>
-              <h1 className="text-2xl font-extrabold text-white tracking-tight">BOSS</h1>
-              <p className="text-xs text-gray-400 font-medium mt-1">Municipality of Liliw, Laguna</p>
+              <h1 className="text-base font-semibold text-white tracking-tight">Pamahalaang Bayan ng Liliw</h1>
+              <p className="text-xs text-zinc-400 font-mono">Municipality of Liliw, Laguna</p>
             </div>
           </div>
 
-          {/* Tagline */}
+          {/* Headline */}
           <div className="space-y-3">
-            <h2 className="text-3xl font-extrabold text-white leading-tight tracking-tight">
-              Business Permits<br />Made Simple.
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-white text-[11px] font-mono">
+              <span className="font-semibold uppercase tracking-wider text-zinc-300">OFFICIAL PORTAL</span>
+            </span>
+
+            <h2 className="text-3xl xl:text-4xl font-semibold text-white tracking-tight leading-[1.12]">
+              Business permits,<br />
+              <span className="text-zinc-400 font-normal">without the queue.</span>
             </h2>
-            <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
-              Apply, track, and manage your business permits online. No more long queues.
+
+            <p className="text-zinc-400 text-xs sm:text-sm leading-relaxed max-w-sm font-normal">
+              Register a new business, renew a permit, or track your application status online 24/7.
             </p>
           </div>
 
-          {/* Features */}
-          <div className="space-y-3 w-full max-w-xs">
+          {/* Features Strip */}
+          <div className="space-y-2.5 w-full pt-2 border-t border-white/10">
             {[
-              { icon: <FileCheck size={16} />, text: 'Submit applications online 24/7' },
-              { icon: <Shield size={16} />, text: 'Real-time status tracking' },
-              { icon: <Banknote size={16} />, text: 'Pay via OTC or online (GCash/Card)' },
+              { text: 'Paperless online filing 24/7' },
+              { text: 'Real-time status tracking & verification' },
+              { text: 'Automated tax computation & digital receipt' },
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 text-left">
-                <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 shrink-0">
-                  {item.icon}
-                </div>
-                <span className="text-sm text-gray-300 font-medium">{item.text}</span>
+              <div key={i} className="flex items-center gap-2.5 text-xs text-zinc-300 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                <span>{item.text}</span>
               </div>
             ))}
           </div>
+
+          {/* ARTA Badge */}
+          <div className="inline-flex items-center gap-1.5 font-mono text-[10px] text-zinc-300 bg-white/10 px-3 py-1 rounded-full border border-white/15 leading-none">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span className="translate-y-[0.5px]">RA 11032 ARTA Compliant System</span>
+          </div>
+
         </div>
 
-        {/* Bottom copyright */}
-        <div className="absolute bottom-6 left-0 right-0 text-center">
-          <p className="text-xs text-gray-600">
-            © {new Date().getFullYear()} Municipality of Liliw
+        {/* Footer */}
+        <div className="absolute bottom-6 left-0 right-0 text-center z-10">
+          <p className="text-[11px] text-zinc-500 font-mono">
+            © {new Date().getFullYear()} Pamahalaang Bayan ng Liliw. All rights reserved.
           </p>
         </div>
       </div>
 
-      {/* Right Panel — Form (centered) */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-gray-50">
-        {/* Mobile logo (shown only on small screens) */}
-        <div className="lg:hidden flex items-center gap-3 mb-10">
-          <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg shadow-blue-900/5 p-2 border border-gray-100">
-            <img src={logo} alt="BOSS Logo" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <span className="text-lg font-extrabold text-gray-900 tracking-tight block leading-tight">BOSS</span>
-            <span className="text-[10px] text-gray-400 font-medium">Municipality of Liliw</span>
+      {/* Right Panel — Form Container (centered) */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-12 bg-zinc-50">
+        
+        {/* Mobile Header (shown on small screens) */}
+        <div className="lg:hidden flex items-center gap-2.5 mb-8">
+          <img src={logo} alt="Bayan ng Liliw Seal" className="w-8 h-8 object-contain rounded-full border border-zinc-200" />
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-zinc-900 text-sm tracking-tight">Liliw e-BPLS</span>
+            <span className="text-[10px] font-mono bg-zinc-200/70 text-zinc-700 px-1.5 py-0.5 rounded font-medium">Laguna</span>
           </div>
         </div>
 
-        {/* Form card */}
-        <div className="w-full max-w-[420px] bg-white rounded-3xl border border-gray-100 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)]">
+        {/* Form Card */}
+        <div className="w-full max-w-[400px] bg-white rounded-2xl border border-zinc-200/90 shadow-xs">
           <Outlet />
         </div>
 
         {/* Footer */}
-        <p className="mt-8 text-[11px] text-gray-400 text-center">
-          Electronic Business Permits & Licensing System
+        <p className="mt-8 text-[11px] text-zinc-400 font-mono text-center">
+          Electronic Business Permits & Licensing System v3.6
         </p>
       </div>
+
     </div>
   );
 };

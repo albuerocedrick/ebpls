@@ -1,159 +1,165 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { gsap } from "../../lib/gsap";
-import { Zap, ShieldCheck, Clock, FileText, Activity, Smartphone } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ROUTES } from "../../utils/constants";
+import {
+  FileSpreadsheet,
+  Calculator,
+  ShieldCheck,
+  QrCode,
+  ArrowRight,
+} from "lucide-react";
+
+const STEPS = [
+  {
+    step: "01",
+    icon: FileSpreadsheet,
+    title: "Unified application form",
+    desc: "One digital form covers new business filing and annual renewal, saved as you go.",
+    action: "Open the form",
+    route: ROUTES.REGISTER,
+  },
+  {
+    step: "02",
+    icon: Calculator,
+    title: "Automated tax assessment",
+    desc: "Mayor's permit, sanitary, and business tax fees are itemised before you pay.",
+    action: "View assessment",
+    route: ROUTES.LOGIN,
+  },
+  {
+    step: "03",
+    icon: ShieldCheck,
+    title: "Barangay clearance sync",
+    desc: "Clearances are verified by the issuing office directly, with no extra hall visits.",
+    action: "Check status",
+    route: ROUTES.LOGIN,
+  },
+  {
+    step: "04",
+    icon: QrCode,
+    title: "QR digital permit",
+    desc: "The approved permit is issued with a QR code inspectors can verify on site.",
+    action: "Get your permit",
+    route: ROUTES.LOGIN,
+  },
+];
 
 export default function Features() {
-  const sectionRef = useRef();
-  const headerRef = useRef();
-  const cardsRef = useRef([]);
-  const parallaxBg = useRef();
+  const sectionRef = useRef(null);
+  const cardsRef = useRef(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // 1. Parallax Background Orb
-      gsap.to(parallaxBg.current, {
-        yPercent: 30, 
-        ease: "none",
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top bottom",
-          end: "bottom top",
-          scrub: true, 
-        },
-      });
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-      // 2. Header Reveal
       gsap.fromTo(
-        headerRef.current.children,
-        { y: 40, opacity: 0, filter: "blur(8px)" },
+        cardsRef.current?.children || [],
+        { y: 28, opacity: 0 },
         {
           y: 0,
           opacity: 1,
-          filter: "blur(0px)",
-          duration: 1.2,
-          stagger: 0.2,
-          ease: "expo.out",
+          stagger: 0.09,
+          duration: 0.7,
+          ease: "power3.out",
           scrollTrigger: {
-            trigger: headerRef.current,
-            start: "top 80%",
-            toggleActions: "play reset restart none",
+            trigger: sectionRef.current,
+            start: "top 70%",
+            toggleActions: "play none none reverse",
           },
-        }
-      );
-
-      // 3. PREMIUM CARD REVEAL (3D Hinge + Blur + Grid Stagger)
-      gsap.fromTo(
-        cardsRef.current,
-        { 
-          y: 80, 
-          opacity: 0, 
-          scale: 0.9,
-          rotationX: -15, // Starts slightly tilted away
-          transformPerspective: 1000, // Gives the rotation a 3D depth
-          filter: "blur(12px)" // Starts blurry
         },
-        {
-          y: 0,
-          opacity: 1,
-          scale: 1,
-          rotationX: 0, // Snaps flat
-          filter: "blur(0px)", // Snaps into focus
-          duration: 1.2,
-          ease: "expo.out",
-          immediateRender: false,
-          stagger: {
-            amount: 0.6, // Total time spread across all cards
-            grid: [2, 3], // Tells GSAP how the cards are laid out
-            from: "start" // Animates from top-left to bottom-right
-          },
-          scrollTrigger: {
-            trigger: cardsRef.current[0], 
-            start: "top 85%",
-            toggleActions: "play reset restart none",
-          },
-        }
       );
     }, sectionRef);
 
     return () => ctx.revert();
   }, []);
 
-  const features = [
-    {
-      icon: <Zap className="w-6 h-6 text-blue-600" />,
-      title: "Lightning Fast Processing",
-      desc: "Submit and process permits in minutes with our automated workflow engine.",
-    },
-    {
-      icon: <ShieldCheck className="w-6 h-6 text-emerald-500" />,
-      title: "Bank-Grade Security",
-      desc: "Your data and documents are protected with advanced end-to-end encryption.",
-    },
-    {
-      icon: <Clock className="w-6 h-6 text-indigo-500" />,
-      title: "24/7 Portal Access",
-      desc: "Access your business records, pay fees, and print permits anytime, anywhere.",
-    },
-    {
-      icon: <FileText className="w-6 h-6 text-amber-500" />,
-      title: "Paperless Records",
-      desc: "Centralize your compliance documents with zero physical paperwork required.",
-    },
-    {
-      icon: <Activity className="w-6 h-6 text-rose-500" />,
-      title: "Real-time Analytics",
-      desc: "Monitor your application status and track performance metrics live.",
-    },
-    {
-      icon: <Smartphone className="w-6 h-6 text-cyan-500" />,
-      title: "Mobile Optimized",
-      desc: "A fully responsive dashboard that looks and works perfectly on any device.",
-    },
-  ];
-
   return (
-    <section ref={sectionRef} className="relative w-full bg-slate-50 overflow-hidden py-32">
-      {/* Subtle Parallax Background Element */}
-      <div 
-        ref={parallaxBg}
-        className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-b from-blue-100/50 to-indigo-50/50 rounded-full blur-3xl -z-10 translate-x-1/3 -translate-y-1/4 pointer-events-none"
-      />
+    <section
+      ref={sectionRef}
+      id="services"
+      className="flex min-h-svh items-center border-b border-zinc-200 bg-zinc-50"
+    >
+      <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-2xl">
+            <span className="text-xs font-medium tracking-wider text-zinc-500 uppercase">
+              E-services workflow
+            </span>
+            <h2 className="mt-4 text-4xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-5xl">
+              Digital business permit workflow
+            </h2>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-zinc-600">
+              Every stage follows the Ease of Doing Business Act (RA 11032), so
+              you always know which office is holding your papers.
+            </p>
+          </div>
 
-      <div className="max-w-7xl mx-auto px-6 relative z-10">
-        
-        {/* Header Area */}
-        <div ref={headerRef} className="text-center max-w-3xl mx-auto">
-          <h2 className="text-sm font-bold tracking-widest text-blue-600 uppercase mb-3">
-            System Capabilities
-          </h2>
-          <h3 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-            Built for modern <br /> digital governance.
-          </h3>
-          <p className="mt-6 text-lg text-slate-600">
-            Everything you need to manage business permits securely, track applications in real-time, and eliminate manual bottlenecks.
-          </p>
+          <Link
+            to={ROUTES.REGISTER}
+            className="group inline-flex shrink-0 items-center gap-2 text-sm font-medium text-zinc-900 underline-offset-4 hover:underline"
+          >
+            Start an application
+            <ArrowRight className="h-4 w-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5 motion-reduce:transition-none" />
+          </Link>
         </div>
 
-        {/* Grid Area */}
-        <div className="mt-24 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((item, i) => (
-            <div
-              key={i}
-              ref={(el) => (cardsRef.current[i] = el)}
-              // Will-change helps the browser optimize the 3D transforms and blur
-              className="group bg-white/60 backdrop-blur-md border border-slate-200/60 p-8 rounded-3xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer will-change-transform"
-            >
-              <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
-                {item.icon}
-              </div>
-              <h4 className="font-bold text-xl text-slate-900 mb-3">
-                {item.title}
-              </h4>
-              <p className="text-slate-500 leading-relaxed">
-                {item.desc}
-              </p>
-            </div>
-          ))}
+        <ol
+          ref={cardsRef}
+          className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {STEPS.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <li
+                key={item.step}
+                className="group flex flex-col rounded-xl border border-zinc-200 bg-white p-7 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-zinc-300 hover:shadow-lg motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 transition-colors duration-300 ease-out group-hover:bg-zinc-900 group-hover:text-white motion-reduce:transition-none">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="text-2xl font-semibold tracking-tight text-zinc-200 transition-colors duration-300 group-hover:text-zinc-900 motion-reduce:transition-none">
+                    {item.step}
+                  </span>
+                </div>
+
+                <h3 className="mt-7 text-base font-semibold text-pretty text-zinc-900">
+                  {item.title}
+                </h3>
+                <p className="mt-2.5 flex-1 text-sm leading-relaxed text-zinc-600">
+                  {item.desc}
+                </p>
+
+                <Link
+                  to={item.route}
+                  className="mt-7 inline-flex items-center gap-1.5 border-t border-zinc-100 pt-5 text-sm font-medium text-zinc-900"
+                >
+                  {item.action}
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 ease-out group-hover:translate-x-1 motion-reduce:transition-none" />
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="mt-16 flex flex-col gap-6 rounded-xl bg-zinc-900 p-8 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-white">
+              Need help with your Liliw business application?
+            </h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
+              The BPLO desk at Liliw Municipal Hall is open Monday to Friday,
+              8:00 AM to 5:00 PM.
+            </p>
+          </div>
+          <a
+            href="tel:+63495631201"
+            className="shrink-0 rounded-lg bg-white px-5 py-2.5 text-center text-sm font-medium text-zinc-900 transition-all duration-200 ease-out hover:bg-zinc-100 active:scale-[0.98] motion-reduce:transition-none"
+          >
+            Call (049) 563-1201
+          </a>
         </div>
       </div>
     </section>
