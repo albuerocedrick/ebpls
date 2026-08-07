@@ -114,6 +114,7 @@ export const ROUTES = Object.freeze({
   APPLICANT_UAF: '/applicant/apply',
   APPLICANT_STATUS: '/applicant/status',
   APPLICANT_RETIRE: '/applicant/retire',
+  APPLICANT_FEE_SCHEDULE: '/applicant/fee-schedule',
   // BPLO
   BPLO_DASHBOARD: '/bplo/dashboard',
   BPLO_VERIFIER: '/bplo/verify/:appNo',
@@ -122,6 +123,7 @@ export const ROUTES = Object.freeze({
   TREASURY_ASSESSMENT: '/treasury/assess',
   TREASURY_CASHIER: '/treasury/cashier',
   TREASURY_QUEUE: '/treasury/queue',
+  TREASURY_FEE_SCHEDULE: '/treasury/fee-schedule',
   // Barangay
   BARANGAY_QUEUE: '/barangay/queue',
   // Admin
@@ -176,6 +178,8 @@ export const API_ENDPOINTS = Object.freeze({
   // Treasury
   TREASURY_ASSESS: '/api/treasury/assess',
   TREASURY_OTC_PAYMENT: '/api/treasury/payments/otc',
+  TREASURY_FEE_SCHEDULE: '/api/treasury/fee-schedule',
+  TREASURY_FEE_SCHEDULE_LOOKUP: '/api/treasury/fee-schedule/lookup',
   // Retirement
   RETIREMENT_SUBMIT: '/api/retirement/submit',
   RETIREMENT_MY: '/api/retirement/my',

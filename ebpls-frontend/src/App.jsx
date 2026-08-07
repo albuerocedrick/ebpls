@@ -48,6 +48,9 @@ const StatusTracker       = lazy(() => import('./screens/applicant/StatusTracker
 const BPLODashboard         = lazy(() => import('./screens/bplo/Dashboard'));
 const SplitScreenVerifier   = lazy(() => import('./screens/bplo/SplitScreenVerifier'));
 
+// Shared (Phase 1)
+const FeeSchedule     = lazy(() => import('./screens/shared/FeeSchedule'));
+
 // Treasury (Phase 5)
 const AssessmentQueue = lazy(() => import('./screens/treasury/AssessmentQueue')); // Added Queue List
 const AssessmentGrid  = lazy(() => import('./screens/treasury/AssessmentGrid'));
@@ -162,6 +165,7 @@ function App() {
               <Route path="apply" element={<UAFWizardScreen />} />
               <Route path="status" element={<StatusTracker />} />
               <Route path="retire" element={<RetirementForm />} />
+              <Route path="fee-schedule" element={<FeeSchedule />} />
             </Route>
           </Route>
 
@@ -224,6 +228,10 @@ function App() {
               <Route
                 path="retirements"
                 element={<RetirementAssess />}
+              />
+              <Route
+                path="fee-schedule"
+                element={<FeeSchedule />}
               />
             </Route>
           </Route>

@@ -31,7 +31,11 @@ const CashierPOS = () => {
   const [checkDetails, setCheckDetails] = useState({ number: '', bank: '' });
 
   useEffect(() => {
-    if (appNo) fetchAssessment();
+    if (appNo) {
+      fetchAssessment();
+    } else {
+      setIsLoading(false);
+    }
   }, [appNo]);
 
   const fetchAssessment = async () => {
@@ -76,6 +80,15 @@ const CashierPOS = () => {
     <div className="flex flex-col items-center justify-center h-64 gap-4">
       <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
       <p className="text-gray-400 text-sm font-mono">LOADING TERMINAL...</p>
+    </div>
+  );
+
+  if (!appNo) return (
+    <div className="flex flex-col items-center justify-center h-[500px] text-center">
+      <Banknote size={48} className="text-gray-200 mb-4" />
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Cashier Terminal</h1>
+      <p className="text-gray-500 mb-6">Please select an application from the Assessment Queue to process payment.</p>
+      <Button variant="primary" onClick={() => navigate('/treasury/queue')}>Go to Queue</Button>
     </div>
   );
 

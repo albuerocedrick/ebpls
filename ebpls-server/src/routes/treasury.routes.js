@@ -12,7 +12,19 @@ const { ROLES } = require('../utils/constants');
 
 const router = express.Router();
 
-// All standard treasury routes require Treasury_Officer or Admin role
+/**
+ * @route   GET /api/treasury/fee-schedule
+ * @desc    Fetch the full categorized Revenue Code fee schedule (Read-only for all logged in users)
+ */
+router.get('/fee-schedule', authenticate, treasuryController.getFeeSchedule);
+
+/**
+ * @route   GET /api/treasury/fee-schedule/lookup
+ * @desc    Lookup fee item by business activity and optional tier count (Read-only for all logged in users)
+ */
+router.get('/fee-schedule/lookup', authenticate, treasuryController.lookupFeeSchedule);
+
+// All other treasury routes require Treasury_Officer or Admin role
 router.use(authenticate, authorize(ROLES.TREASURY_OFFICER, ROLES.ADMIN));
 
 /**

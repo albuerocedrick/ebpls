@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { ClipboardList, XCircle, Banknote } from 'lucide-react';
+import { ClipboardList, XCircle, Banknote, FileText } from 'lucide-react';
 import { Navbar, Sidebar } from '../components/layout';
 import { ROUTES } from '../utils/constants';
 import useUIStore from '../store/UIStore';
@@ -23,15 +23,16 @@ const TREASURY_NAV = [
         icon: <ClipboardList size={18} />,
         label: 'Assessment Queue',
       },
-      {
-        to: '/treasury/cashier',
-        icon: <Banknote size={18} />,
-        label: 'Cashier POS',
-      },
+
       {
         to: '/treasury/retirements',
         icon: <XCircle size={18} />,
         label: 'Retirements',
+      },
+      {
+        to: ROUTES.TREASURY_FEE_SCHEDULE,
+        icon: <FileText size={18} />,
+        label: 'Fee Schedule',
       },
     ],
   },

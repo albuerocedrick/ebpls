@@ -20,7 +20,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { ROUTES } from '../../utils/constants';
-import { LayoutDashboard, FilePlus } from 'lucide-react';
+import { LayoutDashboard, FilePlus, FileText } from 'lucide-react';
 
 // =========================================
 // Tab Configuration — Applicant-specific
@@ -38,6 +38,12 @@ const TABS = [
     icon: <FilePlus size={22} />,
     label: 'Apply',
     id: 'bottom-nav-apply',
+  },
+  {
+    to: ROUTES.APPLICANT_FEE_SCHEDULE,
+    icon: <FileText size={22} />,
+    label: 'Schedule',
+    id: 'bottom-nav-fee-schedule',
   },
 ];
 

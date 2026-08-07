@@ -493,6 +493,136 @@ const getTreasuryQueue = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/treasury/fee-schedule
+ * Fetch the full Revenue Code fee schedule
+ */
+const getFeeSchedule = async (req, res, next) => {
+  try {
+    // 1. Fetch categories
+    const { data: categories, error: catErr } = await supabaseAdmin
+      .from('fee_schedule_categories')
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (catErr) throw createError('Failed to fetch fee categories.', 500, ERROR_CODES.INTERNAL_ERROR);
+
+    // 2. Fetch items
+    const { data: items, error: itemErr } = await supabaseAdmin
+      .from('fee_schedule_items')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (itemErr) throw createError('Failed to fetch fee items.', 500, ERROR_CODES.INTERNAL_ERROR);
+
+    // 3. Fetch rules
+    const { data: rules, error: rulesErr } = await supabaseAdmin
+      .from('fee_schedule_rules')
+      .select('*')
+      .eq('is_active', true);
+
+    if (rulesErr) throw createError('Failed to fetch fee rules.', 500, ERROR_CODES.INTERNAL_ERROR);
+
+    // 4. Map items to categories
+    const categoriesWithItems = categories.map(cat => ({
+      ...cat,
+      items: items.filter(item => item.category_id === cat.id)
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        categories: categoriesWithItems,
+        rules: rules
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/treasury/fee-schedule/lookup
+ * Lookup fee schedule item by business activity and optional tier
+ */
+const lookupFeeSchedule = async (req, res, next) => {
+  try {
+    const { activity_name, tier_count } = req.query;
+
+    if (!activity_name) {
+      throw createError('activity_name query parameter is required', 400, ERROR_CODES.VALIDATION_ERROR);
+    }
+
+    const count = tier_count ? parseInt(tier_count, 10) : null;
+
+    // Step 1: Exact match query on activity_match (case-insensitive)
+    let { data: items, error: exactErr } = await supabaseAdmin
+      .from('fee_schedule_items')
+      .select('*')
+      .ilike('activity_match', activity_name)
+      .eq('is_active', true);
+
+    if (exactErr) throw createError('Database error during lookup.', 500, ERROR_CODES.INTERNAL_ERROR);
+
+    // Step 2: Partial ILIKE match
+    if (!items || items.length === 0) {
+      const { data: partialItems, error: partialErr } = await supabaseAdmin
+        .from('fee_schedule_items')
+        .select('*')
+        .ilike('activity_match', `%${activity_name}%`)
+        .eq('is_active', true);
+
+      if (partialErr) throw createError('Database error during lookup.', 500, ERROR_CODES.INTERNAL_ERROR);
+      items = partialItems || [];
+    }
+
+    // Step 3: No match at all -> Return DEFAULT_FEE
+    if (!items || items.length === 0) {
+      // Get default fee rule
+      const { data: defaultRule } = await supabaseAdmin
+        .from('fee_schedule_rules')
+        .select('value')
+        .eq('rule_code', 'DEFAULT_FEE')
+        .single();
+        
+      return res.status(200).json({
+        success: true,
+        data: {
+          amount: defaultRule ? parseFloat(defaultRule.value) : 500.00,
+          is_default: true
+        }
+      });
+    }
+
+    // Filter by tier if applicable
+    let matchedItem = items[0];
+    
+    // If there are multiple matches, check if they are tiered
+    if (items.length > 1 || items[0].tier_label !== null) {
+      // We need to apply tier filtering
+      if (count !== null) {
+        matchedItem = items.find(item => {
+          const minMatch = item.tier_min === null || count >= item.tier_min;
+          const maxMatch = item.tier_max === null || count <= item.tier_max;
+          return minMatch && maxMatch;
+        }) || items[0]; // fallback to first if count doesn't match
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...matchedItem,
+        is_default: false
+      }
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   assessApplication,
   finalizeAssessment,
@@ -500,5 +630,7 @@ module.exports = {
   getAssessmentByApp,
   recordOTCPayment,
   initiateOnlinePayment,
-  getTreasuryQueue
+  getTreasuryQueue,
+  getFeeSchedule,
+  lookupFeeSchedule
 };
