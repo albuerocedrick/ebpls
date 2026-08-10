@@ -62,6 +62,7 @@ const UAFSubmissionPayloadSchema = z.object({
       capitalization: z.coerce.number().min(0).default(0),
       gross_sales_prev_year: z.coerce.number().min(0).default(0),
       units: z.coerce.number().int().min(1).default(1),
+      metric_count: z.coerce.number().int().positive().optional().nullable(),
     })
   ).optional().default([]),
 

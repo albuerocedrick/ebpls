@@ -349,6 +349,7 @@ const submitApplication = async (taxpayerId, payload) => {
           activity_id: actData.id,
           capitalization: activity.capitalization || 0,
           gross_sales_prev_year: activity.gross_sales_prev_year || 0,
+          metric_count: activity.metric_count || null,
         });
 
       if (actInsertErr) {

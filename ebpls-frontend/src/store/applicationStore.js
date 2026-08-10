@@ -75,10 +75,14 @@ const useApplicationStore = create((set, get) => ({
   isSaving: false,
   lastSavedAt: null,
 
+  // Dynamic reference data from lookups (not persisted in drafts)
+  activityMetrics: {},
+
   // UAF Form Payload
   formData: JSON.parse(JSON.stringify(initialFormState)),
 
   // Actions
+  setActivityMetrics: (map) => set({ activityMetrics: map }),
   setStep: (stepNumber) => set({ current_step: stepNumber }),
 
   /**

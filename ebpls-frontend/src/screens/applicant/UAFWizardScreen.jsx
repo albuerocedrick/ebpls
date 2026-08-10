@@ -32,7 +32,7 @@ const WIZARD_STEPS = [
 // Per-step validation rules
 // Returns an array of human-readable error strings (empty = valid).
 // -----------------------------------------------------------------
-const validateStep = (step, formData, requirements = []) => {
+const validateStep = (step, formData, requirements = [], activityMetrics = {}) => {
   const errors = [];
 
   if (step === 1) {
@@ -65,6 +65,13 @@ const validateStep = (step, formData, requirements = []) => {
           errors.push(`Line of Business #${i + 1}: please select a business activity.`);
         if (!lob.capital_investment || Number(lob.capital_investment) <= 0)
           errors.push(`Line of Business #${i + 1}: Capital Investment must be greater than zero.`);
+        
+        if (lob.name && activityMetrics[lob.name]) {
+          const label = activityMetrics[lob.name].metric;
+          if (!lob.metric_count || Number(lob.metric_count) <= 0) {
+            errors.push(`Line of Business #${i + 1}: "${label}" is required and must be greater than zero.`);
+          }
+        }
       });
     }
   }
@@ -121,6 +128,7 @@ const UAFWizardScreen = () => {
   const resetForm    = useApplicationStore((state) => state.resetForm);
   const setFormField = useApplicationStore((state) => state.setFormField);
   const isAttestationAgreed = useApplicationStore((state) => state.formData.step5.attestation_agreed);
+  const activityMetrics = useApplicationStore((state) => state.activityMetrics);
 
   const { isSaving, lastSavedAt } = useAutosave();
   const { requirements } = useApplicableRequirements();
@@ -181,7 +189,7 @@ const UAFWizardScreen = () => {
   }, [editAppNo, setFormField]);
 
   const handleNext = () => {
-    const errors = validateStep(current_step, formData, requirements);
+    const errors = validateStep(current_step, formData, requirements, activityMetrics);
     if (errors.length > 0) {
       setStepErrors(errors);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -231,6 +239,7 @@ const UAFWizardScreen = () => {
             capitalization: parseFloat(lob.capital_investment) || 0,
             gross_sales_prev_year: 0,
             units: parseInt(lob.units) || 1,
+            metric_count: lob.metric_count ? parseInt(lob.metric_count) : null,
           })),
         address_line1: formData.step2.address_line1,
         barangay: formData.step2.barangay,

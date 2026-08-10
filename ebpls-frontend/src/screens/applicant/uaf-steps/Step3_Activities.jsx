@@ -19,6 +19,8 @@ const FALLBACK_ACTIVITIES = [
 const Step3_Activities = () => {
   const data = useApplicationStore((state) => state.formData.step3);
   const setFormField = useApplicationStore((state) => state.setFormField);
+  const activityMetrics = useApplicationStore((state) => state.activityMetrics);
+  const setActivityMetrics = useApplicationStore((state) => state.setActivityMetrics);
 
   const [businessActivities, setBusinessActivities] = useState(FALLBACK_ACTIVITIES);
 
@@ -34,6 +36,7 @@ const Step3_Activities = () => {
         const res = await apiClient.get(API_ENDPOINTS.APPLICATIONS_LOOKUPS);
         if (res.success && res.data?.business_activities?.length > 0) {
           setBusinessActivities(res.data.business_activities);
+          setActivityMetrics(res.data.business_activity_metrics || {});
         }
       } catch (err) {
         console.warn('Failed to fetch dynamic lookups, using fallback.');
@@ -47,7 +50,7 @@ const Step3_Activities = () => {
   const handleAddLOB = () => {
     setFormField('step3', 'lineOfBusinesses', [
       ...lobs, 
-      { name: '', capital_investment: '', units: 1 }
+      { name: '', capital_investment: '', units: 1, metric_count: '' }
     ]);
   };
 
@@ -59,6 +62,11 @@ const Step3_Activities = () => {
   const handleChange = (index, field, value) => {
     const updatedLOBs = [...lobs];
     updatedLOBs[index] = { ...updatedLOBs[index], [field]: value };
+    
+    if (field === 'name' && !activityMetrics[value]) {
+      updatedLOBs[index].metric_count = '';
+    }
+
     setFormField('step3', 'lineOfBusinesses', updatedLOBs);
   };
 
@@ -135,6 +143,24 @@ const Step3_Activities = () => {
                     className={inputClasses} 
                   />
                 </div>
+
+                {/* Conditional Metric Count */}
+                {activityMetrics[lob.name] && (
+                  <div className="md:col-span-12 md:w-1/3 mt-2">
+                    <label htmlFor={`lob-metric-${index}`} className={labelClasses}>
+                      {activityMetrics[lob.name].metric} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id={`lob-metric-${index}`}
+                      type="number"
+                      min={activityMetrics[lob.name].min}
+                      value={lob.metric_count || ''}
+                      onChange={(e) => handleChange(index, 'metric_count', e.target.value)}
+                      placeholder="0"
+                      className={inputClasses}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Remove Button (Hide if only 1 item exists) */}

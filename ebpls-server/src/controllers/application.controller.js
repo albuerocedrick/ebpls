@@ -326,6 +326,7 @@ const getApplicationForEdit = async (req, res, next) => {
         activity_id,
         capitalization,
         gross_sales_prev_year,
+        metric_count,
         business_activities ( name )
       `)
       .eq('application_no', app_no);
@@ -387,6 +388,7 @@ const getApplicationForEdit = async (req, res, next) => {
             name: a.business_activities?.name || '',
             capital_investment: String(a.capitalization || 0),
             units: 1,
+            metric_count: a.metric_count ? String(a.metric_count) : '',
           })),
         },
         step4: {
@@ -453,12 +455,40 @@ const getUafLookups = async (req, res, next) => {
     // Fetch organization types
     const { data: orgTypes } = await supabaseAdmin.from('organization_types').select('id, name').order('name', { ascending: true });
 
+    // Fetch tiered fee items to build the metrics map
+    const { data: tieredItems } = await supabaseAdmin
+      .from('fee_schedule_items')
+      .select('activity_match, tier_unit')
+      .not('tier_label', 'is', null)
+      .not('activity_match', 'is', null);
+
+    const UNIT_LABEL_MAP = {
+      'heads': 'Number of Heads',
+      'boarders': 'Number of Boarders',
+      'seating_capacity': 'Seating Capacity',
+      'doors': 'Number of Doors',
+    };
+
+    // Build deduplicated map: activityName → metric config
+    const metricsMap = {};
+    (tieredItems || []).forEach(item => {
+      if (!metricsMap[item.activity_match] && item.tier_unit) {
+        metricsMap[item.activity_match] = {
+          metric: UNIT_LABEL_MAP[item.tier_unit] || item.tier_unit,
+          unit: item.tier_unit,
+          type: 'number',
+          min: 1,
+        };
+      }
+    });
+
     return res.status(200).json({
       success: true,
       data: {
         barangays: barangays?.map(b => b.name) || [],
         business_activities: activities?.map(a => a.name) || [],
         organization_types: orgTypes || [],
+        business_activity_metrics: metricsMap,
       }
     });
   } catch (error) {
