@@ -83,6 +83,12 @@ router.get(
 );
 
 router.get(
+  '/:app_no/assessment',
+  authenticate,
+  applicationController.getAssessmentForApplicant
+);
+
+router.get(
   '/:app_no/status',
   authenticate,
   applicationController.getStatus

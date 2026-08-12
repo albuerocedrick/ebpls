@@ -529,6 +529,152 @@ const getApplicableRequirements = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/applications/:app_no/assessment
+ * Retrieves the fee assessment breakdown for an application.
+ */
+const getAssessmentForApplicant = async (req, res, next) => {
+  try {
+    const { app_no } = req.params;
+    const userRole = req.user.roleName;
+    const taxpayerId = req.user.taxpayerId;
+    const { supabaseAdmin } = require('../config/supabase');
+
+    // 1 & 2. Ownership check
+    let appQuery = supabaseAdmin
+      .from('applications')
+      .select('status, businesses!inner(taxpayer_id)')
+      .eq('application_no', app_no);
+
+    if (userRole === 'Applicant') {
+      appQuery = appQuery.eq('businesses.taxpayer_id', taxpayerId);
+    }
+    
+    const { data: appData, error: appError } = await appQuery.single();
+
+    if (appError || !appData) {
+      throw createError('Application not found or access denied.', 404, ERROR_CODES.NOT_FOUND);
+    }
+
+    // 3. Fetch assessment + line items + fee_types
+    const { data: assessment, error: assError } = await supabaseAdmin
+      .from('assessments')
+      .select(`
+        id,
+        total_amount,
+        created_at,
+        assessment_line_items (
+          amount,
+          fee_types (name, computation_basis, percentage_of_id, percentage_value, id)
+        )
+      `)
+      .eq('application_no', app_no)
+      .single();
+
+    if (assError || !assessment) {
+      throw createError('Assessment not found.', 404, ERROR_CODES.NOT_FOUND);
+    }
+
+    // 4. Fetch application activities
+    const { data: activities } = await supabaseAdmin
+      .from('application_activities')
+      .select(`
+        gross_sales_prev_year,
+        metric_count,
+        business_activities (name)
+      `)
+      .eq('application_no', app_no);
+
+    const totalGrossSales = (activities || []).reduce((sum, act) => sum + Number(act.gross_sales_prev_year || 0), 0);
+
+    // 5 & 6. Build computation descriptions
+    const line_items = [];
+    let mpAmount = 0;
+    
+    // Find Mayor's Permit amount first for reference
+    const mpItem = assessment.assessment_line_items.find(item => item.fee_types?.name === "Mayor's Permit Fee");
+    if (mpItem) {
+      mpAmount = Number(mpItem.amount);
+    }
+
+    for (const item of assessment.assessment_line_items) {
+      const feeName = item.fee_types?.name || 'Unknown Fee';
+      const amount = Number(item.amount);
+      let computation = '';
+
+      if (feeName === "Mayor's Permit Fee") {
+        // Find best match in fee_schedule_items
+        let matchedCategory = '';
+        let matchedBusinessType = '';
+        
+        for (const act of (activities || [])) {
+          const actName = act.business_activities?.name;
+          if (!actName) continue;
+          
+          const { data: feeItems } = await supabaseAdmin
+            .from('fee_schedule_items')
+            .select('business_type, fee_schedule_categories(name)')
+            .ilike('activity_match', `%${actName}%`)
+            .eq('is_active', true)
+            .limit(1);
+            
+          if (feeItems && feeItems.length > 0) {
+            matchedBusinessType = feeItems[0].business_type;
+            matchedCategory = feeItems[0].fee_schedule_categories?.name;
+            break;
+          }
+        }
+        
+        if (matchedBusinessType && matchedCategory) {
+          computation = `Fixed — ${matchedBusinessType} (Revenue Code: ${matchedCategory})`;
+        } else {
+          computation = `Fixed — Revenue Code default (₱500.00)`;
+        }
+      } else if (feeName === 'Business Tax') {
+        computation = `Based on Gross Sales (₱${totalGrossSales.toLocaleString(undefined, { minimumFractionDigits: 2 })})`;
+      } else if (feeName === 'Fire Safety Inspection Fee') {
+        computation = `10% of Mayor's Permit Fee (₱${mpAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })})`;
+      } else if (item.fee_types?.computation_basis === 'Fixed') {
+        computation = 'Fixed municipal fee';
+      } else {
+        computation = 'Computed fee';
+      }
+
+      line_items.push({
+        name: feeName,
+        amount: amount,
+        computation: computation
+      });
+    }
+
+    // Fallback for legacy seeded assessments that lack line items in the database
+    if (line_items.length === 0 && assessment.total_amount > 0) {
+      line_items.push({
+        name: 'Legacy Assessment',
+        amount: Number(assessment.total_amount),
+        computation: 'Consolidated fees from previous system'
+      });
+    }
+
+    const special_notes = [
+      "Late payment surcharge of 25% applies if not paid within the prescribed period (Sec. 3A.03)"
+    ];
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        total_amount: Number(assessment.total_amount),
+        assessed_at: assessment.created_at,
+        line_items,
+        special_notes
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDraft,
   saveDraft,
@@ -541,4 +687,5 @@ module.exports = {
   getActiveBarangays,
   getUafLookups,
   getApplicableRequirements,
+  getAssessmentForApplicant,
 };

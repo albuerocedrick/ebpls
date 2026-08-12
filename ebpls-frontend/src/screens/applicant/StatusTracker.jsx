@@ -12,9 +12,12 @@ import {
   Award, 
   Receipt,
   Globe,
-  Banknote
+  Banknote,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import StatusBadge from '../../components/shared/StatusBadge';
+import ProcedureGuide from '../../components/shared/ProcedureGuide';
 import { ROUTES, STATUSES, API_BASE_URL } from '../../utils/constants';
 import apiClient from '../../utils/apiClient';
 import useAuthStore from '../../store/authStore';
@@ -42,6 +45,40 @@ const StatusTracker = () => {
   const { data: applicationData, status: currentStatus, isLoading, error } = useApplicationStatus(appId);
   
   const [isActionLoading, setIsActionLoading] = useState(false);
+
+  // Assessment Breakdown state
+  const [assessmentBreakdown, setAssessmentBreakdown] = useState(null);
+  const [isBreakdownLoading, setIsBreakdownLoading] = useState(false);
+  const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
+
+  useEffect(() => {
+    if (appId && currentStatus) {
+      const breakdownStatuses = [
+        STATUSES.ASSESSED,
+        STATUSES.FOR_PAYMENT,
+        STATUSES.PAYMENT_PROCESSING,
+        STATUSES.PAID,
+        STATUSES.COMPLETED
+      ];
+      
+      if (breakdownStatuses.includes(currentStatus) && !assessmentBreakdown && !isBreakdownLoading) {
+        const fetchAssessment = async () => {
+          try {
+            setIsBreakdownLoading(true);
+            const res = await apiClient.get(`/api/applications/${appId}/assessment`);
+            if (res.success) {
+              setAssessmentBreakdown(res.data);
+            }
+          } catch (err) {
+            console.error('Failed to fetch assessment breakdown', err);
+          } finally {
+            setIsBreakdownLoading(false);
+          }
+        };
+        fetchAssessment();
+      }
+    }
+  }, [appId, currentStatus]);
 
   // ---------------------------------------------------------------------------
   // ONLINE PAYMENT HANDLER
@@ -176,6 +213,8 @@ const StatusTracker = () => {
         <h1 className="text-2xl font-bold text-gray-900">Track Application</h1>
       </div>
 
+      <ProcedureGuide status={currentStatus} />
+
       {/* Main Status Timeline Card */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="bg-gray-50 px-5 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -250,6 +289,70 @@ const StatusTracker = () => {
           </div>
         </div>
       </div>
+
+      {/* PHASE 2: ASSESSMENT BREAKDOWN CARD */}
+      {assessmentBreakdown && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          <div 
+            className="px-6 py-4 bg-gray-50 flex items-center justify-between cursor-pointer sm:cursor-default"
+            onClick={() => setIsBreakdownExpanded(!isBreakdownExpanded)}
+          >
+            <div>
+              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                📋 Fee Assessment Breakdown
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Assessed: {formatDate(assessmentBreakdown.assessed_at)}
+              </p>
+            </div>
+            <div className="sm:hidden text-gray-400">
+              {isBreakdownExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
+          </div>
+          
+          <div className={`p-6 border-t border-gray-200 ${isBreakdownExpanded ? 'block' : 'hidden sm:block'}`}>
+            <div className="space-y-4">
+              {assessmentBreakdown.line_items.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-start gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900 text-sm">{item.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                      └─ {item.computation}
+                    </p>
+                  </div>
+                  <div className="font-mono text-sm text-gray-900 whitespace-nowrap pt-0.5">
+                    ₱ {Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 pt-4 border-t-2 border-gray-900 flex justify-between items-center">
+              <p className="font-bold text-gray-900">TOTAL AMOUNT DUE</p>
+              <p className="text-lg font-black font-mono text-gray-900">
+                ₱ {assessmentBreakdown.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+
+            {assessmentBreakdown.special_notes && assessmentBreakdown.special_notes.length > 0 && (
+              <div className="mt-6 p-4 bg-yellow-50 rounded-lg flex items-start gap-3">
+                <AlertCircle size={16} className="text-yellow-600 shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  {assessmentBreakdown.special_notes.map((note, idx) => (
+                    <p key={idx} className="text-xs text-yellow-800 leading-relaxed">{note}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-6 pt-6 border-t border-gray-100">
+               <Button variant="secondary" fullWidth className="!bg-white" onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/top/${appId}?token=${token}`, '_blank'); }}>
+                 📄 Download Tax Order of Payment (TOP)
+               </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* PHASE 5: PAYMENT OPTIONS CARD */}
       {currentStatus === STATUSES.FOR_PAYMENT && (
