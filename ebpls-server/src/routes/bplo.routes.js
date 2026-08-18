@@ -36,6 +36,19 @@ router.put('/applications/start-review/:app_no', bploController.startReview);
  * @access  BPLO_Officer, Admin
  */
 router.put('/applications/save-checklist/:app_no', bploController.saveChecklist);
+/**
+ * @route   GET /api/bplo/applications/completed
+ * @desc    Fetch all Completed applications for the BPLO Completed Queue.
+ * @access  BPLO_Officer, Admin
+ */
+router.get('/applications/completed', bploController.getCompletedApplications);
+
+/**
+ * @route   POST /api/bplo/applications/:app_no/notify-ready
+ * @desc    Send CERT_READY notification + email to applicant for a Completed application.
+ * @access  BPLO_Officer, Admin
+ */
+router.post('/applications/:app_no/notify-ready', bploController.notifyApplicantReady);
 
 /**
  * @route   GET /api/bplo/applications/:app_no/document/:requirement_id

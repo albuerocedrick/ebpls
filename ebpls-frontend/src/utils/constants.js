@@ -119,6 +119,7 @@ export const ROUTES = Object.freeze({
   BPLO_DASHBOARD: '/bplo/dashboard',
   BPLO_VERIFIER: '/bplo/verify/:appNo',
   BPLO_RETIREMENTS: '/bplo/retirements',
+  BPLO_COMPLETED: '/bplo/completed',
   // Treasury
   TREASURY_ASSESSMENT: '/treasury/assess',
   TREASURY_CASHIER: '/treasury/cashier',
@@ -175,6 +176,8 @@ export const API_ENDPOINTS = Object.freeze({
   BPLO_RETURN: (appNo) => `/api/bplo/applications/return/${appNo}`,
   BPLO_REVIEW: (appNo) => `/api/bplo/applications/review/${appNo}`,
   BPLO_DOCUMENT_URL: (appNo, requirementId) => `/api/bplo/applications/${appNo}/document/${requirementId}`,
+  BPLO_COMPLETED: '/api/bplo/applications/completed',
+  BPLO_NOTIFY_READY: (appNo) => `/api/bplo/applications/${appNo}/notify-ready`,
   // Treasury
   TREASURY_ASSESS: '/api/treasury/assess',
   TREASURY_OTC_PAYMENT: '/api/treasury/payments/otc',
@@ -250,6 +253,7 @@ export const EMAIL_TRIGGERS = Object.freeze({
   PAYMENT_RECORDED:           'PAYMENT_RECORDED',
   PERMIT_READY:               'PERMIT_READY',
   RETIREMENT_COMPLETE:        'RETIREMENT_COMPLETE',
+  CERT_READY_NOTIFICATION:    'CERT_READY_NOTIFICATION',
 });
 
 export const DOC_VERIFICATION_STATUS = Object.freeze({

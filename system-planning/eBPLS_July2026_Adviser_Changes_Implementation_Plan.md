@@ -1037,7 +1037,4 @@ graph LR
 
 ---
 
-## Open Questions
 
-> [!IMPORTANT]
-> 1. **Property Tax**: What exactly does "tracked" mean? Awaiting adviser clarification — will add as Phase 5.5 when confirmed.

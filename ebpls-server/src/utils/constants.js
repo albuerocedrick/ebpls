@@ -105,6 +105,9 @@ const AUDIT_ACTIONS = Object.freeze({
   // Admin
   MASTER_DATA_UPDATED:        'MASTER_DATA_UPDATED',
   DOCUMENT_TEMPLATE_UPLOADED: 'DOCUMENT_TEMPLATE_UPLOADED',
+  
+  // Notifications (Phase 5)
+  CERT_READY_NOTIFIED:        'CERT_READY_NOTIFIED',
 });
 
 // -----------------------------------------------------------------
@@ -135,6 +138,7 @@ const EMAIL_TRIGGERS = Object.freeze({
   PAYMENT_RECORDED:           'PAYMENT_RECORDED',
   PERMIT_READY:               'PERMIT_READY',
   RETIREMENT_COMPLETE:        'RETIREMENT_COMPLETE',
+  CERT_READY_NOTIFICATION:    'CERT_READY_NOTIFICATION',
 });
 
 // -----------------------------------------------------------------

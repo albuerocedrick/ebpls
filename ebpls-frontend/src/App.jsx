@@ -47,6 +47,7 @@ const StatusTracker       = lazy(() => import('./screens/applicant/StatusTracker
 // BPLO
 const BPLODashboard         = lazy(() => import('./screens/bplo/Dashboard'));
 const SplitScreenVerifier   = lazy(() => import('./screens/bplo/SplitScreenVerifier'));
+const CompletedQueue        = lazy(() => import('./screens/bplo/CompletedQueue'));
 
 // Shared (Phase 1)
 const FeeSchedule     = lazy(() => import('./screens/shared/FeeSchedule'));
@@ -186,6 +187,7 @@ function App() {
               <Route path="verify/:appNo" element={<SplitScreenVerifier />} />
               <Route path="verify" element={<SplitScreenVerifier />} />
               <Route path="retirements" element={<RetirementQueue />} />
+              <Route path="completed" element={<CompletedQueue />} />
             </Route>
           </Route>
 

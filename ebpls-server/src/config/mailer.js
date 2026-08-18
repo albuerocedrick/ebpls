@@ -93,12 +93,38 @@ const sendViaBrevoAPI = (to, subject, html, attachments = []) => {
  * @returns {Promise<{messageId: string, previewUrl?: string}>}
  */
 const sendEmail = async ({ to, subject, html, attachments = [] }) => {
-  // If we have Brevo credentials, use the REST API to bypass IP blocking
+  // 1. Gmail SMTP via Nodemailer
+  if (env.SMTP_HOST && env.SMTP_HOST.includes('gmail.com') && env.SMTP_PASS) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASS,
+      },
+    });
+
+    try {
+      const info = await transporter.sendMail({
+        from: env.EMAIL_FROM || `"eBPLS Municipality of Liliw" <${env.SMTP_USER}>`,
+        to,
+        subject,
+        html,
+        attachments,
+      });
+      console.log(`✉️  Email sent via Gmail SMTP: ${info.messageId} → ${to}`);
+      return { messageId: info.messageId, previewUrl: null };
+    } catch (err) {
+      console.error(`❌ Gmail SMTP Error:`, err.message);
+      throw err;
+    }
+  }
+
+  // 2. Brevo REST API
   if (env.SMTP_HOST && env.SMTP_HOST.includes('brevo.com') && env.SMTP_PASS) {
     return sendViaBrevoAPI(to, subject, html, attachments);
   }
 
-  // Fallback to Nodemailer for Ethereal (Development/Test)
+  // 3. Fallback to Nodemailer for Ethereal (Development/Test)
   const transporter = await getEtherealTransporter();
 
   const info = await transporter.sendMail({

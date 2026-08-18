@@ -197,6 +197,24 @@ const templates = {
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
   }),
+
+  [EMAIL_TRIGGERS.CERT_READY_NOTIFICATION]: ({ name, applicationNo, businessName, notes, downloadUrl }) => ({
+    subject: `eBPLS — Your Business Permit is Ready for Download (${applicationNo})`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #16a34a;">🎉 Your Business Permit is Ready!</h2>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>Great news! Your business permit for <strong>${businessName}</strong> is now ready for download.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+          <tr><td style="padding: 8px; background: #f3f4f6; font-weight: bold;">Application No.</td><td style="padding: 8px;">${applicationNo}</td></tr>
+          <tr><td style="padding: 8px; background: #f3f4f6; font-weight: bold;">Business</td><td style="padding: 8px;">${businessName}</td></tr>
+        </table>
+        ${notes ? `<div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; margin: 16px 0; border-radius: 4px;"><strong>Notes from BPLO:</strong><br/>${notes}</div>` : ''}
+        <p>Please log in to your eBPLS account to download your Business Permit and E-Resibo.</p>
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
+        <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
+      </div>`,
+  }),
 };
 
 // =================================================================

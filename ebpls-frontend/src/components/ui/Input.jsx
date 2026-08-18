@@ -8,7 +8,8 @@
  * @policy  Never use a placeholder as a label substitute — the `label` prop is required.
  */
 
-import React, { useId } from 'react';
+import React, { useId, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 // =========================================
 // Component
@@ -35,6 +36,7 @@ const Input = ({
   rightElement,
   required = false,
   className = '',
+  type = 'text',
   ...inputProps
 }) => {
   const autoId = useId();
@@ -43,6 +45,10 @@ const Input = ({
   const errorId = `${inputId}-error`;
 
   const hasError = Boolean(error);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const isPassword = type === 'password';
+  const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
 
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
@@ -72,6 +78,7 @@ const Input = ({
 
         <input
           id={inputId}
+          type={inputType}
           aria-describedby={[hint && hintId, error && errorId].filter(Boolean).join(' ')}
           aria-invalid={hasError}
           required={required}
@@ -82,7 +89,7 @@ const Input = ({
             'placeholder:text-gray-400',
             // Padding — account for left/right elements
             leftElement ? 'pl-10' : 'pl-4',
-            rightElement ? 'pr-10' : 'pr-4',
+            (rightElement || isPassword) ? 'pr-10' : 'pr-4',
             'py-3',
             // Border and focus transitions
             'transition-all duration-200',
@@ -97,9 +104,20 @@ const Input = ({
           {...inputProps}
         />
 
-        {rightElement && (
-          <div className="absolute right-3 text-[hsl(var(--color-text-muted))] pointer-events-none">
-            {rightElement}
+        {(rightElement || isPassword) && (
+          <div className={`absolute right-3 flex items-center text-[hsl(var(--color-text-muted))] ${isPassword && !rightElement ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+            {isPassword && !rightElement ? (
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="focus:outline-none hover:text-gray-700 transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            ) : (
+              rightElement
+            )}
           </div>
         )}
       </div>

@@ -7,9 +7,9 @@ const NotificationPopup = () => {
   const { notifications, newNotificationIds, markAsRead, clearNewNotificationIds } = useNotificationStore();
   const navigate = useNavigate();
 
-  // Get the first new APPLICATION_RETURNED notification
+  // Get the first new popup notification (returned or ready)
   const popup = notifications.find(
-    n => newNotificationIds.includes(n.id) && n.type === 'APPLICATION_RETURNED'
+    n => newNotificationIds.includes(n.id) && ['APPLICATION_RETURNED', 'CERT_READY'].includes(n.type)
   );
 
   useEffect(() => {

@@ -15,7 +15,7 @@
 
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { LayoutDashboard, FileSearch, XCircle } from 'lucide-react';
+import { LayoutDashboard, FileSearch, XCircle, CheckCircle2 } from 'lucide-react';
 import { Navbar, Sidebar } from '../components/layout';
 import { ROUTES } from '../utils/constants';
 import useUIStore from '../store/UIStore';
@@ -41,6 +41,11 @@ const BPLO_NAV = [
         to: ROUTES.BPLO_RETIREMENTS,
         icon: <XCircle size={18} />,
         label: 'Retirements',
+      },
+      {
+        to: ROUTES.BPLO_COMPLETED,
+        icon: <CheckCircle2 size={18} />,
+        label: 'Completed',
       },
     ],
   },

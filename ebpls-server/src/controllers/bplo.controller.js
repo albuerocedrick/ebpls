@@ -803,6 +803,131 @@ const getDocumentUrl = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/bplo/applications/completed
+ * Fetch all Completed applications for the BPLO Completed Queue.
+ */
+const getCompletedApplications = async (req, res, next) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('applications')
+      .select(`
+        application_no,
+        status,
+        submitted_at,
+        cert_notified_at,
+        cert_notes,
+        businesses ( business_name, taxpayers ( first_name, last_name ) )
+      `)
+      .eq('status', STATUSES.COMPLETED)
+      .order('cert_notified_at', { ascending: false, nullsFirst: false })
+      .order('submitted_at', { ascending: false });
+
+    if (error) {
+      return next(createError('Failed to fetch completed applications', 500, ERROR_CODES.INTERNAL_ERROR));
+    }
+
+    return res.status(200).json(successResponse('Completed applications retrieved', data || []));
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/bplo/applications/:app_no/notify-ready
+ * Send CERT_READY notification + email to applicant for a Completed application.
+ */
+const notifyApplicantReady = async (req, res, next) => {
+  try {
+    const { app_no } = req.params;
+    const { notes } = req.body;
+    const actorId = req.user.userId;
+
+    // 1. Fetch application and verify it is Completed
+    const { data: app, error: appError } = await supabaseAdmin
+      .from('applications')
+      .select('application_no, status')
+      .eq('application_no', app_no)
+      .single();
+
+    if (appError || !app) {
+      return next(createError('Application not found.', 404, ERROR_CODES.NOT_FOUND));
+    }
+    if (app.status !== STATUSES.COMPLETED) {
+      return next(createError(
+        `Cannot notify: application status is "${app.status}". Only Completed applications can be notified.`,
+        400, ERROR_CODES.VALIDATION_ERROR
+      ));
+    }
+
+    // 2. Resolve applicant contact info
+    const applicant = await _resolveApplicantForEmail(app_no);
+
+    // 3. Insert CERT_READY in-app notification
+    if (applicant?.userId) {
+      const notifNotes = notes?.trim()
+        ? notes.trim()
+        : 'Your business permit is now ready for download in your eBPLS account.';
+
+      await supabaseAdmin.from('notifications').insert({
+        user_id: applicant.userId,
+        application_no: app_no,
+        type: 'CERT_READY',
+        title: 'Your Business Permit is Ready!',
+        message: notifNotes,
+        action_url: `/applicant/status?id=${app_no}`,
+      });
+    }
+
+    // 4. Dispatch email
+    if (applicant?.email) {
+      dispatchEmail({
+        triggerEvent: EMAIL_TRIGGERS.CERT_READY_NOTIFICATION,
+        recipientEmail: applicant.email,
+        applicationNo: app_no,
+        payload: {
+          name: applicant.name,
+          applicationNo: app_no,
+          businessName: applicant.businessName,
+          notes: notes?.trim() || null,
+        }
+      });
+    }
+
+    // 5. Update application record
+    const updatePayload = {
+      cert_notified_at: new Date().toISOString(),
+      cert_notes: notes?.trim() || null,
+    };
+
+    const { error: updateError } = await supabaseAdmin
+      .from('applications')
+      .update(updatePayload)
+      .eq('application_no', app_no);
+
+    if (updateError) {
+      console.error('[bplo.controller] cert_notified_at update failed:', updateError.message);
+    }
+
+    // 6. Audit log
+    logAction({
+      userId: actorId,
+      action: AUDIT_ACTIONS.CERT_READY_NOTIFIED,
+      entityType: 'applications',
+      entityId: app_no,
+      newValue: updatePayload,
+      ipAddress: getClientIp(req),
+    });
+
+    return res.status(200).json(successResponse('Applicant notified successfully.', {
+      applicationNo: app_no,
+      notifiedAt: updatePayload.cert_notified_at,
+    }));
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getPendingApplications,
   startReview,
@@ -812,4 +937,6 @@ module.exports = {
   reviewApplication,
   verifyApplication,
   returnApplication,
+  getCompletedApplications,
+  notifyApplicantReady,
 };
