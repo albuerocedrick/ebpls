@@ -153,6 +153,22 @@ const startReview = async (req, res, next) => {
       return next(createError('Failed to start review.', 500, ERROR_CODES.INTERNAL_ERROR));
     }
 
+    // Phase 6: Insert in-app notification
+    _resolveApplicantForEmail(applicationNo).then((applicant) => {
+      if (applicant && applicant.userId) {
+        supabaseAdmin.from('notifications').insert({
+          user_id:        applicant.userId,
+          application_no: applicationNo,
+          type:           'APPLICATION_UNDER_REVIEW',
+          title:          'Application Under Review',
+          message:        'Your application is now being reviewed by the BPLO office.',
+          action_url:     `/applicant/status?id=${applicationNo}`,
+        }).then(({ error }) => {
+          if (error) console.error('[bplo.controller] Failed to insert under review notification:', error.message);
+        });
+      }
+    });
+
     return res.status(200).json(successResponse('Application is now under review.'));
   } catch (err) {
     return next(err);
@@ -640,6 +656,20 @@ const verifyApplication = async (req, res, next) => {
           businessName: applicant.businessName,
         },
       });
+
+      // Phase 6: Insert in-app notification
+      if (applicant.userId) {
+        supabaseAdmin.from('notifications').insert({
+          user_id:        applicant.userId,
+          application_no: applicationNo,
+          type:           'APPLICATION_VERIFIED',
+          title:          'Application Verified',
+          message:        'Your documents have been verified and forwarded to Treasury for assessment.',
+          action_url:     `/applicant/status?id=${applicationNo}`,
+        }).then(({ error }) => {
+          if (error) console.error('[bplo.controller] Failed to insert verified notification:', error.message);
+        });
+      }
     }
   } catch (err) {
     return next(err);

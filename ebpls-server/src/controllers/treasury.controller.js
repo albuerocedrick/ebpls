@@ -115,7 +115,7 @@ const finalizeAssessment = async (req, res, next) => {
       .select(`
         businesses (
           business_name,
-          taxpayers ( first_name, middle_name, last_name, users ( email ) )
+          taxpayers ( first_name, middle_name, last_name, users ( email, user_id ) )
         )
       `)
       .eq('application_no', app_no)
@@ -161,6 +161,20 @@ const finalizeAssessment = async (req, res, next) => {
           buffer:   topBuffer,
         }],
       });
+
+      // Phase 6: Insert in-app notification
+      if (topUser.user_id) {
+        supabaseAdmin.from('notifications').insert({
+          user_id:        topUser.user_id,
+          application_no: app_no,
+          type:           'APPLICATION_ASSESSED',
+          title:          'Fees Assessed',
+          message:        'Your fees have been assessed. Please proceed to payment.',
+          action_url:     `/applicant/status?id=${app_no}`,
+        }).then(({ error }) => {
+          if (error) console.error('[treasury.controller] Failed to insert assessed notification:', error.message);
+        });
+      }
     }
 
   } catch (err) {
@@ -324,7 +338,7 @@ const recordOTCPayment = async (req, res, next) => {
           business_name,
           taxpayers (
             first_name, last_name,
-            users ( email )
+            users ( email, user_id )
           )
         )
       `)
@@ -362,6 +376,20 @@ const recordOTCPayment = async (req, res, next) => {
           businessName: appInfo.businesses?.business_name || 'your business',
         },
       });
+
+      // Phase 6: Insert in-app notification
+      if (userInfo.user_id) {
+        supabaseAdmin.from('notifications').insert({
+          user_id:        userInfo.user_id,
+          application_no: application_no,
+          type:           'PAYMENT_CONFIRMED',
+          title:          'Payment Confirmed',
+          message:        'Your OTC payment has been confirmed. Your permit is ready for download.',
+          action_url:     `/applicant/status?id=${application_no}`,
+        }).then(({ error }) => {
+          if (error) console.error('[treasury.controller] Failed to insert payment confirmed notification:', error.message);
+        });
+      }
     }
   } catch (err) {
     next(err);

@@ -172,7 +172,7 @@ async function processSuccessfulPayment(paymentData, eventAttributes, metaAppNo,
   // This runs AFTER the audit & log update so the main flow is fully committed first.
   const { data: onlineAppOwner } = await supabaseAdmin
     .from('applications')
-    .select('businesses ( business_name, taxpayers ( first_name, last_name, users ( email ) ) )')
+    .select('businesses ( business_name, taxpayers ( first_name, last_name, users ( email, user_id ) ) )')
     .eq('application_no', appNo)
     .single();
 
@@ -206,6 +206,20 @@ async function processSuccessfulPayment(paymentData, eventAttributes, metaAppNo,
         businessName: onlineAppOwner.businesses?.business_name || 'your business',
       },
     });
+
+    // Phase 6: Insert in-app notification
+    if (onlineUser.user_id) {
+      supabaseAdmin.from('notifications').insert({
+        user_id:        onlineUser.user_id,
+        application_no: appNo,
+        type:           'PAYMENT_CONFIRMED',
+        title:          'Payment Confirmed',
+        message:        'Your online payment has been confirmed. Your permit is ready for download.',
+        action_url:     `/applicant/status?id=${appNo}`,
+      }).then(({ error }) => {
+        if (error) console.error('[webhook.controller] Failed to insert payment confirmed notification:', error.message);
+      });
+    }
   }
 }
 

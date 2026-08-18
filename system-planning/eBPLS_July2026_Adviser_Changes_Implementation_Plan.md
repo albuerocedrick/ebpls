@@ -1,10 +1,10 @@
 # eBPLS — July 2026 Adviser Changes: Agile Implementation Plan
 
 > **Project**: eBPLS — Municipality of Liliw  
-> **Scope**: 6 changes across Treasury, Applicant, and BPLO modules  
-> **Approach**: 6 phases, chronological, each phase testable independently  
+> **Scope**: 7 phases across Treasury, Applicant, BPLO, and Barangay modules  
+> **Approach**: 7 phases, chronological, each phase testable independently  
 > **Date**: August 2026  
-> **Revision**: v2 — Incorporates official Revenue Code fee schedule
+> **Revision**: v3 — Adds Phase 6 (UX improvements, auto-OR, filters, accordion)
 
 ---
 
@@ -12,16 +12,19 @@
 
 | # | Module | Change | Status |
 |---|--------|--------|--------|
-| 1 | Shared | Dedicated Fee Schedule page (full Revenue Code) available to Treasury and Applicant + DB storage | New |
-| 1.5 | Applicant | Dynamic conditional inputs in Step 3 for tiered fees (heads, boarders, capacity) | New |
-| 2 | Applicant | Assessment breakdown view (shows matched fees) + step-by-step procedure | New |
-| 3 | Applicant | Pop-up notification for returned/declined applications + email notice | Enhancement |
-| 4 | Applicant | Fee breakdown visible during online payment flow | Enhancement |
-| 5 | BPLO | Property Tax tracking | ⏸️ Deferred (awaiting adviser confirmation) |
-| 6 | BPLO | Certificate ready notification with notes to applicant (pop-up notif) | New |
-
-> [!IMPORTANT]
-> **Property Tax tracking (item #5)** is deferred until you confirm the requirements with your adviser. The plan includes a placeholder phase for it, but it won't block the other phases.
+| 1 | Shared | Dedicated Fee Schedule page (full Revenue Code) available to Treasury and Applicant + DB storage | ✅ Done |
+| 1.5 | Applicant | Dynamic conditional inputs in Step 3 for tiered fees (heads, boarders, capacity) | ✅ Done |
+| 2 | Applicant | Assessment breakdown view (shows matched fees) + step-by-step procedure | ✅ Done |
+| 3 | Applicant | Pop-up notification for returned/declined applications + email notice | ✅ Done |
+| 4 | Applicant | Fee breakdown visible during online payment flow | ✅ Done |
+| 5 | BPLO | Certificate ready notification with notes to applicant (pop-up notif) | 🔄 In Progress |
+| 6.1 | Applicant | Pop-up notifications for ALL status updates with timespan on login | New |
+| 6.2 | Backend | Email sent to applicant on every status update with timestamp | New |
+| 6.3 | Treasury | Auto-generate OTC receipt/OR number (no manual input) | New |
+| 6.4 | BPLO | Dashboard Application Queue — status filter dropdown | New |
+| 6.5 | Shared | Fee Schedule page — collapsible accordion sections per category | Enhancement |
+| 6.6 | Barangay | Clearance Queue — status filter dropdown | New |
+| 7 | All | Final integration testing (full frontend test plan) | Pending |
 
 ---
 
@@ -828,10 +831,211 @@ Phase 3's notification infrastructure automatically handles CERT_READY notificat
 
 ---
 
-## Phase 6 — Final Integration Testing & Full Frontend Test Plan
+## Phase 6 — UX Improvements, Auto-OR, Filters & Accordion
 
 ### Goal
-Comprehensive end-to-end integration testing of all 5 phases, plus a **complete frontend test plan** for human execution.
+Address adviser feedback on UX polish: expand notification coverage to all statuses, auto-generate OTC receipt numbers, add filtering to BPLO Dashboard and Clearance Queue, and make the Fee Schedule page more user-friendly with collapsible sections.
+
+### Why Sixth
+These are UX enhancements that improve existing, working features. None of them introduce new data models — they refine what's already built in Phases 1–5.
+
+### Deliverables
+
+---
+
+### 6.1 — Pop-Up Notifications for ALL Status Updates + Timespan
+
+#### Current State
+Pop-ups currently trigger only for `APPLICATION_RETURNED` and `CERT_READY`. Timespan ("5 minutes ago") shows in the bell dropdown but not in the pop-up itself.
+
+#### Changes
+
+##### [MODIFY] Backend Controllers — Insert notifications on ALL status transitions
+
+**File**: `ebpls-server/src/controllers/bplo.controller.js`
+- In the handler that moves status to `Under Review`: insert notification `{ type: 'APPLICATION_UNDER_REVIEW', title: 'Application Under Review', message: 'Your application is now being reviewed by the BPLO office.' }`
+- In the handler that moves status to `Verified`: insert notification `{ type: 'APPLICATION_VERIFIED', title: 'Application Verified', message: 'Your documents have been verified and forwarded to Treasury for assessment.' }`
+
+**File**: `ebpls-server/src/controllers/treasury.controller.js`
+- After assessment (status → `For Payment`): insert notification `{ type: 'APPLICATION_ASSESSED', title: 'Fees Assessed', message: 'Your fees have been assessed. Please proceed to payment.' }`
+- After OTC payment recorded (status → `Completed`): insert notification `{ type: 'PAYMENT_CONFIRMED', title: 'Payment Confirmed', message: 'Your payment has been confirmed. Your permit is ready for download.' }`
+
+**File**: `ebpls-server/src/controllers/webhook.controller.js`
+- After online payment confirmed (status → `Completed`): insert notification `{ type: 'PAYMENT_CONFIRMED', ... }` (same as OTC)
+
+##### [MODIFY] `NotificationPopup.jsx` — Expand type filter + add timespan
+
+**File**: `ebpls-frontend/src/components/shared/NotificationPopup.jsx`
+- Remove the type filter that restricts pop-ups to only `APPLICATION_RETURNED` and `CERT_READY`
+- Allow ALL notification types to trigger the pop-up overlay
+- Add timespan display to the pop-up body (e.g., "2 hours ago")
+- Each notification type gets a different icon/color:
+  - `APPLICATION_UNDER_REVIEW` → 🔍 blue
+  - `APPLICATION_VERIFIED` → ✅ green
+  - `APPLICATION_ASSESSED` → 📋 orange
+  - `PAYMENT_CONFIRMED` → 💳 green
+  - `APPLICATION_RETURNED` → ⚠️ red (existing)
+  - `CERT_READY` → 📄 green (existing)
+
+##### [MODIFY] `notificationStore.js` — Minor adjustment
+
+**File**: `ebpls-frontend/src/store/notificationStore.js`
+- Ensure `newNotificationIds` logic works for all notification types (currently it does, no filter needed — just verify)
+
+---
+
+### 6.2 — Email on Every Status Update with Timestamp
+
+#### Current State
+Most transitions already send emails. The only missing transition is `Pending → Under Review`.
+
+#### Changes
+
+##### [MODIFY] `constants.js` (backend) — Add new trigger
+
+**File**: `ebpls-server/src/utils/constants.js`
+- Add `APPLICATION_UNDER_REVIEW: 'APPLICATION_UNDER_REVIEW'` to `EMAIL_TRIGGERS`
+
+##### [MODIFY] `email.service.js` — Add template + timestamp to all templates
+
+**File**: `ebpls-server/src/services/email.service.js`
+- Add new `APPLICATION_UNDER_REVIEW` email template:
+  - Subject: "eBPLS — Your Application is Now Under Review"
+  - Body: "Your application {app_no} is now being reviewed by the BPLO office. Status changed on: {formatted_timestamp}"
+- Update ALL existing email templates to include a visible timestamp line: `"Status updated on: August 18, 2026 at 8:30 PM"`
+
+##### [MODIFY] `bplo.controller.js` — Dispatch email on Under Review
+
+**File**: `ebpls-server/src/controllers/bplo.controller.js`
+- In the handler where status changes to `Under Review`, add `dispatchEmail(APPLICATION_UNDER_REVIEW, ...)`
+
+---
+
+### 6.3 — Auto-Generate OTC Receipt/OR Number
+
+#### Current State
+- **Online**: Auto-generated as `PM-YYYYMMDD-000001`
+- **OTC**: Cashier manually types the physical booklet OR number
+
+#### Changes (Option B — Fully Automatic)
+
+##### [MODIFY] `treasury.controller.js` — Auto-generate OR number
+
+**File**: `ebpls-server/src/controllers/treasury.controller.js`
+- In `recordOTCPayment`: remove `or_number` from `req.body` validation
+- Auto-generate OR number using format: `OTC-YYYYMMDD-NNNNNN` (e.g., `OTC-20260818-000001`)
+- Generation logic:
+  1. Query `transactions` table for today's OTC count: `SELECT COUNT(*) FROM transactions WHERE or_number LIKE 'OTC-{today}-%'`
+  2. Increment and zero-pad to 6 digits
+  3. Insert with the generated OR number
+- Same approach for retirement OTC payments in `retirement.controller.js`
+
+##### [MODIFY] `CashierPOS.jsx` — Remove manual OR input
+
+**File**: `ebpls-frontend/src/screens/treasury/CashierPOS.jsx`
+- Remove the OR Number text input field
+- After successful payment, display the auto-generated OR number in a success confirmation card
+- Show the generated OR number prominently so the cashier can write it on the physical receipt if needed
+
+---
+
+### 6.4 — BPLO Dashboard — Status Filter Dropdown
+
+#### Current State
+The BPLO Dashboard shows 3 stat cards (Pending Review, Under Review, Total) but has no filters. All applications are always displayed together with only a sort toggle.
+
+#### Changes
+
+##### [MODIFY] `Dashboard.jsx` — Add status filter dropdown
+
+**File**: `ebpls-frontend/src/screens/bplo/Dashboard.jsx`
+- Add a dropdown filter above the Application Queue table:
+  ```
+  Filter by Status: [ All ▾ | Pending | Under Review ]
+  ```
+- Filter state: `selectedStatus` (default: `'All'`)
+- When a filter is selected, the rendered application list is filtered client-side by `status`
+- Place the dropdown next to the existing sort toggle for a clean layout
+- Optional: add a search input to find by business name or app number
+
+---
+
+### 6.5 — Fee Schedule — Collapsible Accordion Sections
+
+#### Current State
+All 13 fee categories are fully expanded on page load. The page is very long and difficult to navigate by scrolling.
+
+#### Changes
+
+##### [MODIFY] `FeeSchedule.jsx` — Add accordion toggle
+
+**File**: `ebpls-frontend/src/screens/shared/FeeSchedule.jsx`
+- Add state: `openCategories` (Set or object tracking which category IDs are expanded)
+- **All categories collapsed by default** on page load
+- Click a category header to expand/collapse its items table
+- Add a chevron icon (▶ collapsed / ▼ expanded) on each category header
+- Smooth expand/collapse animation (CSS transition on `max-height` or similar)
+- "Other Municipal Fees" section and "Special Rules" banner remain always visible (not collapsible)
+- Optional: "Expand All / Collapse All" toggle button at the top
+
+---
+
+### 6.6 — Clearance Queue — Status Filter Dropdown
+
+#### Current State
+The Clearance Queue only loads `Pending` clearances from the backend. The only existing filter is a barangay dropdown. No status filter exists.
+
+#### Changes
+
+##### [MODIFY] `barangay.controller.js` — Accept status query param
+
+**File**: `ebpls-server/src/controllers/barangay.controller.js`
+- Update `getPendingClearances` (or rename to `getClearances`) to accept an optional `status` query parameter
+- If `status` is provided, filter by it: `.eq('status', status)`
+- If `status` is not provided or is `'All'`, return all statuses (Pending, Issued, Rejected)
+- Update the query to not hardcode `.eq('status', 'Pending')`
+
+##### [MODIFY] `ClearanceQueue.jsx` — Add status filter dropdown
+
+**File**: `ebpls-frontend/src/screens/barangay/ClearanceQueue.jsx`
+- Add a status filter dropdown: `Filter by Status: [ All ▾ | Pending | Issued | Rejected ]`
+- Default: `'All'` (shows all clearances)
+- When status filter changes, re-fetch from backend with `?status=Pending` (or filter client-side if all data is already loaded)
+- Works alongside the existing barangay dropdown for compound filtering
+
+### Phase 6 Acceptance Criteria
+- [ ] Pop-up notifications fire for ALL status transitions (Under Review, Verified, Assessed, Paid, Returned, Cert Ready)
+- [ ] Pop-ups show timespan (e.g., "2 hours ago")
+- [ ] On login with unread notifications, most recent pop-up appears
+- [ ] New `APPLICATION_UNDER_REVIEW` email is sent when BPLO starts reviewing
+- [ ] All email templates include a "Status updated on: {date}" timestamp
+- [ ] OTC payment auto-generates OR number in `OTC-YYYYMMDD-NNNNNN` format
+- [ ] CashierPOS no longer has manual OR input field
+- [ ] Auto-generated OR number is displayed after successful payment
+- [ ] BPLO Dashboard has a status filter dropdown (All / Pending / Under Review)
+- [ ] Filter correctly shows only selected status applications
+- [ ] Fee Schedule page has all categories collapsed by default
+- [ ] Clicking a category header expands/collapses it with animation
+- [ ] Chevron icon toggles on expand/collapse
+- [ ] Special Rules and Other Municipal Fees remain always visible
+- [ ] Clearance Queue has a status filter dropdown (All / Pending / Issued / Rejected)
+- [ ] Clearance Queue filter works alongside barangay filter
+- [ ] No existing functionality is broken across all modules
+
+### 🔍 Human Test Checkpoint
+> **6.1**: Log in as Applicant with unread notifications → Verify pop-up appears with timespan → Have BPLO move app to "Under Review" → Verify pop-up appears within 30s with "Under Review" message.
+> **6.2**: Trigger a status change to "Under Review" → Check email inbox → Verify new email received with timestamp.
+> **6.3**: Log in as Treasury → Open CashierPOS → Record OTC payment → Verify OR input is gone → Verify auto-generated OR number appears in success message.
+> **6.4**: Log in as BPLO → Dashboard → Select "Pending" from filter dropdown → Verify only Pending apps shown → Select "All" → Verify all apps shown.
+> **6.5**: Navigate to Fee Schedule → Verify all categories are collapsed → Click "Manufacturers" → Verify it expands with items → Click again → Verify it collapses → Verify Special Rules and Other Municipal Fees are always visible.
+> **6.6**: Log in as Barangay → Clearance Queue → Select "Issued" from status filter → Verify only issued clearances shown → Combine with barangay filter → Verify compound filtering works.
+
+---
+
+## Phase 7 — Final Integration Testing & Full Frontend Test Plan
+
+### Goal
+Comprehensive end-to-end integration testing of all 6 phases, plus a **complete frontend test plan** for human execution.
 
 ---
 
@@ -841,23 +1045,27 @@ Comprehensive end-to-end integration testing of all 5 phases, plus a **complete 
 
 ---
 
-#### Module A: Treasury — Fee Schedule Page (13 tests)
+#### Module A: Treasury — Fee Schedule Page (17 tests)
 
 | # | Test Case | Steps | Expected Result | Status |
 |---|-----------|-------|-----------------|--------|
 | A1 | Sidebar visibility | Log in as Treasury → Check sidebar | "Fee Schedule" item visible | ☐ |
 | A2 | Page loads | Click "Fee Schedule" | Page renders with categorized schedule | ☐ |
 | A3 | Categories count | Count category sections | All 13 categories present | ☐ |
-| A4 | Manufacturers section | Expand "Manufacturers" | 15 entries (Air gun ₱200, Bakery ₱500, etc.) | ☐ |
-| A5 | Service Establishments | Expand "Service Establishments" | ~65 entries with correct fees | ☐ |
-| A6 | Piggery tiers | Expand "Piggery Farms" | 8 tiers: Exempt, ₱500, ₱600, ₱700, ₱800, ₱1,500, ₱2,000, ₱3,000 | ☐ |
-| A7 | Poultry Broiler tiers | Expand "Poultry — Broiler" | 8 tiers starting at Exempt (< 300 heads) | ☐ |
-| A8 | Exempt entries | Check piggery "< 10 heads" | Shows "EXEMPT" badge, ₱0.00 | ☐ |
-| A9 | Special rules banner | Check top of page | Shows surcharge (25%), duplicate (₱200), default (₱500) | ☐ |
-| A10 | Other Municipal Fees | Check "Other Municipal Fees" section | Shows Business Tax, Sanitary, Fire Safety, etc. | ☐ |
-| A11 | Search filter | Type "bakery" in search | Bakery Products row highlighted, others filtered | ☐ |
-| A12 | Category filter | Select "Financial Establishments" | Only financial entries shown | ☐ |
-| A13 | Existing Treasury intact | Navigate to Assessment Queue → Open assessment | AssessmentGrid works, CashierPOS works | ☐ |
+| A4 | All collapsed by default | Check initial state | All 13 categories are collapsed (headers only) | ☐ |
+| A5 | Expand category | Click "Manufacturers" header | Section expands, chevron rotates, 15 entries visible | ☐ |
+| A6 | Collapse category | Click "Manufacturers" header again | Section collapses with animation | ☐ |
+| A7 | Service Establishments | Expand "Service Establishments" | ~65 entries with correct fees | ☐ |
+| A8 | Piggery tiers | Expand "Piggery Farms" | 8 tiers: Exempt, ₱500, ₱600, ₱700, ₱800, ₱1,500, ₱2,000, ₱3,000 | ☐ |
+| A9 | Poultry Broiler tiers | Expand "Poultry — Broiler" | 8 tiers starting at Exempt (< 300 heads) | ☐ |
+| A10 | Exempt entries | Check piggery "< 10 heads" | Shows "EXEMPT" badge, ₱0.00 | ☐ |
+| A11 | Special rules always visible | Check top of page | Shows surcharge (25%), duplicate (₱200), default (₱500) — NOT collapsed | ☐ |
+| A12 | Other Municipal Fees always visible | Check section | Shows Business Tax, Sanitary, Fire Safety — NOT collapsed | ☐ |
+| A13 | Search filter | Type "bakery" in search | Bakery Products row highlighted, others filtered | ☐ |
+| A14 | Category filter | Select "Financial Establishments" | Only financial entries shown | ☐ |
+| A15 | Auto-generated OTC OR number | CashierPOS → Record OTC payment | No manual OR input; OR auto-generated as OTC-YYYYMMDD-NNNNNN | ☐ |
+| A16 | OR number displayed | After OTC payment success | Auto-generated OR number shown in success confirmation | ☐ |
+| A17 | Existing Treasury intact | Navigate to Assessment Queue → Open assessment | AssessmentGrid works | ☐ |
 
 ---
 
@@ -885,25 +1093,30 @@ Comprehensive end-to-end integration testing of all 5 phases, plus a **complete 
 
 ---
 
-#### Module C: In-App Pop-Up Notifications (15 tests)
+#### Module C: In-App Pop-Up Notifications (20 tests)
 
 | # | Test Case | Steps | Expected Result | Status |
 |---|-----------|-------|-----------------|--------|
 | C1 | Bell visible | Log in as Applicant | Bell icon in header | ☐ |
 | C2 | Zero badge | Fresh login, no notifications | No badge or "0" | ☐ |
 | C3 | Return creates notification | BPLO returns app with remarks | Notification row created | ☐ |
-| C4 | Pop-up appears | Wait on Applicant tab | Pop-up within 30s: "Application Returned" | ☐ |
+| C4 | Pop-up for returned | Wait on Applicant tab | Pop-up within 30s: "Application Returned" with ⚠️ red | ☐ |
 | C5 | Pop-up shows remarks | Check pop-up content | BPLO remarks displayed | ☐ |
-| C6 | Pop-up navigation | Click "View Application" | Navigated to StatusTracker | ☐ |
-| C7 | Bell badge updates | Check bell after notification | Badge shows "1" | ☐ |
-| C8 | Dropdown shows notification | Click bell | Notification in dropdown list | ☐ |
-| C9 | Mark as read | Click notification in dropdown | Marked read, badge decrements | ☐ |
-| C10 | Pop-up auto-dismiss | Don't interact with pop-up | Dismisses after ~15s | ☐ |
-| C11 | Email also sent | Check email inbox | APPLICATION_RETURNED email received | ☐ |
-| C12 | Multiple notifications | Return two apps | Badge shows "2", both in dropdown | ☐ |
-| C13 | Polling stops on logout | Logout → Check network tab | No more polling requests | ☐ |
-| C14 | Other roles no bell | Log in as Treasury | No notification bell | ☐ |
-| C15 | Toasts still work | Trigger a form error | Standard toast appears normally | ☐ |
+| C6 | Pop-up shows timespan | Check pop-up content | Shows "2 minutes ago" or similar | ☐ |
+| C7 | Pop-up for Under Review | BPLO starts reviewing app | Pop-up: "Application Under Review" with 🔍 blue | ☐ |
+| C8 | Pop-up for Verified | BPLO verifies app | Pop-up: "Application Verified" with ✅ green | ☐ |
+| C9 | Pop-up for Assessed | Treasury assesses app | Pop-up: "Fees Assessed" with 📋 orange | ☐ |
+| C10 | Pop-up for Payment Confirmed | Payment recorded | Pop-up: "Payment Confirmed" with 💳 green | ☐ |
+| C11 | Pop-up navigation | Click "View Application" | Navigated to StatusTracker | ☐ |
+| C12 | Bell badge updates | Check bell after notification | Badge shows correct unread count | ☐ |
+| C13 | Dropdown shows notification | Click bell | Notification in dropdown list | ☐ |
+| C14 | Mark as read | Click notification in dropdown | Marked read, badge decrements | ☐ |
+| C15 | Pop-up auto-dismiss | Don't interact with pop-up | Dismisses after ~15s | ☐ |
+| C16 | Email for Under Review | Check email inbox | APPLICATION_UNDER_REVIEW email with timestamp | ☐ |
+| C17 | Email timestamps | Check any status email | "Status updated on: {date}" line present | ☐ |
+| C18 | Multiple notifications | Trigger two status changes | Badge shows "2", both in dropdown | ☐ |
+| C19 | Polling stops on logout | Logout → Check network tab | No more polling requests | ☐ |
+| C20 | Toasts still work | Trigger a form error | Standard toast appears normally | ☐ |
 
 ---
 
@@ -947,23 +1160,40 @@ Comprehensive end-to-end integration testing of all 5 phases, plus a **complete 
 
 ---
 
-#### Module F: Cross-Module Integration & Regression (13 tests)
+#### Module F: BPLO Dashboard & Clearance Queue Filters (8 tests)
 
 | # | Test Case | Steps | Expected Result | Status |
 |---|-----------|-------|-----------------|--------|
-| F1 | Full E2E: New Application | Register → Submit → Verify → Assess → OTC Pay → Download | Complete lifecycle | ☐ |
-| F2 | Full E2E: With Return | Submit → Return (check pop-up!) → Resubmit → Verify → Assess → Online Pay | Return notification + payment works | ☐ |
-| F3 | Full E2E: Fee breakdown throughout | Submit → Assess → View breakdown → Pay Online → Completed | Breakdown visible at each relevant stage | ☐ |
-| F4 | Full E2E: Cert notification | Complete app → BPLO notifies → Applicant gets popup + email → Downloads | Full chain works | ☐ |
-| F5 | Fee schedule accuracy | Compare Fee Schedule page with Revenue Code document | All entries match the official document | ☐ |
-| F6 | Auth regression | Login → Navigate all modules → Logout → Login | Sessions work correctly | ☐ |
-| F7 | Role isolation | Login as each role | Each role sees only their pages | ☐ |
-| F8 | Barangay untouched | Process a clearance | Clearance works | ☐ |
-| F9 | Admin untouched | View Audit Logs, Master Data, Users | All admin pages work | ☐ |
-| F10 | Retirement untouched | Submit retirement request | Retirement works | ☐ |
-| F11 | Email health | Admin → Email Logs | All new triggers appear and send | ☐ |
-| F12 | Mobile responsive | Key pages on 375px | All pages usable | ☐ |
-| F13 | Browser compatibility | Chrome + Edge | All features work | ☐ |
+| F1 | BPLO filter dropdown visible | Log in as BPLO → Dashboard | Status filter dropdown present (All / Pending / Under Review) | ☐ |
+| F2 | Filter Pending | Select "Pending" from dropdown | Only Pending applications shown | ☐ |
+| F3 | Filter Under Review | Select "Under Review" | Only Under Review applications shown | ☐ |
+| F4 | Filter All | Select "All" | All applications shown | ☐ |
+| F5 | Clearance filter dropdown | Log in as Barangay → Clearance Queue | Status filter dropdown present (All / Pending / Issued / Rejected) | ☐ |
+| F6 | Clearance filter Pending | Select "Pending" | Only Pending clearances shown | ☐ |
+| F7 | Clearance filter Issued | Select "Issued" | Only Issued clearances shown | ☐ |
+| F8 | Clearance compound filter | Select "Pending" + specific barangay | Both filters applied simultaneously | ☐ |
+
+---
+
+#### Module G: Cross-Module Integration & Regression (15 tests)
+
+| # | Test Case | Steps | Expected Result | Status |
+|---|-----------|-------|-----------------|--------|
+| G1 | Full E2E: New Application | Register → Submit → Verify → Assess → OTC Pay → Download | Complete lifecycle with auto-OR | ☐ |
+| G2 | Full E2E: With Return | Submit → Return (check pop-up!) → Resubmit → Verify → Assess → Online Pay | Return notification + payment works | ☐ |
+| G3 | Full E2E: All notifications | Submit → Each status change triggers pop-up + email with timestamp | Pop-ups for every transition | ☐ |
+| G4 | Full E2E: Fee breakdown throughout | Submit → Assess → View breakdown → Pay Online → Completed | Breakdown visible at each relevant stage | ☐ |
+| G5 | Full E2E: Cert notification | Complete app → BPLO notifies → Applicant gets popup + email → Downloads | Full chain works | ☐ |
+| G6 | Fee schedule accuracy | Compare Fee Schedule page with Revenue Code document | All entries match the official document | ☐ |
+| G7 | Fee schedule accordion | Navigate to Fee Schedule → Expand/collapse categories | All accordion interactions smooth | ☐ |
+| G8 | Auth regression | Login → Navigate all modules → Logout → Login | Sessions work correctly | ☐ |
+| G9 | Role isolation | Login as each role | Each role sees only their pages | ☐ |
+| G10 | Barangay clearance with filter | Process a clearance → Check filter | Clearance works + filter works | ☐ |
+| G11 | Admin untouched | View Audit Logs, Master Data, Users | All admin pages work | ☐ |
+| G12 | Retirement untouched | Submit retirement request | Retirement works | ☐ |
+| G13 | Email health | Admin → Email Logs | All triggers (incl. UNDER_REVIEW) appear and send | ☐ |
+| G14 | Mobile responsive | Key pages on 375px | All pages usable (accordion, filters, popups) | ☐ |
+| G15 | Browser compatibility | Chrome + Edge | All features work | ☐ |
 
 ---
 
@@ -971,13 +1201,14 @@ Comprehensive end-to-end integration testing of all 5 phases, plus a **complete 
 
 | Module | Total Tests | Pass | Fail | Notes |
 |--------|:-----------:|:----:|:----:|-------|
-| A — Treasury Fee Schedule | 13 | | | |
+| A — Treasury Fee Schedule + Accordion + Auto-OR | 17 | | | |
 | B — Applicant Assessment | 17 | | | |
-| C — Pop-Up Notifications | 15 | | | |
+| C — Pop-Up Notifications (All Statuses) + Email | 20 | | | |
 | D — Payment Breakdown | 10 | | | |
 | E — Cert Ready Notification | 16 | | | |
-| F — Integration & Regression | 13 | | | |
-| **TOTAL** | **84** | | | |
+| F — BPLO Dashboard & Clearance Filters | 8 | | | |
+| G — Integration & Regression | 15 | | | |
+| **TOTAL** | **103** | | | |
 
 ---
 
@@ -985,22 +1216,25 @@ Comprehensive end-to-end integration testing of all 5 phases, plus a **complete 
 
 ```mermaid
 graph LR
-    P1["Phase 1\nFee Schedule DB\n+ Treasury Page\n(Medium Risk)"] --> P2["Phase 2\nApplicant\nBreakdown View\n(Low Risk)"]
-    P2 --> P3["Phase 3\nIn-App\nNotifications\n(Medium Risk)"]
-    P3 --> P4["Phase 4\nPayment\nBreakdown\n(Low Risk)"]
-    P4 --> P5["Phase 5\nBPLO Cert\nNotification\n(Medium Risk)"]
-    P5 --> P6["Phase 6\nIntegration\nTesting\n(84 Test Cases)"]
+    P1["Phase 1\nFee Schedule DB\n+ Treasury Page\n✅ Done"] --> P2["Phase 2\nApplicant\nBreakdown View\n✅ Done"]
+    P2 --> P3["Phase 3\nIn-App\nNotifications\n✅ Done"]
+    P3 --> P4["Phase 4\nPayment\nBreakdown\n✅ Done"]
+    P4 --> P5["Phase 5\nBPLO Cert\nNotification\n🔄 In Progress"]
+    P5 --> P6["Phase 6\nUX + Auto-OR\n+ Filters\n(Low-Medium Risk)"]
+    P6 --> P7["Phase 7\nIntegration\nTesting\n(103 Test Cases)"]
 ```
 
 | Phase | Modules Touched | Risk Level | Estimated Effort | Key Risk |
 |-------|----------------|:----------:|:----------------:|----------|
-| 1 | Treasury + DB (new tables + ~200 seed entries) | 🟡 Medium | ~6-8 hours | Revenue Code data accuracy, tier logic |
-| 2 | Applicant + Backend API | 🟢 Low | ~4-5 hours | Ownership security, computation description |
-| 3 | Applicant + BPLO + Backend + DB | 🟡 Medium | ~6-8 hours | Polling performance, notification timing |
-| 4 | Applicant (StatusTracker only) | 🟢 Low | ~2-3 hours | Layout inside blue card |
-| 5 | BPLO + Backend + DB + Email | 🟡 Medium | ~5-6 hours | New workflow for BPLO staff |
-| 6 | All modules (testing only) | 🟢 Low | ~4-5 hours | Test execution time |
-| | | | **~27-35 hours** | |
+| 1 | Treasury + DB (new tables + ~200 seed entries) | 🟡 Medium | ~6-8 hours | ✅ Done |
+| 1.5 | Applicant (Step 3 conditional inputs) | 🟢 Low | ~3-4 hours | ✅ Done |
+| 2 | Applicant + Backend API | 🟢 Low | ~4-5 hours | ✅ Done |
+| 3 | Applicant + BPLO + Backend + DB | 🟡 Medium | ~6-8 hours | ✅ Done |
+| 4 | Applicant (StatusTracker only) | 🟢 Low | ~2-3 hours | ✅ Done |
+| 5 | BPLO + Backend + DB + Email | 🟡 Medium | ~5-6 hours | 🔄 In Progress |
+| 6 | Applicant + Treasury + BPLO + Barangay | 🟢 Low | ~12-18 hours | UX polish, filter logic |
+| 7 | All modules (testing only) | 🟢 Low | ~5-6 hours | Test execution time |
+| | | | **~44-58 hours** | |
 
 ---
 
@@ -1034,6 +1268,18 @@ graph LR
 | 5 | `constants.js` (backend) | MODIFY |
 | 5 | `CompletedQueue.jsx` | **NEW** |
 | 5 | `App.jsx` | MODIFY (route) |
+| 6 | `bplo.controller.js` | MODIFY (insert notifications on verify/under review) |
+| 6 | `treasury.controller.js` | MODIFY (insert notifications on assess/payment + auto-OR) |
+| 6 | `webhook.controller.js` | MODIFY (insert notification on online payment) |
+| 6 | `NotificationPopup.jsx` | MODIFY (expand types + add timespan) |
+| 6 | `notificationStore.js` | MODIFY (verify all types trigger popup) |
+| 6 | `constants.js` (backend) | MODIFY (add APPLICATION_UNDER_REVIEW trigger) |
+| 6 | `email.service.js` | MODIFY (new template + timestamps on all templates) |
+| 6 | `CashierPOS.jsx` | MODIFY (remove manual OR input, show auto-generated) |
+| 6 | `Dashboard.jsx` | MODIFY (add status filter dropdown) |
+| 6 | `FeeSchedule.jsx` | MODIFY (accordion/collapsible sections) |
+| 6 | `barangay.controller.js` | MODIFY (accept status query param) |
+| 6 | `ClearanceQueue.jsx` | MODIFY (add status filter dropdown) |
 
 ---
 
