@@ -50,6 +50,7 @@ const StatusTracker = () => {
   const [assessmentBreakdown, setAssessmentBreakdown] = useState(null);
   const [isBreakdownLoading, setIsBreakdownLoading] = useState(false);
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
+  const [isPaymentBreakdownExpanded, setIsPaymentBreakdownExpanded] = useState(false);
 
   useEffect(() => {
     if (appId && currentStatus) {
@@ -365,6 +366,68 @@ const StatusTracker = () => {
             <div className="text-center sm:text-right">
               <p className="text-[10px] uppercase font-bold text-blue-200 tracking-widest">Total Amount Due</p>
               <p className="text-3xl font-black font-mono">₱{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            </div>
+          </div>
+
+          {/* Phase 4: Payment Breakdown */}
+          <div className="mb-6">
+            <button
+              onClick={() => setIsPaymentBreakdownExpanded(!isPaymentBreakdownExpanded)}
+              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 flex items-center justify-between text-white hover:bg-white/20 transition-colors"
+            >
+              <span className="font-semibold text-sm">
+                {isPaymentBreakdownExpanded ? 'Hide Fee Breakdown' : 'View Fee Breakdown'}
+              </span>
+              {isPaymentBreakdownExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+            
+            <div 
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                isPaymentBreakdownExpanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'
+              }`}
+            >
+              <div className="bg-blue-700/50 rounded-xl p-4 border border-white/10">
+                {isBreakdownLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 size={24} className="text-blue-200 animate-spin" />
+                  </div>
+                ) : !assessmentBreakdown ? (
+                  <p className="text-center text-blue-200 text-sm py-2">Fee details unavailable</p>
+                ) : !assessmentBreakdown.line_items || assessmentBreakdown.line_items.length === 0 ? (
+                  <p className="text-center text-blue-200 text-sm py-2">No fee items found.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {assessmentBreakdown.line_items.map((item, idx) => {
+                      let displayName = item.name;
+                      if (item.name === "Mayor's Permit Fee" && item.computation) {
+                        const parts = item.computation.split('—');
+                        if (parts.length > 1) {
+                            const businessType = parts[1].split('(')[0].trim();
+                            if (businessType) displayName = `${item.name} (${businessType})`;
+                        } else {
+                            const withoutRc = item.computation.split('(Revenue Code:')[0].trim();
+                            if (withoutRc) displayName = `${item.name} (${withoutRc})`;
+                        }
+                      }
+                      
+                      return (
+                        <div key={idx} className="flex justify-between items-start gap-4 pb-3 border-b border-white/20 last:border-0 last:pb-0">
+                          <p className="text-sm text-white font-medium flex-1">{displayName}</p>
+                          <p className="font-mono text-sm text-white/90 whitespace-nowrap pt-0.5">
+                            ₱ {Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      );
+                    })}
+                    <div className="pt-3 border-t border-white/40 flex justify-between items-center mt-2">
+                      <p className="font-bold text-white text-sm">TOTAL</p>
+                      <p className="font-mono font-bold text-white">
+                        ₱ {Number(assessmentBreakdown.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
