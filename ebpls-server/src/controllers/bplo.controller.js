@@ -28,7 +28,7 @@ const _resolveApplicantForEmail = async (applicationNo) => {
         taxpayers (
           first_name,
           last_name,
-          users ( email )
+          users ( email, user_id )
         )
       )
     `)
@@ -47,6 +47,7 @@ const _resolveApplicantForEmail = async (applicationNo) => {
 
   return {
     email:        user.email,
+    userId:       user.user_id,
     name:         `${taxpayer.first_name} ${taxpayer.last_name}`,
     businessName: data.businesses?.business_name || 'your business',
   };
@@ -721,6 +722,20 @@ const returnApplication = async (req, res, next) => {
           remarks:      input.remarks,
         },
       });
+
+      // Phase 3: Insert in-app notification
+      if (applicant.userId) {
+        supabaseAdmin.from('notifications').insert({
+          user_id:        applicant.userId,
+          application_no: applicationNo,
+          type:           'APPLICATION_RETURNED',
+          title:          'Application Returned',
+          message:        input.remarks,
+          action_url:     `/applicant/status?id=${applicationNo}`,
+        }).then(({ error }) => {
+          if (error) console.error('[bplo.controller] Failed to insert return notification:', error.message);
+        });
+      }
     }
   } catch (err) {
     return next(err);

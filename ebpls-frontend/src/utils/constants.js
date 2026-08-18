@@ -201,6 +201,10 @@ export const API_ENDPOINTS = Object.freeze({
   ADMIN_APPLICATIONS: '/api/admin/applications',
   ADMIN_EMAIL_LOGS: '/api/admin/email-logs',
   ADMIN_AUDIT_LOGS: '/api/admin/audit-logs',
+  // Notifications (Phase 3)
+  NOTIFICATIONS_UNREAD: '/api/notifications/unread',
+  NOTIFICATIONS_MARK_READ: (id) => `/api/notifications/${id}/read`,
+  NOTIFICATIONS_READ_ALL: '/api/notifications/read-all',
 });
 
 // =========================================

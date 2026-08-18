@@ -8,6 +8,9 @@ import DraftResumePrompt from '../components/shared/DraftResumePrompt';
 import LogoutConfirmModal from '../components/shared/LogoutConfirmModal';
 import useApplicationStore from '../store/applicationStore';
 import useAuthStore from '../store/authStore';
+import useNotificationStore from '../store/notificationStore';
+import NotificationBell from '../components/shared/NotificationBell';
+import NotificationPopup from '../components/shared/NotificationPopup';
 import apiClient from '../utils/apiClient';
 import { API_ENDPOINTS, ROUTES } from '../utils/constants';
 import useAuth from '../hooks/useAuth';
@@ -20,6 +23,7 @@ const ApplicantLayout = () => {
   // Draft detection logic
   const draft_id = useApplicationStore((state) => state.draft_id);
   const loadDraft = useApplicationStore((state) => state.loadDraft);
+  const { startPolling, stopPolling } = useNotificationStore();
   const [isPromptOpen, setIsPromptOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -45,6 +49,9 @@ const ApplicantLayout = () => {
     if (!draft_id) {
       fetchExistingDraft();
     }
+
+    startPolling();
+    return () => stopPolling();
   }, []); // Run only once on mount
 
   const handleLogoutConfirm = () => {
@@ -61,6 +68,8 @@ const ApplicantLayout = () => {
         onConfirm={handleLogoutConfirm}
         onCancel={() => setShowLogoutModal(false)}
       />
+
+      <NotificationPopup />
       
       {/* Universal Top Header */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 px-4 py-3 flex items-center justify-between">
@@ -92,6 +101,8 @@ const ApplicantLayout = () => {
               </span>
             </div>
           </div>
+
+          <NotificationBell />
 
           <button 
             id="applicant-logout-btn"
