@@ -1,10 +1,14 @@
 # eBPLS Agile Implementation Plan
 
 **Electronic Business Permits and Licensing System — BOSS & E-Resibo**
-Municipality of Liliw | **v5.0 — Codebase Alignment Update**
+Municipality of Liliw | **v6.0 — July 2026 Adviser Updates Integrated**
 
 ---
 
+> **What changed in v6.0**
+> The eBPLS core system has been fully implemented. A massive UX and transparency update was completed based on Adviser feedback. These changes are documented in full detail inside `eBPLS_July2026_Adviser_Changes_Implementation_Plan.md`. 
+> **Key Additions:** Digital Fee Schedule, Dynamic Tiered Form Inputs, Transparent Assessment Breakdown, Auto-generated OTC OR Numbers, and a Universal Notification System (In-app popups & emails for all status changes).
+>
 > **What changed in v5.0**
 > All phases (4 through 11) have been marked as ✅ Done to accurately reflect the codebase, which contains all controllers, routes, and screens for these modules.
 >

@@ -3,23 +3,24 @@
 **eBPLS (Electronic Business Permits and Licensing System)**
 BOSS & E-Resibo — Municipality of Liliw
 
-**Version 5.0** | Revised Requirements System (Phase 8 completion)
+**Version 3.0** | July 2026 Adviser Changes (Phase 1 to 6)
 
-> **What changed in v5.0**
-> 1. Overhauled Requirements Checklist to be dynamic and conditional.
-> 2. Added `requirement_conditions` table and updated `requirement_types` schema.
-> 3. Added `is_renting` to `businesses` table.
-> 4. Added Requirement Resolution Algorithm and API documentation.
->
-> **What changed in v4.0**
-> 1. Payment modes (Annually, Bi-Annually, Quarterly) have been completely removed.
-> 2. Added "Owner's Valid ID" (Back-to-back) to requirement types.
-> 3. Added `fixed_amount` to `fee_types`.
-> 4. Added Admin module setup, health check RPCs, and system settings lookup.
-> 5. Added logic to reset clearance status on application resubmission.
->
 > **What changed in v3.0**
-> PayMongo online payment has been added as an optional payment channel alongside the existing OTC flow. The `transactions` table has been extended, a new `payment_gateway_logs` audit table has been added, and the application state machine now includes a `PaymentProcessing` intermediate state for the online path. All OTC logic is unchanged.
+> 1. Added definitions for new tables: `fee_categories`, `fee_items`, `fee_tiers`, and `notifications`.
+> 2. Added API endpoints for fee schedule, notifications, and application readiness.
+> 3. Dynamic conditional inputs for UAF Step 3 based on tiered fees.
+> 4. Auto-generation of OTC receipt numbers (`OTC-YYYYMMDD-NNNNNN`).
+> 5. Emails and in-app pop-ups are dispatched on every state transition.
+> 6. Preserved existing v2.0 PayMongo info; PayMongo online payment remains an optional payment channel alongside the existing OTC flow.
+
+> **What changed in v2.0**
+> 1. Integrated processing and issuance of Barangay Clearance.
+> 2. Business Retirement / Cessation processing.
+> 3. Printing of Business Permits per line of business.
+> 4. Draft/autosave for UAF wizard.
+> 5. Email notification system with defined triggers.
+> 6. Application status state machine with defined transitions.
+> 7. System audit logging for Data Privacy Act compliance.
 
 ---
 
@@ -40,6 +41,7 @@ BOSS & E-Resibo — Municipality of Liliw
 
 **Apply**
 - Unified Application Form (UAF) — multi-step digital wizard
+- **Dynamic conditional inputs for UAF Step 3 based on tiered fees**
 - Integrated Barangay Clearance processing via checkbox
 - Interactive business location pinning via Leaflet.js + OpenStreetMap
 - Secure document uploading to Supabase Storage
@@ -48,7 +50,7 @@ BOSS & E-Resibo — Municipality of Liliw
 **Pay**
 - Automated fee assessment with manual override capability
 - Tax Order of Payment (TOP) generation and email delivery
-- **Over-The-Counter (OTC) payment** recording by LGU cashier (Cash / Manager Check)
+- **Over-The-Counter (OTC) payment** recording by LGU cashier (Cash / Manager Check) with auto-generated receipt numbers (`OTC-YYYYMMDD-NNNNNN`)
 - **Online payment via PayMongo** — optional channel for GCash, Card, and Payment Links
 - Both payment channels produce the same outcome: Permit + E-Resibo generation
 
@@ -70,12 +72,14 @@ BOSS & E-Resibo — Municipality of Liliw
 
 ### 1.3 Features Added in v3.0
 
-- **PayMongo online payment** — optional channel alongside OTC
-- `PaymentProcessing` intermediate application state (online path only)
-- `payment_gateway_logs` table for webhook audit and idempotency
-- Extended `transactions` table (`GCash`, `Card`, `Online` tendered types; PayMongo reference columns)
-- Webhook endpoint with HMAC-SHA256 signature verification
-- Polling UI in Applicant Status Tracker for async payment confirmation
+- **Data Dictionary Additions**: `fee_categories`, `fee_items`, `fee_tiers`, and `notifications` tables.
+- **Dynamic conditional inputs for UAF Step 3 based on tiered fees**.
+- **Auto-generation of OTC receipt numbers (`OTC-YYYYMMDD-NNNNNN`)**.
+- **Emails and in-app pop-ups dispatched on every state transition**.
+- **API Endpoints**: `GET /api/treasury/fee-schedule`, `GET /api/notifications/unread`, `PUT /api/notifications/:id/read`, `POST /api/bplo/applications/:app_no/notify-ready`.
+- `PaymentProcessing` intermediate application state (online path only).
+- `payment_gateway_logs` table for webhook audit and idempotency.
+- Webhook endpoint with HMAC-SHA256 signature verification.
 
 ---
 
@@ -87,24 +91,25 @@ BOSS & E-Resibo — Municipality of Liliw
 
 ### 2.1 System Flow
 
-1. Applicant registers, creates a business profile, and submits the UAF via the applicant portal.
+1. Applicant registers, creates a business profile, and submits the UAF via the applicant portal. **Dynamic conditional inputs are presented during UAF Step 3 based on tiered fee requirements.**
 2. The system saves a draft at each step; submission moves the application to `Pending` status.
 3. BPLO reviews uploaded documents using the split-screen verification panel and approves or returns the application.
 4. Upon full verification, the application is routed to Treasury for fee assessment.
 5. Treasury reviews the auto-calculated fees, overrides if needed, and generates the Tax Order of Payment (TOP).
 6. The system emails the TOP to the applicant and sets the status to `ForPayment`.
 7. **Payment — two paths (applicant chooses):**
-   - **OTC Path:** Applicant visits the municipal hall and pays at the cashier's window. Cashier logs payment via the POS interface with OR number. Status transitions directly to `Paid`.
+   - **OTC Path:** Applicant visits the municipal hall and pays at the cashier's window. Cashier logs payment via the POS interface. **System auto-generates OR number in format `OTC-YYYYMMDD-NNNNNN`**. Status transitions directly to `Paid`.
    - **Online Path:** Applicant clicks "Pay Online via PayMongo" in the Status Tracker. System creates a Payment Intent, transitions status to `PaymentProcessing`, and redirects applicant to PayMongo checkout. PayMongo fires a `payment.paid` webhook upon success. Webhook handler verifies signature, checks idempotency, records payment, and transitions status to `Paid`.
 8. The system generates the E-Resibo, Business Permit(s), and Barangay Clearance for download.
 9. The applicant receives an email notification that documents are ready.
+10. **State Transitions:** Emails and in-app pop-ups are dispatched on every state transition throughout the flow.
 
 ### 2.2 Payment Channels
 
 | Channel | Initiated By | Path | OR Number Format |
 |---|---|---|---|
-| Cash (OTC) | Treasury Cashier | ForPayment → Paid | Cashier-issued (manual entry) |
-| Manager Check (OTC) | Treasury Cashier | ForPayment → Paid | Cashier-issued (manual entry) |
+| Cash (OTC) | Treasury Cashier | ForPayment → Paid | `OTC-YYYYMMDD-NNNNNN` |
+| Manager Check (OTC) | Treasury Cashier | ForPayment → Paid | `OTC-YYYYMMDD-NNNNNN` |
 | GCash (Online) | Applicant | ForPayment → PaymentProcessing → Paid | `PM-{YYYYMMDD}-{6-digit-seq}` |
 | Card (Online) | Applicant | ForPayment → PaymentProcessing → Paid | `PM-{YYYYMMDD}-{6-digit-seq}` |
 | PayMongo Link (Online) | Applicant | ForPayment → PaymentProcessing → Paid | `PM-{YYYYMMDD}-{6-digit-seq}` |
@@ -133,8 +138,6 @@ BOSS & E-Resibo — Municipality of Liliw
 ## 4. Master Database Schema (Normalized 3NF)
 
 All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enforced at the database level.
-
-> **This section reflects the authoritative schema including all migrations through `033_remove_payment_modes.sql`.**
 
 ### 4.1 Authentication & Authorization
 
@@ -223,8 +226,8 @@ All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enfo
 | created_at | TIMESTAMP | DEFAULT NOW() | |
 | updated_at | TIMESTAMP | DEFAULT NOW() | Auto-updated via trigger |
 
-**Application status ENUM values (updated in v3.0):**
-`Draft`, `Pending`, `UnderReview`, `Returned`, `Verified`, `ForAssessment`, `Assessed`, `ForPayment`, **`PaymentProcessing`**, `Paid`, `Completed`
+**Application status ENUM values:**
+`Draft`, `Pending`, `UnderReview`, `Returned`, `Verified`, `ForAssessment`, `Assessed`, `ForPayment`, `PaymentProcessing`, `Paid`, `Completed`
 
 **Table: application_drafts**
 
@@ -317,6 +320,37 @@ All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enfo
 
 ### 4.5 Treasury & Payment
 
+**Table: fee_categories** *(New in v3.0)*
+
+| Column | Type | Description |
+|---|---|---|
+| id | INT | PK |
+| name | VARCHAR | Local Taxes, Regulatory Fees, Processing Fees |
+| description | TEXT | |
+| is_active | BOOLEAN | Default: true |
+
+**Table: fee_items** *(New in v3.0)*
+
+| Column | Type | Description |
+|---|---|---|
+| id | INT | PK |
+| category_id | INT | FK → fee_categories |
+| name | VARCHAR | Mayor's Permit, Garbage Fee, etc. |
+| computation_basis | VARCHAR | Tiered / Fixed / Percentage |
+| is_active | BOOLEAN | Default: true |
+
+**Table: fee_tiers** *(New in v3.0)*
+
+| Column | Type | Description |
+|---|---|---|
+| id | INT | PK |
+| fee_item_id | INT | FK → fee_items |
+| min_value | NUMERIC | Minimum threshold |
+| max_value | NUMERIC | Maximum threshold |
+| base_amount | NUMERIC | Fixed amount for this tier |
+| excess_rate | NUMERIC | Rate for values above base |
+| is_active | BOOLEAN | Default: true |
+
 **Table: assessments**
 
 | Column | Type | Description |
@@ -334,43 +368,31 @@ All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enfo
 |---|---|---|
 | id | UUID | PK |
 | assessment_id | UUID | FK → assessments |
-| fee_type_id | INT | FK → fee_types |
+| fee_type_id | INT | FK → fee_types (legacy) or fee_items (v3.0) |
 | amount | NUMERIC | Computed or overridden value |
 | is_override | BOOLEAN | Default: false |
 | override_reason | TEXT | Required when overriding |
 
-**Table: fee_types**
-
-| Column | Type | Description |
-|---|---|---|
-| id | INT | PK |
-| name | VARCHAR | Mayor's Permit, Business Tax, Sanitary, Zoning, Garbage, Environmental, Weight & Measures, Fire Safety |
-| computation_basis | VARCHAR | Fixed / Gross_Sales / Percentage |
-| percentage_of_id | INT | Self-FK (for Fire Safety → 10% of Mayor's Permit) |
-| percentage_value | NUMERIC | |
-| is_active | BOOLEAN | Default: true |
-
-**Table: transactions** *(Updated in v3.0)*
+**Table: transactions**
 
 | Column | Type | Description |
 |---|---|---|
 | transaction_id | UUID | PK |
 | assessment_id | UUID | FK → assessments |
-| or_number | VARCHAR | Cashier OR or `PM-{YYYYMMDD}-{seq}` for online |
+| or_number | VARCHAR | `OTC-YYYYMMDD-NNNNNN` for OTC or `PM-{YYYYMMDD}-{seq}` for online |
 | amount_due | NUMERIC | |
 | amount_tendered | NUMERIC | |
 | change_amount | NUMERIC | Default: 0.00 |
-| tendered_type | ENUM | **Cash, Manager Check, GCash, Card, Online** |
+| tendered_type | ENUM | Cash, Manager Check, GCash, Card, Online |
 | check_number | VARCHAR | Manager Check only |
 | bank_name | VARCHAR | Manager Check only |
-| **paymongo_payment_intent_id** | **VARCHAR** | **UNIQUE — PayMongo Payment Intent reference** |
-| **paymongo_payment_id** | **VARCHAR** | **UNIQUE — PayMongo confirmed Payment ID** |
-| **payment_channel** | **VARCHAR** | **gcash / card / paymongo_link / etc.** |
+| paymongo_payment_intent_id | VARCHAR | UNIQUE — PayMongo Payment Intent reference |
+| paymongo_payment_id | VARCHAR | UNIQUE — PayMongo confirmed Payment ID |
+| payment_channel | VARCHAR | gcash / card / paymongo_link / etc. |
 | cashier_id | UUID | FK → users (null for online-initiated payments) |
 | paid_at | TIMESTAMP | Default: NOW() |
 
-
-### 4.6 Payment Gateway Audit *(New in v3.0)*
+### 4.6 Payment Gateway Audit
 
 **Table: payment_gateway_logs**
 
@@ -443,7 +465,18 @@ All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enfo
 
 > **Backward Compatibility:** Existing in-progress applications retain their original `doc_verifications` rows and are unaffected by the new schema.
 
-### 4.9 System Tables
+### 4.9 System Tables & Notifications
+
+**Table: notifications** *(New in v3.0)*
+
+| Column | Type | Description |
+|---|---|---|
+| id | UUID | PK |
+| user_id | UUID | FK → users |
+| title | VARCHAR | Notification title |
+| message | TEXT | Detailed message content |
+| read | BOOLEAN | Default: false |
+| created_at | TIMESTAMP | Default: NOW() |
 
 **Table: email_notifications**
 
@@ -480,6 +513,7 @@ All UUIDs are generated server-side. Timestamps default to NOW(). Enums are enfo
 ## 5. Application State Machine
 
 > The backend **MUST reject** any status transition not listed below. All violations are logged in `audit_logs`.
+> **Emails and in-app pop-ups are dispatched on every state transition.**
 
 ```
 [*] → Draft (Autosave)
@@ -493,10 +527,10 @@ Verified → ForAssessment (System auto-route)
 ForAssessment → Assessed (TOP generated)
 Assessed → ForPayment (System auto-set)
 
--- OTC Path (unchanged) --
-ForPayment → Paid (Cashier records OTC payment)
+-- OTC Path --
+ForPayment → Paid (Cashier records OTC payment with auto-generated OR number)
 
--- Online Path (new in v3.0) --
+-- Online Path --
 ForPayment → PaymentProcessing (Applicant initiates PayMongo checkout)
 PaymentProcessing → Paid (PayMongo webhook: payment.paid confirmed)
 PaymentProcessing → ForPayment (PayMongo webhook: payment.failed — allow retry)
@@ -518,10 +552,10 @@ Completed → [*]
 | Verified | ForAssessment | System | Auto on Verified transition |
 | ForAssessment | Assessed | Treasury Officer | TOP generated and finalized |
 | Assessed | ForPayment | System | Auto on TOP generation |
-| **ForPayment** | **PaymentProcessing** | **System** | **Applicant initiates PayMongo checkout; Payment Intent created** |
-| **ForPayment** | **Paid** | **Treasury Cashier** | **OTC payment with valid OR number (unchanged)** |
-| **PaymentProcessing** | **Paid** | **System (webhook)** | **PayMongo fires payment.paid; signature verified; idempotency check passes** |
-| **PaymentProcessing** | **ForPayment** | **System (webhook)** | **PayMongo fires payment.failed or link expires — allow retry** |
+| ForPayment | PaymentProcessing | System | Applicant initiates PayMongo checkout; Payment Intent created |
+| ForPayment | Paid | Treasury Cashier | OTC payment with valid OR number (`OTC-YYYYMMDD-NNNNNN`) |
+| PaymentProcessing | Paid | System (webhook) | PayMongo fires payment.paid; signature verified; idempotency check passes |
+| PaymentProcessing | ForPayment | System (webhook) | PayMongo fires payment.failed or link expires — allow retry |
 | Paid | Completed | System | Permit + E-Resibo generated |
 
 ---
@@ -541,17 +575,10 @@ Completed → [*]
 | GET | `/api/applications/:app_no/status` | Poll current status |
 
 **UAF Submission Payload Structure (`/api/applications/uaf`)**
+- Includes dynamic conditional inputs for UAF Step 3 based on tiered fees.
 - Includes `is_renting: boolean` for location details.
 - `documents` array is structured as `[{ requirement_id: integer, file_path, file_name }]`.
-- Multi-file uploads (e.g., max_files = 2 or 3) should include each file as a separate object matching the `requirement_id`.
-
-**Requirement Resolution Algorithm (for `/api/applications/requirements`)**
-1. Fetch all active `requirement_types` filtered by `applies_to_new` or `applies_to_renewal`.
-2. Non-conditional requirements → always included.
-3. Conditional by `org_type` → match org type name against `requirement_conditions.match_value`.
-4. Conditional by `business_activity` → match any activity name against `requirement_conditions.match_value`.
-5. Conditional by `rental_status` → include only if `is_renting = true`.
-6. Sort by `sort_order` ascending.
+- Multi-file uploads include each file as a separate object matching the `requirement_id`.
 
 ### Module B — BPLO (Verify & Process)
 
@@ -562,16 +589,18 @@ Completed → [*]
 | PUT | `/api/bplo/applications/review/:app_no` | Upsert `application_data_reviews` sections |
 | PUT | `/api/bplo/applications/verify/:app_no` | Update verification checklist |
 | PUT | `/api/bplo/applications/return/:app_no` | Return with mandatory remarks |
+| **POST** | **`/api/bplo/applications/:app_no/notify-ready`** | **Notify applicant that documents are ready** *(New in v3.0)* |
 
 ### Module C — Treasury (Assess & Pay)
 
 | Method | Endpoint | Purpose | Auth |
 |---|---|---|---|
+| **GET** | **`/api/treasury/fee-schedule`** | **Fetch tiered fee schedules** *(New in v3.0)* | **Treasury_Officer** |
 | POST | `/api/treasury/assess` | Calculate fees, generate assessment + TOP | Treasury_Officer |
 | PUT | `/api/treasury/assess/:id/override` | Override line item (audit-logged) | Treasury_Officer |
 | GET | `/api/documents/top/:app_no` | Generate TOP PDF | Treasury_Officer |
-| POST | `/api/treasury/payments/otc` | Record OTC payment (Cash / Manager Check) | Treasury_Officer |
-| **POST** | **`/api/treasury/payments/online`** | **Initiate PayMongo Payment Intent; transition to PaymentProcessing** | **Applicant or Treasury_Officer** |
+| POST | `/api/treasury/payments/otc` | Record OTC payment (auto-generates `OTC-YYYYMMDD-NNNNNN`) | Treasury_Officer |
+| POST | `/api/treasury/payments/online` | Initiate PayMongo Payment Intent; transition to PaymentProcessing | Applicant or Treasury_Officer |
 
 ### Module D — Barangay Clearance
 
@@ -607,19 +636,24 @@ Completed → [*]
 | GET | `/api/documents/permit/:app_no?lob=:id` | Per-line-of-business permit |
 | GET | `/api/documents/eresibo/:transaction_id` | Official Receipt (E-Resibo) PDF |
 
-### Webhooks *(New in v3.0)*
+### Module H — Notifications *(New in v3.0)*
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| **GET** | **`/api/notifications/unread`** | **Fetch user's unread in-app notifications** |
+| **PUT** | **`/api/notifications/:id/read`** | **Mark notification as read** |
+
+### Webhooks
 
 | Method | Endpoint | Purpose | Auth |
 |---|---|---|---|
-| **POST** | **`/api/webhooks/paymongo`** | **Receive PayMongo payment events; raw body; HMAC-SHA256 verified** | **None (PayMongo server-to-server)** |
-
-> **Implementation note:** The webhook route must use `express.raw({ type: 'application/json' })` and be mounted **before** the global `express.json()` middleware. If the body is pre-parsed, HMAC signature verification will always fail.
+| POST | `/api/webhooks/paymongo` | Receive PayMongo payment events; raw body; HMAC-SHA256 verified | None (PayMongo server-to-server) |
 
 ---
 
 ## 7. Email Notification System
 
-All notifications use Nodemailer via Gmail SMTP or Brevo. The `PAYMENT_RECORDED` trigger fires for both OTC and online payment paths using the same template; the OR number format distinguishes the channel.
+All notifications use Nodemailer via Gmail SMTP or Brevo. The `PAYMENT_RECORDED` trigger fires for both OTC and online payment paths using the same template; the OR number format distinguishes the channel. **In-app pop-ups are dynamically tied to these transitions for instantaneous feedback.**
 
 | Trigger Event | Recipient | Subject / Content |
 |---|---|---|
@@ -628,7 +662,7 @@ All notifications use Nodemailer via Gmail SMTP or Brevo. The `PAYMENT_RECORDED`
 | `APPLICATION_RETURNED` | Applicant | BPLO remarks + resubmission link |
 | `APPLICATION_VERIFIED` | Applicant | Application passed BPLO review; awaiting assessment |
 | `TOP_GENERATED` | Applicant | TOP PDF attached; OTC instructions + online payment link |
-| `PAYMENT_RECORDED` | Applicant | Payment confirmed; OR number (cashier or PM-prefixed); E-Resibo download link |
+| `PAYMENT_RECORDED` | Applicant | Payment confirmed; OR number (`OTC-YYYYMMDD-NNNNNN` or `PM-...`); E-Resibo link |
 | `PERMIT_READY` | Applicant | Business Permit + documents ready for download or physical claiming |
 | `RETIREMENT_COMPLETE` | Applicant | Retirement processed; final receipt attached |
 | `ACCOUNT_CREATED` | New User | Welcome email with activation link |
@@ -640,9 +674,9 @@ All notifications use Nodemailer via Gmail SMTP or Brevo. The `PAYMENT_RECORDED`
 
 | Role | Module Access | Key Permissions | Restrictions |
 |---|---|---|---|
-| Applicant | A, F (own only) | Submit UAF, upload docs, view own status, download own documents, **initiate PayMongo online payment** | Cannot view other applicants' data; cannot verify or assess |
+| Applicant | A, F, H (own only) | Submit UAF, upload docs, view own status, download own documents, initiate PayMongo online payment, view in-app notifications | Cannot view other applicants' data; cannot verify or assess |
 | BPLO Officer | B (Read A) | Verify documents, review data sections, approve/return applications | Cannot modify profiles; cannot assess fees or record payments |
-| Treasury Officer | C (Read A, B) | Assess fees, override line items, generate TOP, record OTC payment, **initiate online payment on behalf of applicant**, issue E-Resibo | Cannot approve/deny regulatory clearances |
+| Treasury Officer | C (Read A, B) | Assess fees, override line items, generate TOP, record OTC payment, initiate online payment on behalf of applicant, issue E-Resibo | Cannot approve/deny regulatory clearances |
 | Barangay Officer | D | Issue or reject Barangay Clearance, view clearance queue | Cannot access other modules |
 | System Admin | All | Manage users/roles, update lookup tables, customize document layouts, view audit logs | Should not process live applications or payments directly |
 
@@ -658,7 +692,7 @@ All notifications use Nodemailer via Gmail SMTP or Brevo. The `PAYMENT_RECORDED`
 | Assess Fees | — | — | ✅ | — | — |
 | Override Fee Items | — | — | ✅ | — | — |
 | Record OTC Payment | — | — | ✅ | — | — |
-| **Initiate Online Payment** | **✅** | **—** | **✅** | **—** | **—** |
+| Initiate Online Payment | ✅ | — | ✅ | — | — |
 | Issue Brgy Clearance | — | — | — | ✅ | — |
 | Process Retirement | — | ✅ | ✅ | — | ✅ |
 | Download Documents | ✅ (own) | ✅ | ✅ | — | ✅ |
@@ -673,13 +707,14 @@ All notifications use Nodemailer via Gmail SMTP or Brevo. The `PAYMENT_RECORDED`
 ### 9.1 Applicant Interface — Mobile-First
 
 - **Dashboard:** Welcoming screen with Quick Action buttons and application list with status badges. `PaymentProcessing` badge = Purple / Animated.
-- **UAF Wizard:** Progress bar pinned to top; autosave indicator.
+- **UAF Wizard:** Progress bar pinned to top; autosave indicator. **Dynamic conditional inputs shown in Step 3.**
 - **Draft Resume Prompt:** Modal on login if draft exists.
 - **Document Upload:** Large clickable areas for camera/gallery access; instant thumbnail on success.
-- **Payment & Claiming Screen (updated):**
-  - When status = `ForPayment`: displays total due, a "Download TOP" button, OTC instructions, **and a "Pay Online via PayMongo" button**.
+- **Payment & Claiming Screen:**
+  - When status = `ForPayment`: displays total due, a "Download TOP" button, OTC instructions, and a "Pay Online via PayMongo" button.
   - When status = `PaymentProcessing`: shows a pending state — *"Your online payment is being confirmed. This page will update automatically."* Polls `GET /api/applications/:app_no/status` every 5 seconds.
   - When status = `Paid` / `Completed`: shows Permit and E-Resibo download buttons.
+- **In-App Notifications:** Pop-ups and notification bell for every state transition.
 
 ### 9.2 BPLO Officer Interface — Desktop-First
 
@@ -690,7 +725,7 @@ All notifications use Nodemailer via Gmail SMTP or Brevo. The `PAYMENT_RECORDED`
 ### 9.3 Treasury Officer Interface — Desktop POS-Like
 
 - **Assessment Grid:** Spreadsheet-style view with overridable fields highlighted in yellow. Grand Total updates in real-time.
-- **Cashier POS Panel:** High-contrast, large-typography interface. Cash/Manager Check selector, OR number input, change computation. Giant "Confirm Payment" button.
+- **Cashier POS Panel:** High-contrast, large-typography interface. Cash/Manager Check selector, change computation. **OR numbers are auto-generated as `OTC-YYYYMMDD-NNNNNN`**. Giant "Confirm Payment" button.
 - **Online Payment Initiation:** If applicant prefers online, Treasury can also trigger `POST /api/treasury/payments/online` from the POS screen and copy the checkout URL to the applicant.
 
 ### 9.4 System Administrator Interface — Utilitarian
@@ -698,7 +733,7 @@ All notifications use Nodemailer via Gmail SMTP or Brevo. The `PAYMENT_RECORDED`
 - Admin Dashboard: System health metrics, active users, error rate.
 - Master Data Configuration: CRUD for fee types, clearance types, org types.
 - Document Builder: Visual workspace for template upload and `{{placeholder}}` mapping.
-- Audit Log Viewer: Filterable by user, action type (now includes `ONLINE_PAYMENT_INITIATED`, `ONLINE_PAYMENT_CONFIRMED`, `ONLINE_PAYMENT_FAILED`), date range, and entity type.
+- Audit Log Viewer: Filterable by user, action type, date range, and entity type.
 
 ---
 
@@ -709,11 +744,11 @@ All notifications use Nodemailer via Gmail SMTP or Brevo. The `PAYMENT_RECORDED`
 | Performance | < 2s API response under normal load; handle January renewal spikes |
 | Security — Auth | Passwords hashed with bcrypt (cost ≥ 12); JWT 24-hour expiry |
 | Security — Data | Supabase RLS on all tables; pre-signed URLs (15-min expiry) |
-| **Security — Webhooks** | **HMAC-SHA256 signature verification on every inbound PayMongo webhook; reject with 400 on failure** |
-| **Webhook Idempotency** | **Duplicate `payment.paid` events must not create duplicate transactions, PDFs, or emails** |
+| Security — Webhooks | HMAC-SHA256 signature verification on every inbound PayMongo webhook; reject with 400 on failure |
+| Webhook Idempotency | Duplicate `payment.paid` events must not create duplicate transactions, PDFs, or emails |
 | Privacy Compliance | DPA 2012; all PII access logged in `audit_logs`; admin access reports |
 | Payment | OTC (Cash / Manager Check) + Online via PayMongo (GCash / Card / Link). Retirement flow: OTC only. |
-| **Credentials** | **PAYMONGO_SECRET_KEY and PAYMONGO_WEBHOOK_SECRET stored in env vars only. Never logged or persisted in DB.** |
+| Credentials | PAYMONGO_SECRET_KEY and PAYMONGO_WEBHOOK_SECRET stored in env vars only. Never logged or persisted in DB. |
 | Usability | Applicant portal fully mobile-responsive; UAF completable on smartphone |
 | Availability | 99.5% uptime; Supabase managed PostgreSQL handles backups |
 | Audit Trail | Every data mutation logged in `audit_logs`; webhook events in `payment_gateway_logs` |
@@ -729,9 +764,9 @@ All notifications use Nodemailer via Gmail SMTP or Brevo. The `PAYMENT_RECORDED`
 | ESLint | Code linting |
 | GitHub (Git Flow) | Version control and branching strategy |
 | Supabase CLI | Local DB development and migrations |
-| **ngrok** | **Expose local webhook endpoint to PayMongo during development** |
+| ngrok | Expose local webhook endpoint to PayMongo during development |
 
-### 11.1 Environment Variables (updated)
+### 11.1 Environment Variables
 
 ```env
 # Existing
@@ -766,15 +801,15 @@ PAYMONGO_CANCEL_URL=https://your-domain.com/payment/cancel
 
 ### 12.1 In Scope
 
-- OTC payment recording (Cash and Manager Check)
-- **Online payment via PayMongo (GCash, Card, Payment Link) — optional channel**
+- OTC payment recording (Cash and Manager Check) with auto-generated receipt numbers
+- Online payment via PayMongo (GCash, Card, Payment Link) — optional channel
 - UAF submission with integrated Barangay Clearance processing
 - BPLO document and data verification workflow
 - Treasury fee assessment and TOP generation
 - Business Retirement / Cessation module (OTC payment only)
 - E-Resibo (Official Receipt) generation
 - Business Permit generation including per-line-of-business printing
-- Email notification system (transactional events)
+- Email and in-app notification system (transactional events)
 - System audit logging and webhook event logging
 - Admin document layout customization (DocumentBuilder)
 
@@ -782,15 +817,15 @@ PAYMONGO_CANCEL_URL=https://your-domain.com/payment/cancel
 
 > **Excluded Features — Do Not Implement**
 >
-> 1. ~~Online payment gateways~~ — **PayMongo is now in scope. All other gateways remain excluded** (Landbank ePay, DBP PayConnect, PayMaya, GCash Direct — only via PayMongo aggregation)
+> 1. Other Online payment gateways — PayMongo is the only in-scope gateway.
 > 2. Legacy system data migration from paper or legacy digital records
 > 3. Integration with national-level databases (BIR, DTI, SEC national portals)
 > 4. SMS notification system
 > 5. Mobile native app (iOS/Android) — web-only
 > 6. Multi-LGU or federated deployment
-> 7. **Online payment for the Retirement Module — OTC only**
+> 7. Online payment for the Retirement Module — OTC only
 
 ---
 
-*eBPLS SDD v5.0 — Municipality of Liliw*
-*Previous version: SDD v4.0. This version overhauls the documentary requirements system to use dynamic, conditional checklists based on application profiles.*
+*eBPLS SDD v3.0 — Municipality of Liliw*
+*This version incorporates the July 2026 Adviser Changes (Phase 1 to 6).*

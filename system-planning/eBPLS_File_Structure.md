@@ -1,11 +1,13 @@
 # eBPLS File Structure
 
-**v2.0 — Updated with PayMongo Online Payment Integration**
+**v3.0 — Updated with July 2026 Adviser Changes (Phase 1 to 6)**
 
 This document outlines the recommended directory structure for the **eBPLS (Electronic Business Permits and Licensing System)**. The project is split into two distinct codebases: the Node.js/Express Backend and the React.js Frontend, reflecting the Client-Server Architecture.
 
-> **What changed in v2.0**
-> Five new backend files added for PayMongo integration. One new Supabase migration. Six existing files updated with targeted changes. Frontend `StatusTracker.jsx` and `applicationStore.js` updated for the `PaymentProcessing` state and online payment UI.
+> **What changed in v3.0**
+> Three new migrations added for fee scheduling, notifications, and certificate readiness. Six new frontend files added (e.g., `FeeSchedule.jsx`, `ProcedureGuide.jsx`, `NotificationBell.jsx`). `bplo.controller.js`, `treasury.controller.js`, `webhook.controller.js`, and `email.service.js` updated to fire notifications/emails for all status transitions. `CashierPOS.jsx` updated for auto-OR. `Dashboard.jsx` (bplo) and `ClearanceQueue.jsx` updated with status filters.
+> 
+> *(Includes all previous v2.0 updates for PayMongo Online Payment Integration).*
 
 ---
 
@@ -19,22 +21,25 @@ The backend follows a standard controller-service-route architecture to separate
 ebpls-backend/
 ├── src/
 │   ├── config/                        # Configuration files and initializations
-│   │   ├── env.js                     # Zod env validation ⚠️ UPDATED — 4 PayMongo vars added
+│   │   ├── env.js                     # Zod env validation ⚠️ UPDATED — 4 PayMongo vars added (v2.0)
 │   │   ├── supabase.js                # Supabase client setup (DB and Storage)
 │   │   └── mailer.js                  # Nodemailer / SMTP configuration
 │   │
 │   ├── controllers/                   # Route handlers organized by architectural module
 │   │   ├── application.controller.js  # Module A: UAF submissions, drafts
-│   │   ├── bplo.controller.js         # Module B: Document verification
-│   │   ├── treasury.controller.js     # Module C: Fees, TOP, OTC payments
+│   │   ├── bplo.controller.js         # Module B: Document verification ⚠️ UPDATED (v3.0)
+│   │   │                              #     Fires notifications/emails for status transitions
+│   │   ├── treasury.controller.js     # Module C: Fees, TOP, OTC payments ⚠️ UPDATED (v3.0)
+│   │   │                              #     Fires notifications/emails for status transitions
 │   │   ├── barangay.controller.js     # Module D: Barangay Clearances
 │   │   ├── retirement.controller.js   # Module E: Business Retirements
 │   │   ├── document.controller.js     # Module F: PDF generation endpoints
-│   │   └── webhook.controller.js      # 🆕 NEW — PayMongo webhook handler
+│   │   └── webhook.controller.js      # 🆕 NEW (v2.0) — PayMongo webhook handler ⚠️ UPDATED (v3.0)
 │   │                                  #     Verifies HMAC-SHA256 signature
 │   │                                  #     Checks idempotency via payment_gateway_logs
 │   │                                  #     Handles payment.paid and payment.failed events
 │   │                                  #     Triggers document generation + PAYMENT_RECORDED email
+│   │                                  #     🆕 (v3.0) Fires notifications for all status transitions
 │   │
 │   ├── middlewares/                   # Express middlewares
 │   │   ├── auth.middleware.js         # Verifies JWT from requests
@@ -46,11 +51,11 @@ ebpls-backend/
 │   │   ├── application.routes.js      # Module A routes
 │   │   ├── bplo.routes.js             # Module B routes
 │   │   ├── treasury.routes.js         # Module C: OTC payment routes (unchanged)
-│   │   ├── treasury.online.routes.js  # 🆕 NEW — POST /api/treasury/payments/online
+│   │   ├── treasury.online.routes.js  # 🆕 NEW (v2.0) — POST /api/treasury/payments/online
 │   │   │                              #     RBAC: Applicant or Treasury_Officer
 │   │   │                              #     Initiates PayMongo Payment Intent
 │   │   │                              #     Transitions status to PaymentProcessing
-│   │   ├── webhook.routes.js          # 🆕 NEW — POST /api/webhooks/paymongo
+│   │   ├── webhook.routes.js          # 🆕 NEW (v2.0) — POST /api/webhooks/paymongo
 │   │   │                              #     No JWT auth (server-to-server)
 │   │   │                              #     Uses express.raw() — must mount BEFORE express.json()
 │   │   ├── barangay.routes.js         # Module D routes
@@ -58,17 +63,18 @@ ebpls-backend/
 │   │   └── document.routes.js         # Module F routes
 │   │
 │   ├── services/                      # Core business logic and database interactions
-│   │   ├── application.service.js     # State machine transitions ⚠️ UPDATED
+│   │   ├── application.service.js     # State machine transitions ⚠️ UPDATED (v2.0)
 │   │   │                              #     Added: ForPayment → PaymentProcessing
 │   │   │                              #     Added: PaymentProcessing → Paid
 │   │   │                              #     Added: PaymentProcessing → ForPayment
 │   │   │                              #     Existing transitions unchanged
 │   │   ├── assessment.service.js      # Tax and fee calculation logic
 │   │   ├── audit.service.js           # Writes securely to audit_logs
-│   │   ├── email.service.js           # Event-driven email sending ⚠️ UPDATED
-│   │   │                              #     PAYMENT_RECORDED template supports both
+│   │   ├── email.service.js           # Event-driven email sending ⚠️ UPDATED (v3.0)
+│   │   │                              #     PAYMENT_RECORDED template supports both (v2.0)
 │   │   │                              #     cashier OR numbers and PM-prefixed OR numbers
-│   │   ├── paymongo.service.js        # 🆕 NEW — PayMongo API client
+│   │   │                              #     🆕 (v3.0) Fires emails for all status transitions
+│   │   ├── paymongo.service.js        # 🆕 NEW (v2.0) — PayMongo API client
 │   │   │                              #     createPaymentIntent(amount, description, appNo)
 │   │   │                              #       amount in centavos (PHP × 100)
 │   │   │                              #     createPaymentLink(amount, description, appNo)
@@ -80,14 +86,14 @@ ebpls-backend/
 │   │   └── pdf.service.js             # pdf-lib template population
 │   │
 │   ├── utils/                         # Shared utility functions
-│   │   ├── constants.js               # Enums, valid states, role IDs ⚠️ UPDATED
+│   │   ├── constants.js               # Enums, valid states, role IDs ⚠️ UPDATED (v2.0)
 │   │   │                              #     APPLICATION_STATUS.PAYMENT_PROCESSING added
 │   │   │                              #     TRANSACTION_TENDERED_TYPE: GCASH, CARD, ONLINE added
 │   │   │                              #     AUDIT_ACTIONS: ONLINE_PAYMENT_INITIATED,
 │   │   │                              #       ONLINE_PAYMENT_CONFIRMED, ONLINE_PAYMENT_FAILED added
 │   │   └── helpers.js                 # General helpers (UUID, date formatters)
 │   │
-│   └── app.js                         # Express application setup ⚠️ UPDATED
+│   └── app.js                         # Express application setup ⚠️ UPDATED (v2.0)
 │                                      #   CRITICAL MOUNT ORDER:
 │                                      #   1. webhook.routes with express.raw() — BEFORE express.json()
 │                                      #   2. express.json() global middleware
@@ -112,18 +118,14 @@ ebpls-backend/
 │       ├── 015_design_gaps_fix.sql
 │       ├── 016_application_data_reviews.sql
 │       ├── 017_uaf_clearance_hook.sql
-│       └── 018_paymongo_payment.sql    # 🆕 NEW — PayMongo migration
-│                                       #   Adds GCash, Card, Online to tendered_type enum
-│                                       #   Adds PaymentProcessing to application_status enum
-│                                       #   Adds paymongo_payment_intent_id (UNIQUE) to transactions
-│                                       #   Adds paymongo_payment_id (UNIQUE) to transactions
-│                                       #   Adds payment_channel to transactions
-│                                       #   Creates payment_gateway_logs table with RLS
-│                                       #   (append-only — no DELETE policy)
+│       ├── 018_paymongo_payment.sql    # 🆕 NEW (v2.0) — PayMongo migration
+│       ├── 036_fee_schedule.sql        # 🆕 NEW (v3.0) — Fee schedule changes
+│       ├── 037_notifications.sql       # 🆕 NEW (v3.0) — In-app notifications
+│       └── 038_cert_ready_notification.sql # 🆕 NEW (v3.0) — Certificate readiness
 │
 ├── tests/                             # Unit and integration tests
 ├── .env                               # Local environment variables (gitignored)
-├── .env.example                       # Template ⚠️ UPDATED — 4 PayMongo vars added
+├── .env.example                       # Template ⚠️ UPDATED (v2.0) — 4 PayMongo vars added
 │                                      #   PAYMONGO_SECRET_KEY=sk_test_...
 │                                      #   PAYMONGO_WEBHOOK_SECRET=whsec_...
 │                                      #   PAYMONGO_SUCCESS_URL=https://...
@@ -157,13 +159,15 @@ ebpls-frontend/
 │   │   └── shared/                    # Domain-specific shared components
 │   │       ├── DocumentUploadPanel.jsx
 │   │       ├── InteractiveLocationPin.jsx
-│   │       └── StatusBadge.jsx        # ⚠️ UPDATED — PaymentProcessing badge style added
+│   │       ├── StatusBadge.jsx        # ⚠️ UPDATED (v2.0) — PaymentProcessing badge style added
 │   │                                  #   (purple / animated indicator)
+│   │       ├── NotificationBell.jsx   # 🆕 NEW (v3.0)
+│   │       └── NotificationPopup.jsx  # 🆕 NEW (v3.0)
 │   │
 │   ├── hooks/                         # Custom React hooks
 │   │   ├── useAuth.js                 # Authentication logic
 │   │   ├── useAutosave.js             # UAF draft autosave logic
-│   │   ├── useApplicationStatus.js    # Status polling ⚠️ UPDATED
+│   │   ├── useApplicationStatus.js    # Status polling ⚠️ UPDATED (v2.0)
 │   │   │                              #   Used by StatusTracker during PaymentProcessing
 │   │   │                              #   to poll GET /api/applications/:app_no/status
 │   │   │                              #   every 5 seconds until status changes
@@ -183,10 +187,13 @@ ebpls-frontend/
 │   │   │   ├── Login.jsx
 │   │   │   ├── Register.jsx
 │   │   │   └── ForgotPassword.jsx
+│   │   ├── shared/
+│   │   │   └── FeeSchedule.jsx        # 🆕 NEW (v3.0)
 │   │   ├── applicant/
 │   │   │   ├── Dashboard.jsx
+│   │   │   ├── ProcedureGuide.jsx     # 🆕 NEW (v3.0)
 │   │   │   ├── UAFWizardScreen.jsx    # 5-step application wizard
-│   │   │   └── StatusTracker.jsx      # ⚠️ UPDATED — ForPayment state now shows:
+│   │   │   └── StatusTracker.jsx      # ⚠️ UPDATED (v2.0) — ForPayment state now shows:
 │   │   │                              #   Option A: OTC instructions (unchanged)
 │   │   │                              #   Option B: "Pay Online via PayMongo" button
 │   │   │                              #     → calls POST /api/treasury/payments/online
@@ -196,26 +203,28 @@ ebpls-frontend/
 │   │   │                              #     Polls status every 5 seconds via useApplicationStatus
 │   │   │                              #     Auto-updates to download view on Paid/Completed
 │   │   ├── bplo/
-│   │   │   ├── Dashboard.jsx
-│   │   │   └── SplitScreenVerifier.jsx
+│   │   │   ├── Dashboard.jsx          # ⚠️ UPDATED (v3.0) — Status filters added
+│   │   │   ├── SplitScreenVerifier.jsx
+│   │   │   └── CompletedQueue.jsx     # 🆕 NEW (v3.0)
 │   │   ├── treasury/
 │   │   │   ├── AssessmentGrid.jsx
-│   │   │   └── CashierPOS.jsx         # OTC payment logger (unchanged)
+│   │   │   └── CashierPOS.jsx         # ⚠️ UPDATED (v3.0) — Auto-OR functionality added
 │   │   ├── barangay/
-│   │   │   └── ClearanceQueue.jsx
+│   │   │   └── ClearanceQueue.jsx     # ⚠️ UPDATED (v3.0) — Status filters added
 │   │   └── admin/
 │   │       ├── MasterData.jsx
 │   │       ├── DocumentBuilder.jsx
-│   │       └── AuditLogs.jsx          # ⚠️ UPDATED — filter options now include
+│   │       └── AuditLogs.jsx          # ⚠️ UPDATED (v2.0) — filter options now include
 │   │                                  #   ONLINE_PAYMENT_INITIATED
 │   │                                  #   ONLINE_PAYMENT_CONFIRMED
 │   │                                  #   ONLINE_PAYMENT_FAILED
 │   │
 │   ├── store/                         # Zustand state management
 │   │   ├── authStore.js               # User session and role
-│   │   ├── applicationStore.js        # Local state for UAF forms ⚠️ UPDATED
+│   │   ├── applicationStore.js        # Local state for UAF forms ⚠️ UPDATED (v2.0)
 │   │   │                              #   PaymentProcessing added to handled statuses
 │   │   │                              #   Drives StatusTracker view switching
+│   │   ├── notificationStore.js       # 🆕 NEW (v3.0)
 │   │   └── UIStore.js                 # Modals, sidebars, toast states
 │   │
 │   ├── utils/
@@ -247,7 +256,7 @@ The backend relies on `auth.middleware.js` and `rbac.middleware.js` to enforce s
 Business logic (fee calculation, state machine enforcement, PayMongo API calls, webhook signature verification) is kept out of controllers and placed in services. This makes unit testing significantly easier and keeps controllers thin.
 
 ### 3.4 Zustand Stores (`/src/store/`)
-State management is split logically. `applicationStore` handles the complex draft state of the UAF wizard and the payment status view (including the new `PaymentProcessing` polling state), while `authStore` handles user identity.
+State management is split logically. `applicationStore` handles the complex draft state of the UAF wizard and the payment status view (including the new `PaymentProcessing` polling state), while `authStore` handles user identity. The new `notificationStore` (v3.0) centralizes state for real-time alerts.
 
 ### 3.5 Webhook Route Mount Order — Critical ⚠️
 The PayMongo webhook endpoint must receive the **raw, unparsed request body** for HMAC-SHA256 signature verification. If Express has already run `express.json()` on the request, the body will be pre-parsed and the signature will always fail.
@@ -284,31 +293,37 @@ No DELETE RLS policy is granted on this table. Rows must never be deleted.
 
 ---
 
-## 4. New Files Summary (v2.0)
+## 4. New Files Summary (v3.0)
 
 | File | Type | Purpose |
 |---|---|---|
-| `supabase/migrations/018_paymongo_payment.sql` | Migration | Enum additions, transactions columns, payment_gateway_logs table + RLS |
-| `src/services/paymongo.service.js` | Service | PayMongo API client (Payment Intent, Payment Link, signature verification) |
-| `src/routes/treasury.online.routes.js` | Route | `POST /api/treasury/payments/online` — RBAC protected |
-| `src/routes/webhook.routes.js` | Route | `POST /api/webhooks/paymongo` — raw body, no JWT |
-| `src/controllers/webhook.controller.js` | Controller | Webhook handler: signature check, idempotency, state transitions, doc + email trigger |
+| `supabase/migrations/036_fee_schedule.sql` | Migration | Fee schedule updates |
+| `supabase/migrations/037_notifications.sql` | Migration | In-app notification tables and relationships |
+| `supabase/migrations/038_cert_ready_notification.sql` | Migration | Certificate readiness notification templates/rules |
+| `src/screens/shared/FeeSchedule.jsx` | Frontend View | Shared fee schedule screen |
+| `src/screens/applicant/ProcedureGuide.jsx` | Frontend View | Applicant procedure guidance |
+| `src/components/shared/NotificationBell.jsx` | UI Component | Notification bell icon and trigger |
+| `src/components/shared/NotificationPopup.jsx` | UI Component | Popup for displaying recent notifications |
+| `src/screens/bplo/CompletedQueue.jsx` | Frontend View | Separate queue for completed applications |
+| `src/store/notificationStore.js` | Zustand Store | Global notification state and logic |
 
-## 5. Modified Files Summary (v2.0 — Targeted Changes Only)
+*(For v2.0 new files like PayMongo integration services and webhooks, see the directory tree above.)*
+
+## 5. Modified Files Summary (v3.0 — Targeted Changes)
 
 | File | What Changed |
 |---|---|
-| `src/config/env.js` | Added 4 PayMongo env vars to Zod schema |
-| `src/utils/constants.js` | Added `PAYMENT_PROCESSING` status, `GCASH`/`CARD`/`ONLINE` tendered types, 3 new audit actions |
-| `src/services/application.service.js` | Added 3 new state machine transitions; existing transitions untouched |
-| `src/services/email.service.js` | `PAYMENT_RECORDED` template updated to support both OR number formats |
-| `src/app.js` | Mounted 2 new route files; webhook route gets `express.raw()` before global `express.json()` |
-| `src/screens/applicant/StatusTracker.jsx` | Added online payment button for `ForPayment`; added polling UI for `PaymentProcessing` |
-| `src/store/applicationStore.js` | Added `PaymentProcessing` to handled statuses |
-| `src/components/shared/StatusBadge.jsx` | Added `PaymentProcessing` badge style (purple / animated) |
-| `.env.example` | Added 4 PayMongo placeholder variables |
+| `src/controllers/bplo.controller.js` | Updated to fire notifications/emails for all status transitions. |
+| `src/controllers/treasury.controller.js` | Updated to fire notifications/emails for all status transitions. |
+| `src/controllers/webhook.controller.js` | Updated to fire notifications/emails for all status transitions. |
+| `src/services/email.service.js` | Enhanced to dispatch emails alongside notifications for all status transitions. |
+| `src/screens/treasury/CashierPOS.jsx` | Updated for auto-OR generation. |
+| `src/screens/bplo/Dashboard.jsx` | Updated to include status filters. |
+| `src/screens/barangay/ClearanceQueue.jsx` | Updated to include status filters. |
+
+*(Includes all previous v2.0 modifications for PayMongo integration, such as updates to `env.js`, `constants.js`, and `StatusTracker.jsx`).*
 
 ---
 
-*eBPLS File Structure v2.0 — Municipality of Liliw*
-*Updated: Five new backend files, one new migration, nine targeted file modifications for PayMongo online payment integration.*
+*eBPLS File Structure v3.0 — Municipality of Liliw*
+*Updated: Three new migrations, six new frontend files, and several controller/UI updates for the July 2026 Adviser Changes (Phase 1-6).*

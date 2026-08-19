@@ -8,7 +8,9 @@ const {
 
 const getPendingClearances = async (req, res, next) => {
     try {
-        const { data, error } = await supabaseAdmin
+        const { status } = req.query;
+
+        let query = supabaseAdmin
             .from('barangay_clearances')
             .select(`
                 *,
@@ -44,8 +46,15 @@ const getPendingClearances = async (req, res, next) => {
                     )
                 ),
                 clearance_types ( name )
-            `)
-            .eq('status', 'Pending'); 
+            `);
+
+        if (status && status !== 'All') {
+            query = query.eq('status', status);
+        } else if (!status) {
+            query = query.eq('status', 'Pending');
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 

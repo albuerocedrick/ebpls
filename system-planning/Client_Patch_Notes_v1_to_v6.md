@@ -1,10 +1,10 @@
-# eBPLS System Update: Comprehensive Patch Notes (Phases 1 to 6.1)
+# eBPLS System Update: Comprehensive Patch Notes (Phases 1 to 6)
 
 Welcome to the latest major update of the eBPLS (Electronic Business Permits and Licensing System). Based on recent feedback and requirements from the adviser and municipal stakeholders, we have rolled out a comprehensive set of features. 
 
-These updates are focused on **transparency, automated communication, and strict adherence to the official Municipal Revenue Code.**
+These updates are focused on **transparency, automated communication, strict adherence to the official Municipal Revenue Code, and significant UX (User Experience) improvements for our municipal staff.**
 
-Below is a detailed breakdown of every new feature, enhancement, and workflow improvement added to the system.
+Below is a detailed breakdown of every new feature, enhancement, and workflow improvement added to the system across all 6 phases.
 
 ---
 
@@ -17,21 +17,36 @@ Below is a detailed breakdown of every new feature, enhancement, and workflow im
   * The page displays all **13 business categories** (e.g., Manufacturers, Wholesalers, Service Establishments, Financial Institutions).
   * It includes all sub-categories and their exact fixed fees (e.g., Bakery Products at ₱500.00, Air guns at ₱200.00).
   * **Tiered pricing** is fully supported. For example, "Piggery Farms" dynamically shows the 8 different pricing tiers ranging from "Exempt" (less than 10 heads) up to ₱3,000.00 (more than 500 heads).
-  * The page also prominently displays the **"Other Municipal Fees"** that are universally applied (Business Tax, Sanitary Inspection Fee, Garbage Fee, Fire Safety Inspection Fee, etc.) for full transparency.
+  * The page prominently displays the **"Other Municipal Fees"** that are universally applied (Business Tax, Sanitary Inspection Fee, Garbage Fee, Fire Safety Inspection Fee, etc.) for full transparency.
   * Special rules (like the 25% surcharge for late renewals) are highlighted at the top.
+
+### 1.2 Fee Schedule — Collapsible Accordion Layout
+* **What was changed**: Navigating the massive list of fees is now effortless.
+* **Complete Details**: We converted all 13 business categories on the Fee Schedule page into **collapsible accordion sections**. They are all collapsed by default to keep the page clean. Clicking a category header smoothly expands it to show the fees, saving Treasury officers from endless scrolling!
+
+### 1.3 Fully Automated OTC Receipt Number Generation
+* **What was changed**: Treasury officers no longer need to manually type the physical OR (Official Receipt) number from their paper booklets into the system.
+* **Complete Details**: 
+  * When an applicant pays Over-The-Counter (OTC), the cashier simply records the payment amount.
+  * The system will instantly **auto-generate** a unique internal receipt number (e.g., `OTC-20260819-000001`).
+  * This speeds up the checkout line significantly and entirely eliminates human typo errors in the database.
 
 ---
 
 ## 👨‍💼 2. Applicant Experience & Transparency
 
-### 2.1 Dynamic Application Form (Step 3)
+### 2.1 Public Access to the Fee Schedule
+* **What was changed**: Total transparency for business owners!
+* **Complete Details**: The exact same digitized **Fee Schedule** page used by the Treasury is now securely available in the **Applicant's sidebar**. Applicants can browse the official Municipal Revenue Code at any time, allowing them to estimate their costs before they even begin an application.
+
+### 2.2 Dynamic Application Form (Step 3)
 * **What was changed**: The business registration form is now "smart" and adapts to the applicant's chosen business activity.
 * **Complete Details**: 
   * If an applicant selects a business type that has tiered pricing in the Revenue Code, Step 3 of the form will dynamically generate a specific input field for them.
   * For example, selecting "Poultry - Broiler" will automatically ask the applicant to input their "Number of Heads". Selecting "Boarding House" will ask for the "Number of Boarders". 
   * This guarantees that the Treasury has the exact metrics needed to assess the correct fee tier without needing to call the applicant for clarification.
 
-### 2.2 Transparent Fee Assessment Breakdown
+### 2.3 Transparent Fee Assessment Breakdown
 * **What was changed**: Applicants are no longer presented with just a "total amount due". They now receive a fully itemized receipt *before* payment.
 * **Complete Details**:
   * Once the Treasury assesses the application, the applicant's Status Tracker updates to show a detailed **Fee Assessment Breakdown Card**.
@@ -39,7 +54,7 @@ Below is a detailed breakdown of every new feature, enhancement, and workflow im
   * It itemizes all other municipal fees (e.g., explaining that the Fire Safety Fee is calculated as 10% of the Mayor's Permit Fee).
   * It clearly displays any late penalties or surcharges if applicable.
 
-### 2.3 Step-by-Step Procedure Guide
+### 2.4 Step-by-Step Procedure Guide
 * **What was changed**: A dynamic helper box has been added to the applicant's dashboard to guide them through the permit lifecycle.
 * **Complete Details**:
   * If the status is **Pending**, the guide tells them: *"Awaiting BPLO review. No action required."*
@@ -47,13 +62,13 @@ Below is a detailed breakdown of every new feature, enhancement, and workflow im
   * If the status is **For Payment**, it instructs them on how to pay via GCash, Card, or Over-The-Counter.
   * If the status is **Completed**, it provides the download link for their digital permit.
 
-### 2.4 Online Payment Breakdown Toggle
+### 2.5 Online Payment Breakdown Toggle
 * **What was changed**: When an applicant chooses to pay online via PayMongo (GCash/Card), they can review their fees one last time.
 * **Complete Details**: Inside the blue payment checkout card, there is a new collapsible toggle called "View Fee Breakdown". Clicking it expands the full itemized list of fees, ensuring they have absolute confidence in the total amount being charged to their e-wallet or credit card.
 
 ---
 
-## 🔔 3. Universal Notification System (Phase 6.1 Frontend Integration)
+## 🔔 3. Universal Notification System
 
 We have completely overhauled how the system communicates with the applicant, ensuring they never miss an update and reducing the number of follow-up calls to the municipal office.
 
@@ -79,9 +94,9 @@ We have completely overhauled how the system communicates with the applicant, en
 
 ---
 
-## 🏢 4. BPLO Workflow Improvements
+## 🏢 4. Workflow Improvements for Staff
 
-### 4.1 Certificate Ready Notification with Custom Notes
+### 4.1 BPLO Certificate Ready Notification with Custom Notes
 * **What was changed**: The BPLO office now has direct communication controls when a permit finishes processing.
 * **Complete Details**:
   * In the BPLO dashboard, there is a new sidebar section for the **"Completed Queue"**.
@@ -89,3 +104,11 @@ We have completely overhauled how the system communicates with the applicant, en
   * When clicked, the BPLO officer can type a custom message (e.g., *"Your permit is ready. Please proceed to Window 3 with your valid ID to claim the physical plate."*).
   * Hitting send instantly triggers the **Permit Ready** in-app pop-up and dispatches an email to the applicant containing those exact instructions.
   * The dashboard row then updates with a ✅ **Notified** badge and timestamp to prevent duplicate notifications.
+
+### 4.2 BPLO Dashboard — Status Filtering
+* **What was changed**: BPLO officers can now organize their workspace more efficiently.
+* **Complete Details**: We added a dedicated "Filter by Status" dropdown to the Application Queue. Officers can now toggle between seeing **"All"**, just the **"Pending"** new submissions, or just the ones currently **"Under Review"**.
+
+### 4.3 Barangay Clearance Queue — Status Filtering
+* **What was changed**: Just like BPLO, the Barangay officers get new organizational tools.
+* **Complete Details**: The Clearance Queue now features a status filter dropdown. Officers can filter the view by **"Pending"**, **"Issued"**, or **"Rejected"**. This works perfectly alongside their existing Barangay location filter!

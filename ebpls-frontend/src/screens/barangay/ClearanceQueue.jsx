@@ -125,11 +125,15 @@ const ClearanceQueue = () => {
   // Barangay filter
   const [selectedBarangay, setSelectedBarangay] = useState('All Barangays');
   const [barangayList, setBarangayList] = useState(BARANGAYS_LILIW);
+  const [selectedStatus, setSelectedStatus] = useState('Pending');
 
-  const fetchPendingClearances = async () => {
+  const fetchPendingClearances = async (statusOverride) => {
     setLoading(true);
     try {
-      const response = await apiClient.get('/api/barangay/clearances/pending');
+      const currentStatus = statusOverride !== undefined ? statusOverride : selectedStatus;
+      const response = await apiClient.get('/api/barangay/clearances/pending', {
+        params: { status: currentStatus }
+      });
       const fetched = response.data?.data || response.data;
       setClearances(Array.isArray(fetched) ? fetched : []);
     } catch (err) {
@@ -140,7 +144,10 @@ const ClearanceQueue = () => {
   };
 
   useEffect(() => { 
-    fetchPendingClearances();
+    fetchPendingClearances(selectedStatus);
+  }, [selectedStatus]);
+
+  useEffect(() => {
     const fetchBarangays = async () => {
       try {
         const res = await apiClient.get(API_ENDPOINTS.APPLICATIONS_BARANGAYS);
@@ -158,7 +165,7 @@ const ClearanceQueue = () => {
     try {
       await apiClient.put(`/api/barangay/clearances/${id}/issue`);
       toast.success('Clearance Issued Successfully');
-      fetchPendingClearances();
+      fetchPendingClearances(selectedStatus);
     } catch {
       toast.error('Failed to issue clearance');
     }
@@ -171,7 +178,7 @@ const ClearanceQueue = () => {
       toast.success('Clearance rejected successfully.');
       setIsRejectModalOpen(false);
       setRemarks('');
-      fetchPendingClearances();
+      fetchPendingClearances(selectedStatus);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to reject clearance.');
     }
@@ -234,16 +241,30 @@ const ClearanceQueue = () => {
             Review application details, documents, and location pins before issuing clearances.
           </p>
         </div>
-        <Select
-          value={selectedBarangay}
-          onChange={(e) => setSelectedBarangay(e.target.value)}
-          fullWidth={false}
-          size="sm"
-          className="min-w-[200px]"
-        >
-          <option value="All Barangays">All Barangays</option>
-          {barangayList.map((b) => <option key={b} value={b}>{b}</option>)}
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            fullWidth={false}
+            size="sm"
+            className="min-w-[140px]"
+          >
+            <option value="All">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Issued">Issued</option>
+            <option value="Rejected">Rejected</option>
+          </Select>
+          <Select
+            value={selectedBarangay}
+            onChange={(e) => setSelectedBarangay(e.target.value)}
+            fullWidth={false}
+            size="sm"
+            className="min-w-[200px]"
+          >
+            <option value="All Barangays">All Barangays</option>
+            {barangayList.map((b) => <option key={b} value={b}>{b}</option>)}
+          </Select>
+        </div>
       </div>
 
       {/* Stats */}
@@ -276,7 +297,9 @@ const ClearanceQueue = () => {
       <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-2">
           <ClipboardCheck size={16} className="text-gray-400" />
-          <p className="text-sm font-bold text-gray-900">Pending Requests</p>
+          <p className="text-sm font-bold text-gray-900">
+            {selectedStatus === 'All' ? 'All Requests' : `${selectedStatus} Requests`}
+          </p>
         </div>
         <div className="divide-y divide-gray-100">
           {loading ? (
@@ -284,8 +307,8 @@ const ClearanceQueue = () => {
           ) : filteredClearances.length === 0 ? (
             <div className="px-6 py-12 text-center text-sm text-gray-400">
               {selectedBarangay === 'All Barangays'
-                ? 'No pending clearances found.'
-                : 'No pending clearances found for ' + selectedBarangay + '.'}
+                ? `No ${selectedStatus === 'All' ? '' : selectedStatus.toLowerCase() + ' '}clearances found.`
+                : `No ${selectedStatus === 'All' ? '' : selectedStatus.toLowerCase() + ' '}clearances found for ${selectedBarangay}.`}
             </div>
           ) : (
             filteredClearances.map((item) => {
@@ -307,12 +330,16 @@ const ClearanceQueue = () => {
                       <Button variant="secondary" size="sm" leftIcon={<Eye size={14} />} onClick={() => handleViewDetails(item)}>
                         View Details
                       </Button>
-                      <Button variant="primary" size="sm" leftIcon={<CheckCircle2 size={14} />} onClick={() => handleIssue(item.id)}>
-                        Issue
-                      </Button>
-                      <Button variant="danger" size="sm" leftIcon={<XCircle size={14} />} onClick={() => { setSelectedClearance(item); setIsRejectModalOpen(true); }}>
-                        Reject
-                      </Button>
+                      {item.status === 'Pending' && (
+                        <>
+                          <Button variant="primary" size="sm" leftIcon={<CheckCircle2 size={14} />} onClick={() => handleIssue(item.id)}>
+                            Issue
+                          </Button>
+                          <Button variant="danger" size="sm" leftIcon={<XCircle size={14} />} onClick={() => { setSelectedClearance(item); setIsRejectModalOpen(true); }}>
+                            Reject
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 );

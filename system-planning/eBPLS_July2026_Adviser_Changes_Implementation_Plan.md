@@ -17,13 +17,13 @@
 | 2 | Applicant | Assessment breakdown view (shows matched fees) + step-by-step procedure | ✅ Done |
 | 3 | Applicant | Pop-up notification for returned/declined applications + email notice | ✅ Done |
 | 4 | Applicant | Fee breakdown visible during online payment flow | ✅ Done |
-| 5 | BPLO | Certificate ready notification with notes to applicant (pop-up notif) | 🔄 In Progress |
-| 6.1 | Applicant | Pop-up notifications for ALL status updates with timespan on login | New |
-| 6.2 | Backend | Email sent to applicant on every status update with timestamp | New |
-| 6.3 | Treasury | Auto-generate OTC receipt/OR number (no manual input) | New |
-| 6.4 | BPLO | Dashboard Application Queue — status filter dropdown | New |
-| 6.5 | Shared | Fee Schedule page — collapsible accordion sections per category | Enhancement |
-| 6.6 | Barangay | Clearance Queue — status filter dropdown | New |
+| 5 | BPLO | Certificate ready notification with notes to applicant (pop-up notif) | ✅ Done |
+| 6.1 | Applicant | Pop-up notifications for ALL status updates with timespan on login | ✅ Done |
+| 6.2 | Backend | Email sent to applicant on every status update with timestamp | ✅ Done |
+| 6.3 | Treasury | Auto-generate OTC receipt/OR number (no manual input) | ✅ Done |
+| 6.4 | BPLO | Dashboard Application Queue — status filter dropdown | ✅ Done |
+| 6.5 | Shared | Fee Schedule page — collapsible accordion sections per category | ✅ Done |
+| 6.6 | Barangay | Clearance Queue — status filter dropdown | ✅ Done |
 | 7 | All | Final integration testing (full frontend test plan) | Pending |
 
 ---
@@ -1231,8 +1231,8 @@ graph LR
 | 2 | Applicant + Backend API | 🟢 Low | ~4-5 hours | ✅ Done |
 | 3 | Applicant + BPLO + Backend + DB | 🟡 Medium | ~6-8 hours | ✅ Done |
 | 4 | Applicant (StatusTracker only) | 🟢 Low | ~2-3 hours | ✅ Done |
-| 5 | BPLO + Backend + DB + Email | 🟡 Medium | ~5-6 hours | 🔄 In Progress |
-| 6 | Applicant + Treasury + BPLO + Barangay | 🟢 Low | ~12-18 hours | UX polish, filter logic |
+| 5 | BPLO + Backend + DB + Email | 🟡 Medium | ~5-6 hours | ✅ Done |
+| 6 | Applicant + Treasury + BPLO + Barangay | 🟢 Low | ~12-18 hours | ✅ Done |
 | 7 | All modules (testing only) | 🟢 Low | ~5-6 hours | Test execution time |
 | | | | **~44-58 hours** | |
 
