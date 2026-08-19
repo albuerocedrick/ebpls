@@ -12,6 +12,9 @@ const envSchema = z
     SUPABASE_URL: z.string().url(),
     SUPABASE_SERVICE_ROLE_KEY: z.string(),
 
+    // Frontend URL
+    FRONTEND_URL: z.string().url().default('http://localhost:5173'),
+
     // Auth
     JWT_SECRET: z.string().min(32),
 

@@ -128,7 +128,7 @@ const register = async (req, res, next) => {
       type: 'signup',
       email: input.email,
       password: input.password,
-      options: { redirectTo: 'http://localhost:5173/verify-success' }
+      options: { redirectTo: `${env.FRONTEND_URL}/verify-success` }
     });
 
     if (authError) {
@@ -315,7 +315,7 @@ const forgotPassword = async (req, res, next) => {
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type:  'recovery',
       email: input.email,
-      options: { redirectTo: 'http://localhost:5173/reset-password' }
+      options: { redirectTo: `${env.FRONTEND_URL}/reset-password` }
     });
 
     if (linkError) {
