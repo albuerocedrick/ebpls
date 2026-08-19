@@ -156,6 +156,17 @@ const startReview = async (req, res, next) => {
     // Phase 6: Insert in-app notification
     _resolveApplicantForEmail(applicationNo).then((applicant) => {
       if (applicant && applicant.userId) {
+        dispatchEmail({
+          triggerEvent: EMAIL_TRIGGERS.APPLICATION_UNDER_REVIEW,
+          recipientEmail: applicant.email,
+          applicationNo,
+          payload: {
+            name: applicant.name,
+            applicationNo,
+            businessName: applicant.businessName,
+          },
+        });
+
         supabaseAdmin.from('notifications').insert({
           user_id:        applicant.userId,
           application_no: applicationNo,

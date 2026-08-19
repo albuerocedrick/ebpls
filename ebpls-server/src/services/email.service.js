@@ -31,6 +31,20 @@ const pdfService = require('./pdf.service');
 // Payload is also stored as JSONB in email_notifications for retry use.
 // =================================================================
 
+const getTimestampHtml = () => {
+  let formattedDate;
+  try {
+    formattedDate = new Date().toLocaleString('en-PH', { 
+      timeZone: 'Asia/Manila', 
+      dateStyle: 'long', 
+      timeStyle: 'short' 
+    });
+  } catch (e) {
+    formattedDate = new Date().toISOString();
+  }
+  return `<p style="font-size: 12px; color: #6b7280; font-style: italic;">Status updated on: ${formattedDate}</p>`;
+};
+
 const templates = {
 
   [EMAIL_TRIGGERS.ACCOUNT_CREATED]: ({ name, actionLink }) => ({
@@ -44,6 +58,7 @@ const templates = {
           <a href="${actionLink}" style="background-color: #1d4ed8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Verify Email</a>
         </div>
         <p style="font-size: 14px; color: #6b7280;">If the button does not work, copy and paste this link into your browser:<br/>${actionLink}</p>
+        ${getTimestampHtml()}
         <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
@@ -59,6 +74,7 @@ const templates = {
           <a href="${actionLink}" style="background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Reset Password</a>
         </div>
         <p style="font-size: 14px; color: #6b7280;">If you did not request a password reset, you can safely ignore this email.</p>
+        ${getTimestampHtml()}
         <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
@@ -76,7 +92,22 @@ const templates = {
           <tr><td style="padding: 8px; background: #f3f4f6; font-weight: bold; border-radius: 4px;">Application Number</td><td style="padding: 8px;">${applicationNo}</td></tr>
         </table>
         <p>You will receive another notification once your documents have been reviewed. You can track your application status by logging into your eBPLS account.</p>
-        <hr style="border-color: #e5e7eb;" />
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
+        <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
+      </div>`,
+  }),
+
+  [EMAIL_TRIGGERS.APPLICATION_UNDER_REVIEW]: ({ name, applicationNo, businessName }) => ({
+    subject: `eBPLS — Your Application is Now Under Review (${applicationNo})`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #1d4ed8;">Application Under Review</h2>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>Your business permit application for <strong>${businessName}</strong> (${applicationNo}) is now being actively reviewed by the BPLO office.</p>
+        <p>No further action is required from you at this time. We will notify you once the review is complete.</p>
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
   }),
@@ -93,7 +124,8 @@ const templates = {
           <p style="margin: 8px 0 0;">${remarks || 'Please log in to your account for details.'}</p>
         </div>
         <p>Please log in to your eBPLS account, review the remarks, make the necessary corrections, and resubmit your application.</p>
-        <hr style="border-color: #e5e7eb;" />
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
   }),
@@ -106,7 +138,8 @@ const templates = {
         <p>Hello <strong>${name}</strong>,</p>
         <p>We are pleased to inform you that your business permit application for <strong>${businessName}</strong> (${applicationNo}) has been successfully verified by the BPLO office.</p>
         <p>Your application has been forwarded to the <strong>Treasury Office</strong> for fee assessment. You will receive another notification once your Tax Order of Payment (TOP) is ready.</p>
-        <hr style="border-color: #e5e7eb;" />
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
   }),
@@ -121,8 +154,9 @@ const templates = {
         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 16px; text-align: center; margin: 16px 0;">
           <span style="font-size: 28px; font-weight: bold; color: #1d4ed8;">PHP ${Number(totalAmount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
         </div>
-        <p>The official TOP document is attached to this email. Please proceed to the <strong>Municipal Treasury Office</strong> to settle your payment.</p>
-        <hr style="border-color: #e5e7eb;" />
+        <p>The official TOP document is attached to this email. Please proceed to the <strong>Municipal Treasury Office</strong> to settle your payment, or pay online if available.</p>
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
   }),
@@ -149,7 +183,8 @@ const templates = {
           </tr>
         </table>
         <p>Your Business Permit is now being processed and will be ready shortly. You will receive a final notification when it is available for download.</p>
-        <hr style="border-color: #e5e7eb;" />
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS — This is an official receipt notification.</p>
       </div>`,
   }),
@@ -163,7 +198,8 @@ const templates = {
         <p>Congratulations! Your official <strong>Business Permit</strong> and <strong>E-Resibo</strong> for <strong>${businessName}</strong> are now available.</p>
         <p>The documents are attached to this email. You may also download them at any time by logging in to your eBPLS account.</p>
         <p style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; border-radius: 4px;">Please display your Business Permit prominently at your place of business as required by the Local Government Code.</p>
-        <hr style="border-color: #e5e7eb;" />
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
   }),
@@ -180,7 +216,8 @@ const templates = {
           <p style="margin: 8px 0 0;">${remarks || 'Please contact the Barangay Office directly for details.'}</p>
         </div>
         <p><strong>Next Steps:</strong> Your application has been returned. Please log in to your dashboard, correct the issues mentioned above, and re-submit your application online.</p>
-        <hr style="border-color: #e5e7eb;" />
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
   }),
@@ -193,7 +230,8 @@ const templates = {
         <p>Hello <strong>${name}</strong>,</p>
         <p>This email confirms that the business retirement for <strong>${businessName}</strong> has been officially processed and recorded in the system effective <strong>${cessationDate}</strong>.</p>
         <p>All outstanding obligations have been settled. If you have any questions, please contact the BPLO office.</p>
-        <hr style="border-color: #e5e7eb;" />
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
   }),
@@ -211,6 +249,7 @@ const templates = {
         </table>
         ${notes ? `<div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; margin: 16px 0; border-radius: 4px;"><strong>Notes from BPLO:</strong><br/>${notes}</div>` : ''}
         <p>Please log in to your eBPLS account to download your Business Permit and E-Resibo.</p>
+        ${getTimestampHtml()}
         <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
