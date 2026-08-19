@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, AlertCircle, FileText } from 'lucide-react';
+import { ChevronDown, Loader2, AlertCircle, FileText } from 'lucide-react';
 import apiClient from '../../utils/apiClient';
 import { API_ENDPOINTS } from '../../utils/constants';
 
@@ -7,6 +7,16 @@ const FeeSchedule = () => {
   const [scheduleData, setScheduleData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [openCategories, setOpenCategories] = useState(new Set());
+
+  const toggleCategory = (id) => {
+    setOpenCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetchFeeSchedule();
@@ -100,13 +110,24 @@ const FeeSchedule = () => {
       )}
 
       {/* Other Municipal Fees Section */}
-      <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
-        <div className="px-6 py-5 bg-gray-50/50 border-b border-gray-100 flex items-center gap-2">
-          <FileText size={18} className="text-gray-500" />
-          <h2 className="text-lg font-bold text-gray-900">Other Municipal Fees</h2>
+      <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm transition-all duration-200 mb-6">
+        <div 
+          className="px-6 py-5 bg-gray-50/50 border-b border-gray-100 cursor-pointer flex items-center justify-between hover:bg-gray-100/50 transition-colors"
+          onClick={() => toggleCategory('other-municipal-fees')}
+        >
+          <div className="flex items-center gap-2">
+            <FileText size={18} className="text-gray-500" />
+            <h2 className="text-lg font-bold text-gray-900">Other Municipal Fees</h2>
+          </div>
+          <ChevronDown 
+            size={20} 
+            className={`text-gray-400 transition-transform duration-300 ${openCategories.has('other-municipal-fees') ? 'rotate-180' : ''}`} 
+          />
         </div>
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className={`grid transition-all duration-300 ease-in-out ${openCategories.has('other-municipal-fees') ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+          <div className="overflow-hidden">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
                 <th className="px-6 py-4 font-bold">Fee Type</th>
@@ -144,62 +165,79 @@ const FeeSchedule = () => {
               </tr>
             </tbody>
           </table>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Categories */}
       <div className="space-y-6">
-        {categories.map((category) => (
-          <div key={category.id} className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+        {categories.map((category) => {
+          const isOpen = openCategories.has(category.id);
+          return (
+          <div key={category.id} className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm transition-all duration-200">
             {/* Category Header */}
-            <div className="px-6 py-5 bg-gray-50/50 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900">{category.name}</h2>
-              {category.description && (
-                <p className="text-sm text-gray-500 mt-1">{category.description}</p>
-              )}
+            <div 
+              className="px-6 py-5 bg-gray-50/50 border-b border-gray-100 cursor-pointer flex items-center justify-between hover:bg-gray-100/50 transition-colors"
+              onClick={() => toggleCategory(category.id)}
+            >
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">{category.name}</h2>
+                {category.description && (
+                  <p className="text-sm text-gray-500 mt-1">{category.description}</p>
+                )}
+              </div>
+              <ChevronDown 
+                size={20} 
+                className={`text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+              />
             </div>
 
             {/* Items Table */}
-            {category.items && category.items.length > 0 ? (
-              <div className="w-full overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-white border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      <th className="px-6 py-4 font-bold">Line of Business</th>
-                      <th className="px-6 py-4 font-bold">Tier / Range</th>
-                      <th className="px-6 py-4 font-bold text-right">Amount (PHP)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {category.items.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                          {item.business_type}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {item.tier_label ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-100/50 text-gray-600 text-xs font-medium">
-                              {item.tier_label}
-                            </span>
-                          ) : (
-                            <span className="text-gray-300">-</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-right font-medium">
-                          {formatAmount(item.amount, item.is_exempt)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+              <div className="overflow-hidden">
+                {category.items && category.items.length > 0 ? (
+                  <div className="w-full overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-white border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                          <th className="px-6 py-4 font-bold">Line of Business</th>
+                          <th className="px-6 py-4 font-bold">Tier / Range</th>
+                          <th className="px-6 py-4 font-bold text-right">Amount (PHP)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {category.items.map((item) => (
+                          <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                              {item.business_type}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              {item.tier_label ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-100/50 text-gray-600 text-xs font-medium">
+                                  {item.tier_label}
+                                </span>
+                              ) : (
+                                <span className="text-gray-300">-</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-right font-medium">
+                              {formatAmount(item.amount, item.is_exempt)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-sm text-gray-400">
+                    No fee items found for this category.
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="p-6 text-center text-sm text-gray-400">
-                No fee items found for this category.
-              </div>
-            )}
+            </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );
