@@ -32,11 +32,7 @@ const BPLO_NAV = [
         icon: <LayoutDashboard size={18} />,
         label: 'Dashboard',
       },
-      {
-        to: ROUTES.BPLO_VERIFIER.replace('/:appNo', ''),
-        icon: <FileSearch size={18} />,
-        label: 'Verify Applications',
-      },
+
       {
         to: ROUTES.BPLO_RETIREMENTS,
         icon: <XCircle size={18} />,

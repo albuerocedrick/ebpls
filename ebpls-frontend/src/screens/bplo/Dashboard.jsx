@@ -46,6 +46,7 @@ const BPLODashboard = () => {
   const [applications, setApplications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortDirection, setSortDirection] = useState('asc');
+  const [selectedStatus, setSelectedStatus] = useState('All');
 
   const loadQueue = useCallback(async () => {
     setIsLoading(true);
@@ -68,15 +69,20 @@ const BPLODashboard = () => {
     loadQueue();
   }, [loadQueue]);
 
-  const sortedApplications = useMemo(() => {
-    const copy = [...applications];
+  const filteredAndSortedApplications = useMemo(() => {
+    let copy = [...applications];
+
+    if (selectedStatus !== 'All') {
+      copy = copy.filter(app => app.status === selectedStatus);
+    }
+
     copy.sort((a, b) => {
       const aTime = a.submittedAt ? new Date(a.submittedAt).getTime() : Number.MAX_SAFE_INTEGER;
       const bTime = b.submittedAt ? new Date(b.submittedAt).getTime() : Number.MAX_SAFE_INTEGER;
       return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
     });
     return copy;
-  }, [applications, sortDirection]);
+  }, [applications, sortDirection, selectedStatus]);
 
   const stats = useMemo(() => {
     const pendingCount = applications.filter((app) => app.status === APP_STATUS.PENDING).length;
@@ -152,19 +158,30 @@ const BPLODashboard = () => {
       {/* Application Queue Table */}
       <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
         {/* Table Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h3 className="font-bold text-gray-900 flex items-center gap-2">
             <Users size={18} className="text-gray-400" />
             Application Queue
           </h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<ArrowUpDown size={14} />}
-            onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-          >
-            {sortDirection === 'asc' ? 'Oldest first' : 'Newest first'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="text-sm bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium"
+            >
+              <option value="All">All Statuses</option>
+              <option value={APP_STATUS.PENDING}>Pending</option>
+              <option value={APP_STATUS.UNDER_REVIEW}>Under Review</option>
+            </select>
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<ArrowUpDown size={14} />}
+              onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+            >
+              {sortDirection === 'asc' ? 'Oldest first' : 'Newest first'}
+            </Button>
+          </div>
         </div>
 
         {/* Table Body */}
@@ -172,14 +189,14 @@ const BPLODashboard = () => {
           <div className="px-6 py-12 text-center">
             <p className="text-sm text-gray-400">Loading applications...</p>
           </div>
-        ) : sortedApplications.length === 0 ? (
+        ) : filteredAndSortedApplications.length === 0 ? (
           <div className="px-6 py-12 text-center">
             <Inbox size={32} className="text-gray-200 mx-auto mb-3" />
-            <p className="text-sm text-gray-400">No pending applications found.</p>
+            <p className="text-sm text-gray-400">No applications found.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {sortedApplications.map((app) => {
+            {filteredAndSortedApplications.map((app) => {
               const ageMs = app.submittedAt ? Date.now() - new Date(app.submittedAt).getTime() : 0;
               const urgent = ageMs >= 2 * DAY_MS; // 2 days in ms
 
