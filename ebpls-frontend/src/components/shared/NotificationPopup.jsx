@@ -104,7 +104,7 @@ const timeAgo = (dateString) => {
 };
 
 const NotificationPopup = () => {
-  const { notifications, newNotificationIds, markAsRead } = useNotificationStore();
+  const { notifications, newNotificationIds, markAsRead, removeNewNotificationId } = useNotificationStore();
   const navigate = useNavigate();
   const [timeText, setTimeText] = useState('');
 
@@ -121,7 +121,7 @@ const NotificationPopup = () => {
 
     // Auto-dismiss after 15 seconds
     const timer = setTimeout(() => {
-      markAsRead(popup.id);
+      removeNewNotificationId(popup.id);
     }, 15000);
     
     return () => {
@@ -140,7 +140,7 @@ const NotificationPopup = () => {
   };
 
   const handleDismiss = () => {
-    markAsRead(popup.id);
+    removeNewNotificationId(popup.id);
   };
 
   const config = TYPE_CONFIG[popup.type] || DEFAULT_CONFIG;

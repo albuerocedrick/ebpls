@@ -27,7 +27,7 @@ const CashierPOS = () => {
   // Form State
   const [method, setMethod] = useState('Cash'); 
   const [tendered, setTendered] = useState('');
-  const [orNumber, setOrNumber] = useState('');
+  const [generatedOrNumber, setGeneratedOrNumber] = useState('');
   const [checkDetails, setCheckDetails] = useState({ number: '', bank: '' });
 
   useEffect(() => {
@@ -61,14 +61,16 @@ const CashierPOS = () => {
       setError(null);
       const res = await apiClient.post('/api/treasury/payments/otc', {
         application_no: appNo,
-        or_number: orNumber,
         amount_tendered: parseFloat(tendered),
         tendered_type: method,
         check_number: method === 'Manager Check' ? checkDetails.number : null,
         bank_name: method === 'Manager Check' ? checkDetails.bank : null
       });
 
-      if (res.success) setIsSuccess(true);
+      if (res.success) {
+        setGeneratedOrNumber(res.data?.or_number || 'UNKNOWN');
+        setIsSuccess(true);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -98,7 +100,8 @@ const CashierPOS = () => {
         <CheckCircle2 size={40} className="text-gray-900" />
       </div>
       <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-2">Payment Recorded</h1>
-      <p className="text-gray-400 font-mono mb-8">OR NO: {orNumber}</p>
+      <p className="text-gray-400 font-mono mb-2">OR NO: {generatedOrNumber}</p>
+      <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-8">(Please note this number on the physical receipt.)</p>
       <Button variant="primary" onClick={() => navigate('/treasury/queue')}>Return to Queue</Button>
     </div>
   );
@@ -217,28 +220,12 @@ const CashierPOS = () => {
         </div>
       )}
 
-      {/* Official Receipt Number */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-          Official Receipt No.
-        </label>
-        <input
-          type="text"
-          placeholder="OR-000000"
-          className="w-full px-4 py-3 rounded-lg text-base font-mono text-gray-900
-                     bg-transparent border border-gray-200
-                     placeholder:text-gray-900/20 outline-none focus:border-blue-500"
-          value={orNumber}
-          onChange={(e) => setOrNumber(e.target.value)}
-        />
-      </div>
-
       {/* Confirm */}
       <Button 
         variant="primary" 
         fullWidth 
         size="lg" 
-        disabled={isInsufficient || !orNumber || !tendered || (method === 'Manager Check' && (!checkDetails.number || !checkDetails.bank))}
+        disabled={isInsufficient || !tendered || (method === 'Manager Check' && (!checkDetails.number || !checkDetails.bank))}
         loading={isProcessing}
         onClick={handleConfirm}
       >

@@ -58,6 +58,10 @@ const useNotificationStore = create((set, get) => ({
 
   clearNewNotificationIds: () => set({ newNotificationIds: [] }),
 
+  removeNewNotificationId: (id) => set(state => ({
+    newNotificationIds: state.newNotificationIds.filter(nid => nid !== id)
+  })),
+
   startPolling: () => {
     if (_pollingInterval) return; // Already polling
     get().fetchUnread(); // Immediate fetch on start

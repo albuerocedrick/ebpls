@@ -256,7 +256,7 @@ const getAssessmentByApp = async (req, res, next) => {
  */
 const recordOTCPayment = async (req, res, next) => {
   try {
-    const { application_no, or_number, amount_tendered, tendered_type, check_number, bank_name } = req.body;
+    const { application_no, amount_tendered, tendered_type, check_number, bank_name } = req.body;
 
     // 1. Basic Validation
     if (!['Cash', 'Manager Check'].includes(tendered_type)) {
@@ -285,6 +285,21 @@ const recordOTCPayment = async (req, res, next) => {
     }
 
     const changeAmount = Number(amount_tendered) - Number(assessment.total_amount);
+
+    // Auto-generate OR number
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const { count, error: countErr } = await supabaseAdmin
+      .from('transactions')
+      .select('*', { count: 'exact', head: true })
+      .like('or_number', `OTC-${today}-%`);
+    
+    if (countErr) {
+      console.warn('[treasury.controller] Failed to get transaction count for OR generation. Fallback to UUID.');
+    }
+    const sequence = String((count || 0) + 1).padStart(6, '0');
+    const or_number = countErr 
+      ? `OTC-${today}-${require('crypto').randomUUID().slice(0, 6)}` 
+      : `OTC-${today}-${sequence}`;
 
     // 3. Insert Transaction
     const { data: transaction, error: transErr } = await supabaseAdmin
