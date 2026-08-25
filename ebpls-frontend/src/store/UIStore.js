@@ -23,8 +23,15 @@ export const TOAST_TYPE = Object.freeze({
 const useUIStore = create((set, get) => ({
   // =========================================
   // Sidebar State
+  //
+  // @policy  Starts open on desktop, closed below the lg breakpoint (1024px).
+  //          Defaulting to `true` everywhere meant that on a narrow window the
+  //          sidebar rendered as an overlay on top of the content while the
+  //          layouts simultaneously shifted that content right by
+  //          --sidebar-width, so the left edge of every admin/BPLO page was
+  //          pushed off-screen and clipped.
   // =========================================
-  isSidebarOpen: true,
+  isSidebarOpen: typeof window === 'undefined' ? true : window.innerWidth >= 1024,
 
   toggleSidebar: () =>
     set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),

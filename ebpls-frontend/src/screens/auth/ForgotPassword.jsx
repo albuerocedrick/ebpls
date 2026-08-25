@@ -21,49 +21,63 @@ const ForgotPassword = () => {
 
   if (submitted) {
     return (
-      <div className="p-8 sm:p-10 flex flex-col gap-6 items-center text-center">
-        <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
-          <CheckCircle2 size={32} className="text-green-600" />
+      <div className="flex flex-col gap-6 p-7 sm:p-8">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-900">
+          <CheckCircle2 size={20} className="text-white" />
         </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-extrabold text-gray-900">Check your inbox</h1>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            If <strong className="text-gray-900">{email}</strong> is linked to an account, a password reset link has been sent.
+        <div>
+          <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+            Reset requested
+          </span>
+          <h1 className="mt-3 text-xl font-semibold tracking-tight text-zinc-900">
+            Check your inbox
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+            If <strong className="font-medium text-zinc-900">{email}</strong> is
+            linked to an account, a password reset link has been sent.
           </p>
         </div>
-        <div className="w-full h-px bg-gray-100 my-2" />
+        <div className="h-px w-full bg-zinc-200" />
         <Link
           to={ROUTES.LOGIN}
-          className="text-sm font-semibold text-gray-900 hover:underline flex items-center gap-1.5"
+          className="group inline-flex items-center gap-1.5 text-sm font-medium text-zinc-900"
         >
-          <ArrowLeft size={14} /> Back to Sign In
+          <ArrowLeft
+            size={14}
+            className="transition-transform duration-300 ease-out group-hover:-translate-x-0.5 motion-reduce:transition-none"
+          />
+          Back to sign in
         </Link>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-8 sm:p-10 flex flex-col gap-8" noValidate>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-7 p-7 sm:p-8" noValidate>
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
+      <div>
+        <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+          Password reset
+        </span>
+        <h1 className="mt-3 text-xl font-semibold tracking-tight text-zinc-900">
           Reset your password
         </h1>
-        <p className="text-sm text-gray-500 leading-relaxed">
-          Enter your email address and we&apos;ll send you a link to reset your password.
+        <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+          Enter your email address and we&apos;ll send you a link to set a new
+          password.
         </p>
       </div>
 
       {/* Field */}
       <Input
-        label="Email Address"
+        label="Email address"
         type="email"
         placeholder="you@example.com"
         hint="We'll send a secure reset link to this address."
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
-        leftElement={<Mail size={16} />}
+        leftElement={<Mail size={15} className="text-zinc-400" />}
       />
 
       {/* Submit */}
@@ -75,20 +89,22 @@ const ForgotPassword = () => {
         leftIcon={<Send size={16} />}
         isLoading={isLoading}
         disabled={!email.trim()}
+        className="font-semibold"
       >
-        Send Reset Link
+        Send reset link
       </Button>
 
       {/* Back */}
-      <div className="text-center">
-        <Link
-          to={ROUTES.LOGIN}
-          className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors inline-flex items-center gap-1.5"
-        >
-          <ArrowLeft size={14} />
-          Back to Sign In
-        </Link>
-      </div>
+      <Link
+        to={ROUTES.LOGIN}
+        className="group inline-flex items-center justify-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors duration-200 hover:text-zinc-900"
+      >
+        <ArrowLeft
+          size={14}
+          className="transition-transform duration-300 ease-out group-hover:-translate-x-0.5 motion-reduce:transition-none"
+        />
+        Back to sign in
+      </Link>
     </form>
   );
 };

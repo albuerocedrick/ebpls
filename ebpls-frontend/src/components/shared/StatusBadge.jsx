@@ -1,42 +1,43 @@
 // src/components/shared/StatusBadge.jsx
 
-import React from 'react';
-
 /**
- * Clean text-only status badge — no dots, no icons.
- * Just colored text on a subtle background with rounded corners.
+ * Text-only status badge — no dots, no icons.
+ *
+ * @policy  Neutral zinc ramp only. Progression is encoded by weight
+ *          (light fill → dark fill), not by hue, so the badge never
+ *          becomes the only saturated element on a screen.
  */
 const STATUS_CONFIG = {
-  'Draft': 'bg-gray-50 text-gray-500',
-  'Pending': 'bg-gray-50 text-gray-500',
-  'Under Review': 'bg-gray-100 text-gray-600',
-  'For Assessment': 'bg-gray-100 text-gray-600',
-  'PaymentProcessing': 'bg-gray-100 text-gray-600',
-  'Verified': 'bg-gray-200 text-gray-700',
-  'Assessed': 'bg-gray-200 text-gray-700',
-  'For Payment': 'bg-gray-200 text-gray-700',
-  'Paid': 'bg-gray-300 text-gray-800',
-  'Completed': 'bg-gray-900 text-white',
-  'Issued': 'bg-gray-900 text-white',
-  'Returned': 'bg-gray-800 text-gray-200',
-  'Payment Failed': 'bg-gray-100 text-gray-400 line-through',
+  'Draft': 'bg-zinc-50 text-zinc-500 ring-1 ring-zinc-200',
+  'Pending': 'bg-zinc-50 text-zinc-500 ring-1 ring-zinc-200',
+  'Under Review': 'bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200',
+  'For Assessment': 'bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200',
+  'PaymentProcessing': 'bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200',
+  'Verified': 'bg-zinc-200 text-zinc-700 ring-1 ring-zinc-300',
+  'Assessed': 'bg-zinc-200 text-zinc-700 ring-1 ring-zinc-300',
+  'For Payment': 'bg-zinc-200 text-zinc-700 ring-1 ring-zinc-300',
+  'Paid': 'bg-zinc-300 text-zinc-800 ring-1 ring-zinc-400',
+  'Completed': 'bg-zinc-900 text-white',
+  'Issued': 'bg-zinc-900 text-white',
+  'Returned': 'bg-zinc-800 text-zinc-100',
+  'Payment Failed': 'bg-zinc-100 text-zinc-400 line-through ring-1 ring-zinc-200',
 };
 
-const DEFAULT_CONFIG = 'bg-gray-100 text-gray-600';
+const DEFAULT_CONFIG = 'bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200';
 
 const StatusBadge = ({ status, size = 'sm', className = '' }) => {
   const configClasses = STATUS_CONFIG[status] || DEFAULT_CONFIG;
 
   const sizeClasses = {
-    sm: 'px-2.5 py-1 text-[11px]',
-    md: 'px-3 py-1.5 text-xs',
-    lg: 'px-4 py-1.5 text-sm',
+    sm: 'px-2 py-0.5 text-[10px]',
+    md: 'px-2.5 py-1 text-[11px]',
+    lg: 'px-3 py-1 text-xs',
   };
 
   return (
     <span
       className={[
-        'inline-flex items-center font-semibold rounded-lg',
+        'inline-flex items-center rounded-md font-mono tracking-[0.08em] uppercase',
         configClasses,
         sizeClasses[size],
         className,

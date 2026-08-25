@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useNotificationStore from '../../store/notificationStore';
@@ -51,23 +51,23 @@ const NotificationBell = () => {
     <div className="relative" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="relative w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full transition-colors ml-1"
+        className="relative ml-1 flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors duration-200 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
         aria-label="Notifications"
       >
-        <Bell size={18} strokeWidth={2} />
+        <Bell size={17} strokeWidth={2} />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full border-2 border-white">
+          <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-zinc-900 px-1 font-mono text-[9px] text-white ring-2 ring-white tabular-nums">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-            <h3 className="font-bold text-sm text-gray-800">Notifications</h3>
+        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
+          <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50 px-4 py-3">
+            <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">Notifications</h3>
             {unreadCount > 0 && (
-              <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              <span className="rounded-md bg-zinc-900 px-2 py-0.5 font-mono text-[10px] text-white tabular-nums">
                 {unreadCount} unread
               </span>
             )}
@@ -75,27 +75,27 @@ const NotificationBell = () => {
 
           <div className="max-h-[320px] overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-500 flex flex-col items-center">
-                <Bell size={24} className="text-gray-300 mb-2" />
+              <div className="flex flex-col items-center px-4 py-8 text-center text-sm text-zinc-500">
+                <Bell size={20} className="mb-2 text-zinc-300" />
                 <p>No unread notifications</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-zinc-100">
                 {notifications.map((notif) => (
                   <div 
                     key={notif.id}
                     onClick={() => handleNotificationClick(notif)}
-                    className="p-4 hover:bg-gray-50 transition-colors cursor-pointer group"
+                    className="group cursor-pointer p-4 transition-colors duration-200 hover:bg-zinc-50 motion-reduce:transition-none"
                   >
-                    <div className="flex justify-between items-start mb-1">
-                      <h4 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                    <div className="mb-1 flex items-start justify-between">
+                      <h4 className="text-sm font-medium text-zinc-900">
                         {notif.title}
                       </h4>
-                      <span className="text-[10px] font-medium text-gray-400 whitespace-nowrap ml-2">
+                      <span className="ml-2 font-mono text-[10px] whitespace-nowrap text-zinc-500">
                         {formatRelativeTime(notif.created_at)}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+                    <p className="line-clamp-2 text-xs leading-relaxed text-zinc-600">
                       {notif.message}
                     </p>
                   </div>
@@ -105,10 +105,10 @@ const NotificationBell = () => {
           </div>
 
           {notifications.length > 0 && (
-            <div className="border-t border-gray-100 p-2 bg-gray-50/50">
+            <div className="border-t border-zinc-200 bg-zinc-50 p-2">
               <button 
                 onClick={handleMarkAllAsRead}
-                className="w-full py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 rounded-lg transition-colors"
+                className="w-full rounded-md py-2 font-mono text-[10px] tracking-[0.12em] text-zinc-600 uppercase transition-colors duration-200 hover:bg-zinc-200 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:outline-none motion-reduce:transition-none"
               >
                 Mark all as read
               </button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, Loader2, AlertCircle, FileText } from 'lucide-react';
 import apiClient from '../../utils/apiClient';
 import { API_ENDPOINTS } from '../../utils/constants';
@@ -18,44 +18,46 @@ const FeeSchedule = () => {
     });
   };
 
+  // Loads once on mount. `isLoading` already starts as true and `error` as
+  // null, so no synchronous state update is needed before the request — that
+  // keeps the effect free of cascading renders.
   useEffect(() => {
+    const fetchFeeSchedule = async () => {
+      try {
+        const res = await apiClient.get(API_ENDPOINTS.TREASURY_FEE_SCHEDULE);
+        if (res.success) {
+          setScheduleData(res.data);
+        } else {
+          throw new Error('Failed to load fee schedule');
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Could not load the fee schedule at this time. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
     fetchFeeSchedule();
   }, []);
 
-  const fetchFeeSchedule = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const res = await apiClient.get(API_ENDPOINTS.TREASURY_FEE_SCHEDULE);
-      if (res.success) {
-        setScheduleData(res.data);
-      } else {
-        throw new Error('Failed to load fee schedule');
-      }
-    } catch (err) {
-      console.error(err);
-      setError('Could not load the fee schedule at this time. Please try again later.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <Loader2 className="w-7 h-7 animate-spin text-gray-300" />
-        <p className="text-gray-400 text-sm">Loading fee schedule...</p>
+      <div className="flex h-64 flex-col items-center justify-center gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
+        <p className="text-sm text-zinc-500">Loading fee schedule…</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-6 bg-red-50 border border-red-100 rounded-3xl flex items-center gap-4 mt-8">
-        <AlertCircle className="text-red-500 w-8 h-8 flex-shrink-0" />
+      <div className="mx-auto mt-8 flex max-w-4xl items-center gap-4 rounded-lg border border-zinc-200 bg-zinc-50 p-6">
+        <AlertCircle className="h-6 w-6 flex-shrink-0 text-zinc-500" />
         <div>
-          <h3 className="text-red-900 font-bold">Error</h3>
-          <p className="text-red-700 text-sm mt-1">{error}</p>
+          <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+            Unavailable
+          </h3>
+          <p className="mt-1.5 text-sm text-zinc-700">{error}</p>
         </div>
       </div>
     );
@@ -63,10 +65,12 @@ const FeeSchedule = () => {
 
   if (!scheduleData || (!scheduleData.categories?.length && !scheduleData.rules?.length)) {
     return (
-      <div className="max-w-4xl mx-auto p-12 text-center flex flex-col items-center gap-3">
-        <FileText size={48} className="text-gray-200" />
-        <h3 className="text-gray-900 font-bold text-lg">No Schedule Found</h3>
-        <p className="text-sm text-gray-500">The revenue code fee schedule is currently empty.</p>
+      <div className="mx-auto flex max-w-4xl flex-col items-center gap-3 p-12 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+          <FileText size={20} className="text-zinc-400" />
+        </div>
+        <h3 className="text-base font-semibold tracking-tight text-zinc-900">No schedule found</h3>
+        <p className="text-sm text-zinc-500">The revenue code fee schedule is currently empty.</p>
       </div>
     );
   }
@@ -74,34 +78,45 @@ const FeeSchedule = () => {
   const { categories, rules } = scheduleData;
 
   const formatAmount = (amount, isExempt) => {
-    if (isExempt) return <span className="text-green-600 font-bold">Exempt</span>;
+    if (isExempt) {
+      return (
+        <span className="font-mono text-[10px] tracking-[0.08em] text-zinc-500 uppercase">
+          Exempt
+        </span>
+      );
+    }
     return `₱${parseFloat(amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    <div className="mx-auto max-w-5xl space-y-8 pb-12">
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Revenue Code Schedule</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+          Revenue code
+        </span>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
+          Schedule of fees
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-zinc-600">
           Official breakdown of fees, charges, and guidelines as per the municipal revenue code.
         </p>
       </div>
 
       {/* Rules Section */}
       {rules && rules.length > 0 && (
-        <div className="bg-blue-50/50 border border-blue-100 rounded-3xl p-6">
-          <h3 className="text-blue-900 font-bold mb-4 flex items-center gap-2">
-            <AlertCircle size={18} className="text-blue-500" />
-            General Rules & Provisions
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6">
+          <h3 className="mb-4 flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+            <AlertCircle size={14} className="text-zinc-500" />
+            General rules &amp; provisions
           </h3>
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             {rules.map((rule) => (
-              <div key={rule.id} className="bg-white rounded-2xl p-4 border border-blue-50 shadow-sm">
-                <h4 className="font-semibold text-gray-900 text-sm">{rule.title}</h4>
-                <p className="text-xs text-gray-500 mt-1">{rule.description}</p>
-                <div className="mt-3 inline-flex items-center px-2.5 py-1 rounded-md bg-gray-50 text-gray-600 text-xs font-mono font-medium border border-gray-100">
-                  Value: {rule.value < 1 ? `${(rule.value * 100).toFixed(0)}%` : `₱${parseFloat(rule.value).toFixed(2)}`}
+              <div key={rule.id} className="rounded-md border border-zinc-200 bg-white p-4">
+                <h4 className="text-sm font-medium text-zinc-900">{rule.title}</h4>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{rule.description}</p>
+                <div className="mt-3 inline-flex items-center rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1 font-mono text-[11px] text-zinc-700 tabular-nums">
+                  {rule.value < 1 ? `${(rule.value * 100).toFixed(0)}%` : `₱${parseFloat(rule.value).toFixed(2)}`}
                 </div>
               </div>
             ))}
@@ -110,58 +125,58 @@ const FeeSchedule = () => {
       )}
 
       {/* Other Municipal Fees Section */}
-      <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm transition-all duration-200 mb-6">
-        <div 
-          className="px-6 py-5 bg-gray-50/50 border-b border-gray-100 cursor-pointer flex items-center justify-between hover:bg-gray-100/50 transition-colors"
+      <div className="mb-6 overflow-hidden rounded-lg border border-zinc-200 bg-white">
+        <div
+          className="flex cursor-pointer items-center justify-between border-b border-zinc-200 bg-zinc-50 px-5 py-4 transition-colors duration-200 hover:bg-zinc-100 motion-reduce:transition-none"
           onClick={() => toggleCategory('other-municipal-fees')}
         >
-          <div className="flex items-center gap-2">
-            <FileText size={18} className="text-gray-500" />
-            <h2 className="text-lg font-bold text-gray-900">Other Municipal Fees</h2>
+          <div className="flex items-center gap-2.5">
+            <FileText size={16} className="text-zinc-500" />
+            <h2 className="text-base font-semibold tracking-tight text-zinc-900">Other municipal fees</h2>
           </div>
-          <ChevronDown 
-            size={20} 
-            className={`text-gray-400 transition-transform duration-300 ${openCategories.has('other-municipal-fees') ? 'rotate-180' : ''}`} 
+          <ChevronDown
+            size={18}
+            className={`text-zinc-400 transition-transform duration-300 ease-out motion-reduce:transition-none ${openCategories.has('other-municipal-fees') ? 'rotate-180' : ''}`}
           />
         </div>
-        <div className={`grid transition-all duration-300 ease-in-out ${openCategories.has('other-municipal-fees') ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+        <div className={`grid transition-all duration-300 ease-out motion-reduce:transition-none ${openCategories.has('other-municipal-fees') ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
           <div className="overflow-hidden">
             <div className="w-full overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="bg-white border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                <th className="px-6 py-4 font-bold">Fee Type</th>
-                <th className="px-6 py-4 font-bold">Computation Basis</th>
+              <tr className="border-b border-zinc-200 bg-white font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+                <th className="px-5 py-3.5 font-normal">Fee type</th>
+                <th className="px-5 py-3.5 font-normal">Computation basis</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              <tr className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">Business Tax</td>
-                <td className="px-6 py-4 text-sm text-gray-500">Calculated based on Gross Sales schedule</td>
+            <tbody className="divide-y divide-zinc-100">
+              <tr className="transition-colors duration-200 hover:bg-zinc-50 motion-reduce:transition-none">
+                <td className="px-5 py-3.5 text-sm font-medium text-zinc-900">Business Tax</td>
+                <td className="px-5 py-3.5 text-sm text-zinc-600">Calculated based on Gross Sales schedule</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">Sanitary Inspection Fee</td>
-                <td className="px-6 py-4 text-sm text-gray-500">Fixed municipal fee</td>
+              <tr className="transition-colors duration-200 hover:bg-zinc-50 motion-reduce:transition-none">
+                <td className="px-5 py-3.5 text-sm font-medium text-zinc-900">Sanitary Inspection Fee</td>
+                <td className="px-5 py-3.5 text-sm text-zinc-600">Fixed municipal fee</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">Zoning / Occupancy Fee</td>
-                <td className="px-6 py-4 text-sm text-gray-500">Fixed municipal fee</td>
+              <tr className="transition-colors duration-200 hover:bg-zinc-50 motion-reduce:transition-none">
+                <td className="px-5 py-3.5 text-sm font-medium text-zinc-900">Zoning / Occupancy Fee</td>
+                <td className="px-5 py-3.5 text-sm text-zinc-600">Fixed municipal fee</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">Garbage Collection Fee</td>
-                <td className="px-6 py-4 text-sm text-gray-500">Fixed municipal fee</td>
+              <tr className="transition-colors duration-200 hover:bg-zinc-50 motion-reduce:transition-none">
+                <td className="px-5 py-3.5 text-sm font-medium text-zinc-900">Garbage Collection Fee</td>
+                <td className="px-5 py-3.5 text-sm text-zinc-600">Fixed municipal fee</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">Environmental Fee</td>
-                <td className="px-6 py-4 text-sm text-gray-500">Fixed municipal fee</td>
+              <tr className="transition-colors duration-200 hover:bg-zinc-50 motion-reduce:transition-none">
+                <td className="px-5 py-3.5 text-sm font-medium text-zinc-900">Environmental Fee</td>
+                <td className="px-5 py-3.5 text-sm text-zinc-600">Fixed municipal fee</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">Weight and Measures Fee</td>
-                <td className="px-6 py-4 text-sm text-gray-500">Fixed municipal fee</td>
+              <tr className="transition-colors duration-200 hover:bg-zinc-50 motion-reduce:transition-none">
+                <td className="px-5 py-3.5 text-sm font-medium text-zinc-900">Weight and Measures Fee</td>
+                <td className="px-5 py-3.5 text-sm text-zinc-600">Fixed municipal fee</td>
               </tr>
-              <tr className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">Fire Safety Inspection Fee</td>
-                <td className="px-6 py-4 text-sm text-gray-500 font-medium">10% of Mayor's Permit Fee</td>
+              <tr className="transition-colors duration-200 hover:bg-zinc-50 motion-reduce:transition-none">
+                <td className="px-5 py-3.5 text-sm font-medium text-zinc-900">Fire Safety Inspection Fee</td>
+                <td className="px-5 py-3.5 text-sm text-zinc-600">10% of Mayor&apos;s Permit Fee</td>
               </tr>
             </tbody>
           </table>
@@ -175,53 +190,53 @@ const FeeSchedule = () => {
         {categories.map((category) => {
           const isOpen = openCategories.has(category.id);
           return (
-          <div key={category.id} className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm transition-all duration-200">
+          <div key={category.id} className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
             {/* Category Header */}
-            <div 
-              className="px-6 py-5 bg-gray-50/50 border-b border-gray-100 cursor-pointer flex items-center justify-between hover:bg-gray-100/50 transition-colors"
+            <div
+              className="flex cursor-pointer items-center justify-between border-b border-zinc-200 bg-zinc-50 px-5 py-4 transition-colors duration-200 hover:bg-zinc-100 motion-reduce:transition-none"
               onClick={() => toggleCategory(category.id)}
             >
               <div>
-                <h2 className="text-lg font-bold text-gray-900">{category.name}</h2>
+                <h2 className="text-base font-semibold tracking-tight text-zinc-900">{category.name}</h2>
                 {category.description && (
-                  <p className="text-sm text-gray-500 mt-1">{category.description}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-zinc-600">{category.description}</p>
                 )}
               </div>
-              <ChevronDown 
-                size={20} 
-                className={`text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+              <ChevronDown
+                size={18}
+                className={`text-zinc-400 transition-transform duration-300 ease-out motion-reduce:transition-none ${isOpen ? 'rotate-180' : ''}`}
               />
             </div>
 
             {/* Items Table */}
-            <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+            <div className={`grid transition-all duration-300 ease-out motion-reduce:transition-none ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
               <div className="overflow-hidden">
                 {category.items && category.items.length > 0 ? (
                   <div className="w-full overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full border-collapse text-left">
                       <thead>
-                        <tr className="bg-white border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                          <th className="px-6 py-4 font-bold">Line of Business</th>
-                          <th className="px-6 py-4 font-bold">Tier / Range</th>
-                          <th className="px-6 py-4 font-bold text-right">Amount (PHP)</th>
+                        <tr className="border-b border-zinc-200 bg-white font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+                          <th className="px-5 py-3.5 font-normal">Line of business</th>
+                          <th className="px-5 py-3.5 font-normal">Tier / range</th>
+                          <th className="px-5 py-3.5 text-right font-normal">Amount (PHP)</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-zinc-100">
                         {category.items.map((item) => (
-                          <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                          <tr key={item.id} className="transition-colors duration-200 hover:bg-zinc-50 motion-reduce:transition-none">
+                            <td className="px-5 py-3.5 text-sm font-medium text-zinc-900">
                               {item.business_type}
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-500">
+                            <td className="px-5 py-3.5 text-sm text-zinc-600">
                               {item.tier_label ? (
-                                <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-100/50 text-gray-600 text-xs font-medium">
+                                <span className="inline-flex items-center rounded-md border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[11px] text-zinc-600 tabular-nums">
                                   {item.tier_label}
                                 </span>
                               ) : (
-                                <span className="text-gray-300">-</span>
+                                <span className="text-zinc-300">—</span>
                               )}
                             </td>
-                            <td className="px-6 py-4 text-sm text-right font-medium">
+                            <td className="px-5 py-3.5 text-right font-mono text-sm text-zinc-900 tabular-nums">
                               {formatAmount(item.amount, item.is_exempt)}
                             </td>
                           </tr>
@@ -230,7 +245,7 @@ const FeeSchedule = () => {
                     </table>
                   </div>
                 ) : (
-                  <div className="p-6 text-center text-sm text-gray-400">
+                  <div className="p-6 text-center text-sm text-zinc-500">
                     No fee items found for this category.
                   </div>
                 )}

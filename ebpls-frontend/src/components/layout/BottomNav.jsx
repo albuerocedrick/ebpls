@@ -10,14 +10,13 @@
  *          ApplicantLayout must add padding-bottom of this value to
  *          prevent content from being hidden behind the nav.
  * @policy  Max 5 tab items (mobile thumb UX limit). Currently 3.
- * @policy  Active tab uses the accent token for the icon + label.
- *          The indicator is a small top-border line — not a filled pill
- *          (which would violate the 60-30-10 rule at 100% tab width).
+ * @policy  Active tab is marked by a zinc-900 icon/label plus a hairline
+ *          top indicator — not a filled pill (which would violate the
+ *          60-30-10 rule at 100% tab width).
  * @policy  Lucide icons only. Icon size: 22px.
  * @policy  No emojis.
  */
 
-import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { ROUTES } from '../../utils/constants';
 import { LayoutDashboard, FilePlus, FileText } from 'lucide-react';
@@ -56,10 +55,10 @@ const BottomNav = () => {
     <nav
       aria-label="Main mobile navigation"
       className={[
-        'fixed bottom-0 left-0 right-0',
+        'fixed bottom-0 right-0 left-0',
         'flex items-stretch',
         'bg-white/90 backdrop-blur-xl',
-        'border-t border-gray-200/50',
+        'border-t border-zinc-200',
         'z-[var(--z-sticky)]',
         'pb-safe',
       ].join(' ')}
@@ -72,17 +71,16 @@ const BottomNav = () => {
           id={tab.id}
           className={({ isActive }) =>
             [
-              'flex-1 flex flex-col items-center justify-center gap-1',
-              'text-[11px] font-semibold',
-              'transition-all duration-200',
-              'relative',
+              'relative flex flex-1 flex-col items-center justify-center gap-1',
+              'font-mono text-[10px] tracking-[0.08em] uppercase',
+              'transition-colors duration-200 ease-out motion-reduce:transition-none',
               isActive
                 ? [
-                    'text-gray-900',
-                    'after:absolute after:top-0 after:left-6 after:right-6',
-                    'after:h-0.5 after:rounded-full after:bg-gray-900',
+                    'text-zinc-900',
+                    'after:absolute after:top-0 after:right-6 after:left-6',
+                    'after:h-px after:bg-zinc-900',
                   ].join(' ')
-                : 'text-gray-400 hover:text-gray-600',
+                : 'text-zinc-400 hover:text-zinc-700',
             ].join(' ')
           }
           aria-label={tab.label}
@@ -91,8 +89,8 @@ const BottomNav = () => {
             <>
               <span
                 className={[
-                  'transition-transform duration-200',
-                  isActive ? 'scale-110' : 'scale-100',
+                  'transition-transform duration-200 ease-out motion-reduce:transition-none',
+                  isActive ? 'scale-105' : 'scale-100',
                 ].join(' ')}
                 aria-hidden="true"
               >

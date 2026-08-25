@@ -1,6 +1,6 @@
 // src/screens/applicant/uaf-steps/Step4_Documents.jsx
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import useApplicationStore from '../../../store/applicationStore';
 import DocumentUploadPanel from '../../../components/shared/DocumentUploadPanel';
 import { FileText, AlertCircle, Building2, CheckCircle2, Upload, MessageSquare, Loader2 } from 'lucide-react';
@@ -74,21 +74,23 @@ const Step4_Documents = ({ docFeedback }) => {
 
       {/* Information Banners */}
       <div className="flex flex-col gap-3">
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
-          <AlertCircle size={20} className="text-blue-600 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
+          <AlertCircle size={17} className="mt-0.5 shrink-0 text-zinc-500" />
           <div>
-            <h4 className="text-sm font-bold text-blue-900">Documentary Requirements</h4>
-            <p className="text-xs text-blue-800 mt-1">
+            <h4 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+              Documentary requirements
+            </h4>
+            <p className="mt-2 text-xs leading-relaxed text-zinc-600">
               All requirements must be photocopied. Allowed formats: PDF, JPG, PNG (max 5 MB each).
             </p>
           </div>
         </div>
-        
+
         {step1Data.type_id === 1 && (
-          <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg flex items-start gap-3">
-            <AlertCircle size={18} className="text-indigo-600 shrink-0 mt-0.5" />
-            <p className="text-xs font-medium text-indigo-800 mt-0.5">
-              Note: All new applicants are subject to inspection.
+          <div className="flex items-start gap-3 rounded-md border border-zinc-200 bg-white p-3">
+            <AlertCircle size={16} className="mt-0.5 shrink-0 text-zinc-500" />
+            <p className="text-xs leading-relaxed text-zinc-600">
+              All new applicants are subject to inspection.
             </p>
           </div>
         )}
@@ -96,20 +98,24 @@ const Step4_Documents = ({ docFeedback }) => {
 
       {/* BPLO Document Feedback */}
       {docFeedback && docFeedback.length > 0 && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div className="rounded-md border border-zinc-300 bg-zinc-50 p-4">
           <div className="flex items-start gap-3">
-            <MessageSquare size={18} className="text-amber-600 shrink-0 mt-0.5" />
+            <MessageSquare size={17} className="mt-0.5 shrink-0 text-zinc-600" />
             <div className="flex-1">
-              <p className="text-sm font-bold text-amber-900">Documents Needing Attention</p>
-              <p className="text-xs text-amber-700 mt-1 mb-2">The BPLO officer flagged the following documents. Please re-upload corrected versions.</p>
+              <p className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+                Documents needing attention
+              </p>
+              <p className="mt-2 mb-2.5 text-xs leading-relaxed text-zinc-600">
+                The BPLO officer flagged the following documents. Re-upload corrected versions.
+              </p>
               <ul className="space-y-1.5">
                 {docFeedback.map((item, i) => (
-                  <li key={i} className="text-xs bg-white/70 border border-amber-200 rounded px-3 py-2">
-                    <span className="font-semibold text-amber-900">{item.requirement}</span>
+                  <li key={i} className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs">
+                    <span className="font-medium text-zinc-900">{item.requirement}</span>
                     {item.remarks ? (
-                      <span className="text-amber-700 ml-1">— {item.remarks}</span>
+                      <span className="ml-1 text-zinc-600">— {item.remarks}</span>
                     ) : (
-                      <span className="text-amber-600 ml-1 italic">— Rejected, please re-upload</span>
+                      <span className="ml-1 text-zinc-500">— rejected, please re-upload</span>
                     )}
                   </li>
                 ))}
@@ -121,41 +127,42 @@ const Step4_Documents = ({ docFeedback }) => {
 
       {/* ── Phase 3C — Barangay Business Clearance Toggle ── */}
       {brgyReq && (
-        <div className="border-2 border-[hsl(var(--color-border,0,0%,85%))] rounded-xl overflow-hidden">
-          <div className="bg-[hsl(var(--color-surface-raised,0,0%,96%))] px-5 py-4 border-b border-[hsl(var(--color-border,0,0%,90%))] flex items-center gap-3">
-            <div className="p-1.5 bg-accent/10 text-accent rounded-md">
-              <Building2 size={18} />
+        <div className="overflow-hidden rounded-lg border border-zinc-200">
+          <div className="flex items-center gap-3 border-b border-zinc-200 bg-zinc-50 px-5 py-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600">
+              <Building2 size={16} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[hsl(var(--color-text,0,0%,10%))]">
+              <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
                 Barangay Business Clearance
               </h3>
-              <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,45%))] mt-0.5">
+              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                 Choose how you will provide this required clearance.
               </p>
             </div>
           </div>
 
-          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => handleClearanceToggle(true)}
-              className={`relative flex flex-col gap-2 p-4 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer
+              aria-pressed={requestClearance}
+              className={`relative flex cursor-pointer flex-col gap-2 rounded-md border p-4 text-left transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none
                 ${requestClearance
-                  ? 'border-accent bg-accent/5 shadow-sm shadow-accent/10'
-                  : 'border-[hsl(var(--color-border,0,0%,88%))] bg-white hover:border-accent/40 hover:bg-accent/3'
+                  ? 'border-zinc-900 bg-zinc-50'
+                  : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50'
                 }`}
             >
-              {requestClearance && <CheckCircle2 size={18} className="absolute top-3 right-3 text-accent" />}
-              <div className={`p-2 w-fit rounded-lg ${requestClearance ? 'bg-accent/15 text-accent' : 'bg-[hsl(var(--color-surface-raised,0,0%,94%))] text-[hsl(var(--color-text-muted,0,0%,40%))]'}`}>
-                <Building2 size={18} />
+              {requestClearance && <CheckCircle2 size={16} className="absolute top-3 right-3 text-zinc-900" />}
+              <div className={`w-fit rounded-md border p-2 ${requestClearance ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-200 bg-white text-zinc-500'}`}>
+                <Building2 size={16} />
               </div>
               <div>
-                <p className={`text-sm font-bold ${requestClearance ? 'text-accent' : 'text-[hsl(var(--color-text,0,0%,15%))]'}`}>
-                  Request via Municipality
+                <p className="text-sm font-medium text-zinc-900">
+                  Request via municipality
                 </p>
-                <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,45%))] mt-1 leading-relaxed">
-                  The Municipality will forward your clearance request directly to your Barangay Hall.
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                  The Municipality forwards your clearance request directly to your Barangay Hall.
                   No upload needed.
                 </p>
               </div>
@@ -164,21 +171,22 @@ const Step4_Documents = ({ docFeedback }) => {
             <button
               type="button"
               onClick={() => handleClearanceToggle(false)}
-              className={`relative flex flex-col gap-2 p-4 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer
+              aria-pressed={!requestClearance}
+              className={`relative flex cursor-pointer flex-col gap-2 rounded-md border p-4 text-left transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none
                 ${!requestClearance
-                  ? 'border-accent bg-accent/5 shadow-sm shadow-accent/10'
-                  : 'border-[hsl(var(--color-border,0,0%,88%))] bg-white hover:border-accent/40 hover:bg-accent/3'
+                  ? 'border-zinc-900 bg-zinc-50'
+                  : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50'
                 }`}
             >
-              {!requestClearance && <CheckCircle2 size={18} className="absolute top-3 right-3 text-accent" />}
-              <div className={`p-2 w-fit rounded-lg ${!requestClearance ? 'bg-accent/15 text-accent' : 'bg-[hsl(var(--color-surface-raised,0,0%,94%))] text-[hsl(var(--color-text-muted,0,0%,40%))]'}`}>
-                <Upload size={18} />
+              {!requestClearance && <CheckCircle2 size={16} className="absolute top-3 right-3 text-zinc-900" />}
+              <div className={`w-fit rounded-md border p-2 ${!requestClearance ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-200 bg-white text-zinc-500'}`}>
+                <Upload size={16} />
               </div>
               <div>
-                <p className={`text-sm font-bold ${!requestClearance ? 'text-accent' : 'text-[hsl(var(--color-text,0,0%,15%))]'}`}>
-                  I Have My Own Clearance
+                <p className="text-sm font-medium text-zinc-900">
+                  I have my own clearance
                 </p>
-                <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,45%))] mt-1 leading-relaxed">
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                   You already have a valid Barangay Clearance. Upload it below.
                 </p>
               </div>
@@ -204,9 +212,9 @@ const Step4_Documents = ({ docFeedback }) => {
 
           {requestClearance && (
             <div className="px-5 pb-5">
-              <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200">
-                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                <p className="text-xs text-emerald-800 font-medium">
+              <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
+                <CheckCircle2 size={15} className="shrink-0 text-zinc-600" />
+                <p className="text-xs text-zinc-600">
                   Your clearance will be requested from the Barangay automatically.
                 </p>
               </div>
@@ -217,12 +225,12 @@ const Step4_Documents = ({ docFeedback }) => {
 
       {/* ── Dynamic Checklists ── */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-lg border border-gray-200">
-          <Loader2 size={32} className="text-accent animate-spin mb-4" />
-          <p className="text-sm font-medium text-gray-700">Loading your requirements...</p>
+        <div className="flex flex-col items-center justify-center rounded-lg border border-zinc-200 bg-white p-12">
+          <Loader2 size={24} className="mb-4 animate-spin text-zinc-300" />
+          <p className="text-sm text-zinc-500">Loading your requirements…</p>
         </div>
       ) : error ? (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-medium">
+        <div className="rounded-md border border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-700">
           {error}
         </div>
       ) : (
@@ -230,9 +238,9 @@ const Step4_Documents = ({ docFeedback }) => {
           {/* ── Required Documents ── */}
           {requiredDocs.length > 0 && (
             <div>
-              <h3 className="text-sm font-bold text-[hsl(var(--color-text,0,0%,10%))] mb-3 flex items-center gap-2">
-                <FileText size={16} className="text-accent" />
-                Required Documents
+              <h3 className="mb-3 flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+                <FileText size={14} className="text-zinc-500" />
+                Required documents
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {requiredDocs.map((req) => {
@@ -260,10 +268,10 @@ const Step4_Documents = ({ docFeedback }) => {
           {/* ── Additional Requirements ── */}
           {additionalDocs.length > 0 && (
             <div className="mt-2">
-              <h3 className="text-sm font-bold text-[hsl(var(--color-text,0,0%,10%))] mb-3 flex items-center gap-2">
-                <FileText size={16} className="text-accent" />
-                Additional Requirements 
-                <span className="text-xs font-normal text-gray-500">(Based on Your Business)</span>
+              <h3 className="mb-3 flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+                <FileText size={14} className="text-zinc-500" />
+                Additional requirements
+                <span className="text-zinc-400">(based on your business)</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {additionalDocs.map((req) => {

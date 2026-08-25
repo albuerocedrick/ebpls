@@ -13,9 +13,8 @@
  * @policy  Canvas is neutral --color-surface-bplo.
  */
 
-import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { LayoutDashboard, FileSearch, XCircle, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, XCircle, CheckCircle2 } from 'lucide-react';
 import { Navbar, Sidebar } from '../components/layout';
 import { ROUTES } from '../utils/constants';
 import useUIStore from '../store/UIStore';
@@ -55,18 +54,20 @@ const BPLOLayout = () => {
   const { isSidebarOpen } = useUIStore();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-zinc-50">
       <Navbar portalLabel="BPLO Portal" />
       <Sidebar navItems={BPLO_NAV} />
 
-      {/* Content — shifts right when sidebar is open */}
+      {/* Content — offset only from lg up, where the sidebar is pinned rather
+          than an overlay drawer. */}
       <main
         id="bplo-content"
-        className="transition-[margin-left] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-x-hidden min-h-screen"
-        style={{
-          paddingTop: 'var(--navbar-height)',
-          marginLeft: isSidebarOpen ? 'var(--sidebar-width)' : '0',
-        }}
+        className={[
+          'min-h-screen overflow-x-hidden',
+          'transition-[margin-left] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+          isSidebarOpen ? 'lg:ml-[var(--sidebar-width)]' : 'ml-0',
+        ].join(' ')}
+        style={{ paddingTop: 'var(--navbar-height)' }}
       >
         <div className="p-4 sm:p-6 lg:p-8">
           <Outlet />

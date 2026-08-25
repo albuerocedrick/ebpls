@@ -14,7 +14,6 @@
  *          distinguish between data management and audit functions.
  */
 
-import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Database, FileText, ScrollText, Mail, Activity, FolderSearch, Users } from 'lucide-react';
 import { Navbar, Sidebar } from '../components/layout';
@@ -91,19 +90,24 @@ const AdminLayout = () => {
   const { isSidebarOpen } = useUIStore();
 
   return (
-    <div
-      className="min-h-screen bg-gray-50"
-    >
+    <div className="min-h-screen bg-zinc-50">
       <Navbar portalLabel="Admin Console" />
       <Sidebar navItems={ADMIN_NAV} />
 
+      {/*
+        The left offset is applied only from lg up. Below that the sidebar is an
+        overlay drawer, so shifting the content as well pushed its left edge off
+        screen — which is why admin pages appeared cut off. paddingTop clears the
+        fixed navbar.
+      */}
       <main
         id="admin-content"
-        className="transition-[margin-left] duration-300 ease-in-out overflow-x-hidden"
-        style={{
-          paddingTop: 'var(--navbar-height)',
-          marginLeft: isSidebarOpen ? 'var(--sidebar-width)' : '0',
-        }}
+        className={[
+          'min-h-screen overflow-x-hidden',
+          'transition-[margin-left] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+          isSidebarOpen ? 'lg:ml-[var(--sidebar-width)]' : 'ml-0',
+        ].join(' ')}
+        style={{ paddingTop: 'var(--navbar-height)' }}
       >
         <div className="p-4 sm:p-6 lg:p-8">
           <Outlet />

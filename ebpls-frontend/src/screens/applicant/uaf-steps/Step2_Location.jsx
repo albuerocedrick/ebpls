@@ -1,6 +1,6 @@
 // src/screens/applicant/uaf-steps/Step2_Location.jsx
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import useApplicationStore from '../../../store/applicationStore';
 import InteractiveLocationPin from '../../../components/shared/InteractiveLocationPin';
 import { MapPin, Building2, Lock, Home, CheckCircle2 } from 'lucide-react';
@@ -48,23 +48,25 @@ const Step2_Location = () => {
     setFormField('step2', 'is_renting', value);
   };
 
-  const inputClasses = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 focus:outline-none focus:border-gray-400 focus:ring-4 focus:ring-gray-100 focus:bg-white transition-all cursor-pointer";
-  const disabledInputClasses = "w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-2xl text-sm text-gray-400 cursor-not-allowed";
-  const labelClasses = "block text-sm font-semibold text-gray-700 mb-2";
+  // Shared field tokens — mirrors components/ui/Input (rounded-md, hairline
+  // border, focus by darkening the border rather than a wide ring).
+  const inputClasses = "w-full rounded-md border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 transition-colors duration-200 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none motion-reduce:transition-none";
+  const disabledInputClasses = "w-full cursor-not-allowed rounded-md border border-zinc-200 bg-zinc-100 px-3.5 py-2.5 text-sm text-zinc-500";
+  const labelClasses = "mb-2 block font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase";
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      
+    <div className="flex flex-col gap-6 duration-300 animate-in fade-in slide-in-from-bottom-2">
+
       {/* Section 1: Physical Address */}
-      <div className="p-5 border border-[hsl(var(--color-border,0,0%,90%))] rounded-lg bg-[hsl(var(--color-surface-raised,0,0%,98%))]">
-        <h3 className="text-sm font-bold flex items-center gap-2 mb-4 text-[hsl(var(--color-text,0,0%,10%))]">
-          <Building2 size={18} className="text-accent" />
-          Physical Address
+      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-5">
+        <h3 className="mb-4 flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+          <Building2 size={14} className="text-zinc-500" />
+          Physical address
         </h3>
-        
+
         <div className="grid grid-cols-1 gap-4">
           <div>
-            <label className={labelClasses}>Bldg. No. / Street / Address Line 1 <span className="text-red-500">*</span></label>
+            <label className={labelClasses}>Bldg. no. / street / address line 1 <span className="text-zinc-900">*</span></label>
             <input 
               type="text" 
               name="address_line1" 
@@ -75,7 +77,7 @@ const Step2_Location = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {/* Barangay Dropdown */}
             <div>
               <Select
@@ -91,10 +93,10 @@ const Step2_Location = () => {
                 ))}
               </Select>
             </div>
-            
+
             {/* Locked Municipality Fields */}
             <div>
-              <label className={labelClasses}>City / Municipality</label>
+              <label className={labelClasses}>City / municipality</label>
               <div className="relative">
                 <input 
                   type="text" 
@@ -102,10 +104,10 @@ const Step2_Location = () => {
                   disabled 
                   className={disabledInputClasses} 
                 />
-                <Lock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--color-border,0,0%,80%))]" />
+                <Lock size={13} className="absolute top-1/2 right-3 -translate-y-1/2 text-zinc-400" />
               </div>
             </div>
-            
+
             <div>
               <label className={labelClasses}>Province</label>
               <div className="relative">
@@ -115,7 +117,7 @@ const Step2_Location = () => {
                   disabled 
                   className={disabledInputClasses} 
                 />
-                <Lock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--color-border,0,0%,80%))]" />
+                <Lock size={13} className="absolute top-1/2 right-3 -translate-y-1/2 text-zinc-400" />
               </div>
             </div>
           </div>
@@ -123,10 +125,10 @@ const Step2_Location = () => {
       </div>
 
       {/* Section 2: Interactive Location Pin */}
-      <div className="p-5 border border-[hsl(var(--color-border,0,0%,90%))] rounded-lg bg-[hsl(var(--color-surface-raised,0,0%,98%))]">
-        <h3 className="text-sm font-bold flex items-center gap-2 mb-4 text-[hsl(var(--color-text,0,0%,10%))]">
-          <MapPin size={18} className="text-accent" />
-          Geographical Coordinates
+      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-5">
+        <h3 className="mb-4 flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+          <MapPin size={14} className="text-zinc-500" />
+          Geographical coordinates
         </h3>
         
         <InteractiveLocationPin 
@@ -137,51 +139,52 @@ const Step2_Location = () => {
       </div>
 
       {/* Section 3: Business Location Ownership (Rental Status) */}
-      <div className="border-2 border-[hsl(var(--color-border,0,0%,85%))] rounded-xl overflow-hidden">
-        
+      <div className="overflow-hidden rounded-lg border border-zinc-200">
+
         {/* Section Header */}
-        <div className="bg-[hsl(var(--color-surface-raised,0,0%,96%))] px-5 py-4 border-b border-[hsl(var(--color-border,0,0%,90%))] flex items-center gap-3">
-          <div className="p-1.5 bg-accent/10 text-accent rounded-md">
-            <Home size={18} />
+        <div className="flex items-center gap-3 border-b border-zinc-200 bg-zinc-50 px-5 py-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600">
+            <Home size={16} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-[hsl(var(--color-text,0,0%,10%))]">
-              Business Location Ownership
+            <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+              Business location ownership
             </h3>
-            <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,45%))] mt-0.5">
+            <p className="mt-1 text-xs leading-relaxed text-zinc-500">
               Indicate whether you own or rent the business premises.
             </p>
           </div>
         </div>
 
         {/* Two-option toggle */}
-        <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          
+        <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2">
+
           {/* Option A — I am renting */}
           <button
             type="button"
             onClick={() => handleRentalToggle(true)}
-            className={`relative flex flex-col gap-2 p-4 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer
+            aria-pressed={isRenting}
+            className={`relative flex cursor-pointer flex-col gap-2 rounded-md border p-4 text-left transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none
               ${isRenting
-                ? 'border-accent bg-accent/5 shadow-sm shadow-accent/10'
-                : 'border-[hsl(var(--color-border,0,0%,88%))] bg-white hover:border-accent/40 hover:bg-accent/3'
+                ? 'border-zinc-900 bg-zinc-50'
+                : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50'
               }`}
           >
             {isRenting && (
               <CheckCircle2
-                size={18}
-                className="absolute top-3 right-3 text-accent"
+                size={16}
+                className="absolute top-3 right-3 text-zinc-900"
                 aria-hidden="true"
               />
             )}
-            <div className={`p-2 w-fit rounded-lg ${isRenting ? 'bg-accent/15 text-accent' : 'bg-[hsl(var(--color-surface-raised,0,0%,94%))] text-[hsl(var(--color-text-muted,0,0%,40%))]'}`}>
-              <Home size={18} />
+            <div className={`w-fit rounded-md border p-2 ${isRenting ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-200 bg-white text-zinc-500'}`}>
+              <Home size={16} />
             </div>
             <div>
-              <p className={`text-sm font-bold ${isRenting ? 'text-accent' : 'text-[hsl(var(--color-text,0,0%,15%))]'}`}>
+              <p className="text-sm font-medium text-zinc-900">
                 I am renting this location
               </p>
-              <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,45%))] mt-1 leading-relaxed">
+              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                 You lease or rent the business premises from a property owner or lessor.
               </p>
             </div>
@@ -191,27 +194,28 @@ const Step2_Location = () => {
           <button
             type="button"
             onClick={() => handleRentalToggle(false)}
-            className={`relative flex flex-col gap-2 p-4 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer
+            aria-pressed={!isRenting}
+            className={`relative flex cursor-pointer flex-col gap-2 rounded-md border p-4 text-left transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none
               ${!isRenting
-                ? 'border-accent bg-accent/5 shadow-sm shadow-accent/10'
-                : 'border-[hsl(var(--color-border,0,0%,88%))] bg-white hover:border-accent/40 hover:bg-accent/3'
+                ? 'border-zinc-900 bg-zinc-50'
+                : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50'
               }`}
           >
             {!isRenting && (
               <CheckCircle2
-                size={18}
-                className="absolute top-3 right-3 text-accent"
+                size={16}
+                className="absolute top-3 right-3 text-zinc-900"
                 aria-hidden="true"
               />
             )}
-            <div className={`p-2 w-fit rounded-lg ${!isRenting ? 'bg-accent/15 text-accent' : 'bg-[hsl(var(--color-surface-raised,0,0%,94%))] text-[hsl(var(--color-text-muted,0,0%,40%))]'}`}>
-              <Building2 size={18} />
+            <div className={`w-fit rounded-md border p-2 ${!isRenting ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-200 bg-white text-zinc-500'}`}>
+              <Building2 size={16} />
             </div>
             <div>
-              <p className={`text-sm font-bold ${!isRenting ? 'text-accent' : 'text-[hsl(var(--color-text,0,0%,15%))]'}`}>
+              <p className="text-sm font-medium text-zinc-900">
                 I own this property
               </p>
-              <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,45%))] mt-1 leading-relaxed">
+              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                 You are the property owner of the business premises.
               </p>
             </div>

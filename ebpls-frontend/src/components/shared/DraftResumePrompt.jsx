@@ -12,7 +12,6 @@ import Button from '../ui/Button';
 const DraftResumePrompt = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
 
-  const draft_id = useApplicationStore((state) => state.draft_id);
   const current_step = useApplicationStore((state) => state.current_step);
   const lastSavedAt = useApplicationStore((state) => state.lastSavedAt);
   const resetForm = useApplicationStore((state) => state.resetForm);
@@ -58,23 +57,22 @@ const DraftResumePrompt = ({ isOpen, onClose }) => {
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        title="Incomplete Draft Found"
+        title="Incomplete draft found"
         footer={
-          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button
               variant="ghost"
               onClick={handleDiscardClick}
               leftIcon={<Trash2 size={15} />}
-              className="!text-red-600 hover:!bg-red-50"
             >
-              Discard Draft
+              Discard draft
             </Button>
             <Button
               variant="primary"
               onClick={handleResume}
               leftIcon={<Play size={15} fill="currentColor" />}
             >
-              Resume Application
+              Resume application
             </Button>
           </div>
         }
@@ -82,28 +80,31 @@ const DraftResumePrompt = ({ isOpen, onClose }) => {
         <div className="flex flex-col gap-5">
           {/* Icon + message */}
           <div className="flex items-start gap-4">
-            <div className="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
-              <FileText size={20} className="text-amber-600" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+              <FileText size={18} className="text-zinc-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                You have an unfinished business permit application from <span className="font-semibold text-gray-900">{formattedDate}</span>.
+              <p className="text-sm leading-relaxed text-zinc-700">
+                You have an unfinished business permit application from{' '}
+                <span className="font-medium text-zinc-900">{formattedDate}</span>.
               </p>
-              <p className="text-xs text-gray-400 mt-1.5">
+              <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">
                 Resume where you left off, or discard and start fresh.
               </p>
             </div>
           </div>
 
           {/* Progress card */}
-          <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl">
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Progress</span>
-              <span className="text-xs font-bold text-gray-900">{progressPercent}% — Step {current_step} of 5</span>
+          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+            <div className="mb-2.5 flex items-center justify-between">
+              <span className="font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">Progress</span>
+              <span className="font-mono text-[11px] text-zinc-900 tabular-nums">
+                {progressPercent}% — step {current_step} of 5
+              </span>
             </div>
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-px w-full overflow-hidden bg-zinc-200">
               <div
-                className="h-full bg-gray-900 rounded-full transition-all duration-500"
+                className="h-full bg-zinc-900 transition-all duration-500 ease-out motion-reduce:transition-none"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -115,10 +116,10 @@ const DraftResumePrompt = ({ isOpen, onClose }) => {
       <Modal
         isOpen={showConfirmDiscard}
         onClose={() => setShowConfirmDiscard(false)}
-        title="Discard Draft?"
+        title="Discard draft?"
         size="sm"
         footer={
-          <div className="flex gap-3 justify-end">
+          <div className="flex justify-end gap-3">
             <Button
               variant="secondary"
               onClick={() => setShowConfirmDiscard(false)}
@@ -132,21 +133,21 @@ const DraftResumePrompt = ({ isOpen, onClose }) => {
               isLoading={isDiscarding}
               leftIcon={<Trash2 size={15} />}
             >
-              Discard Permanently
+              Discard permanently
             </Button>
           </div>
         }
       >
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
-            <AlertTriangle size={18} className="text-red-600" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+            <AlertTriangle size={18} className="text-zinc-600" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-900">
+            <p className="text-sm font-medium text-zinc-900">
               Are you sure you want to discard your saved progress?
             </p>
-            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-              This action cannot be undone. All information you've entered will be permanently deleted.
+            <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">
+              This action cannot be undone. All information you&apos;ve entered will be permanently deleted.
             </p>
           </div>
         </div>
