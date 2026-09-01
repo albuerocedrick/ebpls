@@ -108,7 +108,7 @@ const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
             <div className="flex h-7 w-7 items-center justify-center">
               <img src={logo} alt="" aria-hidden="true" className="h-full w-full object-contain" />
             </div>
-            <span className="text-sm font-semibold tracking-tight text-white">BOSS</span>
+            <span className="text-sm font-semibold tracking-tight text-white">Business One Stop Shop</span>
           </div>
         </div>
 

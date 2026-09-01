@@ -16,7 +16,7 @@ import LogoutConfirmModal from '../shared/LogoutConfirmModal';
 import logo from '../../assets/logo.png';
 
 const Navbar = ({
-  portalLabel = 'BOSS',
+  portalLabel = 'Business One Stop Shop',
   showSidebarToggle = true,
 }) => {
   const { isSidebarOpen, toggleSidebar } = useUIStore();
@@ -66,7 +66,7 @@ const Navbar = ({
             </div>
             <div className="hidden flex-col sm:flex">
               <span className="text-sm font-semibold leading-tight tracking-tight text-zinc-900">
-                BOSS
+                Business One Stop Shop
               </span>
               <span className="font-mono text-[10px] leading-tight tracking-[0.08em] text-zinc-500 uppercase">
                 {portalLabel}

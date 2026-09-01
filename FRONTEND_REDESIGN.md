@@ -96,7 +96,7 @@ Single highest-leverage change in the whole pass.
 
 Navbar inverts dark → white on scroll. Full-bleed hero. Anchor links land 7px
 under the sticky header. Zero horizontal overflow at 1440 and 390. Wordmark now
-reads **BOSS** rather than "Liliw e-BPLS".
+reads **Business One Stop Shop** rather than "Liliw e-BPLS".
 
 `Requirements.jsx` was rebuilt as a **working checklist** rather than a static
 list: real `<input type="checkbox">` inside a `<label>` (`sr-only` + a
@@ -133,7 +133,7 @@ vertically centred between them.
 use a mono eyebrow, `text-xl font-semibold tracking-tight` heading, `rounded-md`
 controls, and an outline secondary action. Success states use a small
 `zinc-900` square with a white check instead of a green circle. Wordmark and
-copy now say **BOSS**.
+copy now say **Business One Stop Shop**.
 
 ### 3.5 Applicant portal
 

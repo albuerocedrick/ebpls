@@ -190,7 +190,7 @@ export default function Navbar() {
               solid ? "text-zinc-900" : "text-white"
             }`}
           >
-            BOSS
+            Business One Stop Shop
           </span>
         </Link>
 

@@ -32,7 +32,7 @@ const Login = () => {
           Sign in to your account
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-zinc-600">
-          Enter your credentials to reach the BOSS portal.
+          Enter your credentials to reach the Business One Stop Shop portal.
         </p>
       </div>
 

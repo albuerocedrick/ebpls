@@ -56,7 +56,7 @@ const AuthLayout = () => {
               className="h-8 w-8 rounded-full object-contain"
             />
             <span className="text-sm font-semibold tracking-tight text-white">
-              BOSS
+              Business One Stop Shop
             </span>
           </Link>
 
@@ -125,7 +125,7 @@ const AuthLayout = () => {
             className="h-8 w-8 rounded-full object-contain"
           />
           <span className="text-sm font-semibold tracking-tight text-zinc-900">
-            BOSS
+            Business One Stop Shop
           </span>
         </Link>
 

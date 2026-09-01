@@ -86,7 +86,7 @@ const ApplicantLayout = () => {
             />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold leading-tight tracking-tight text-zinc-900">BOSS</span>
+            <span className="text-sm font-semibold leading-tight tracking-tight text-zinc-900">Business One Stop Shop</span>
             <span className="font-mono text-[10px] leading-tight tracking-[0.08em] text-zinc-500 uppercase">
               Municipality of Liliw
             </span>
