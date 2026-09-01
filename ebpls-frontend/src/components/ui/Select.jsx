@@ -2,10 +2,11 @@
  * Select.jsx
  * Fully custom dropdown component — no native <select> rendering.
  * Renders a styled trigger button and a floating options panel.
- * Matches the reference design (rounded-2xl, smooth animations).
+ * Neutral zinc tokens with `rounded-md` controls, matching the landing page.
  */
 
-import React, { useState, useRef, useEffect, useId } from 'react';
+import React from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
 /**
@@ -98,9 +99,9 @@ const Select = ({
   return (
     <div className={`flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${className}`} ref={containerRef}>
       {label && (
-        <label htmlFor={selectId} className="text-sm font-semibold text-gray-700">
+        <label htmlFor={selectId} className="font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
           {label}
-          {required && <span className="ml-1 text-red-500">*</span>}
+          {required && <span className="ml-1 text-zinc-400">*</span>}
         </label>
       )}
 
@@ -112,22 +113,22 @@ const Select = ({
           disabled={disabled}
           onClick={() => !disabled && setIsOpen(!isOpen)}
           className={[
-            'w-full text-left rounded-xl border font-medium',
-            'transition-all duration-200 cursor-pointer',
-            'focus:outline-none focus:ring-2',
+            'w-full text-left rounded-md border font-medium',
+            'transition-colors duration-200 ease-out cursor-pointer motion-reduce:transition-none',
+            'outline-none',
             sizeClasses[size],
-            isOpen ? 'bg-white border-gray-400 ring-2 ring-gray-900/5 shadow-sm' : 'bg-gray-50 border-gray-200',
-            !hasError && !isOpen && 'hover:border-gray-300',
-            hasError && 'border-red-300 focus:ring-red-50 focus:border-red-400',
+            isOpen ? 'bg-white border-zinc-900' : 'bg-white border-zinc-200',
+            !hasError && !isOpen && 'hover:border-zinc-300',
+            hasError && 'border-red-400',
             disabled && 'opacity-60 cursor-not-allowed',
-            value ? 'text-gray-900' : 'text-gray-400',
+            value ? 'text-zinc-900' : 'text-zinc-400',
           ].filter(Boolean).join(' ')}
         >
           <span className="block truncate">{displayLabel}</span>
           <ChevronDown
             size={16}
             className={[
-              'absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-transform duration-200',
+              'absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition-transform duration-200 motion-reduce:transition-none',
               isOpen ? 'rotate-180' : '',
             ].join(' ')}
           />
@@ -137,8 +138,9 @@ const Select = ({
         {isOpen && (
           <div
             className={[
-              'absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg',
-              'py-1 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200',
+              'absolute z-50 mt-1.5 w-full bg-white border border-zinc-200 rounded-md',
+              'shadow-[0_16px_32px_-16px_rgba(24,24,27,0.35)]',
+              'py-1 max-h-60 overflow-y-auto',
               'animate-in fade-in slide-in-from-top-1 duration-150',
             ].join(' ')}
           >
@@ -151,18 +153,18 @@ const Select = ({
                   disabled={opt.disabled}
                   onClick={() => handleSelect(opt.value)}
                   className={[
-                    'w-full text-left px-3 py-2 text-sm font-medium transition-colors flex items-center justify-between gap-2',
-                    'mx-1 rounded-lg',
+                    'w-full text-left px-3 py-2 text-sm font-medium transition-colors duration-150 flex items-center justify-between gap-2',
+                    'mx-1 rounded-sm',
                     'first:mt-0 last:mb-0',
                     isSelected
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                      ? 'bg-zinc-900 text-white'
+                      : 'text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900',
                     opt.disabled && 'opacity-40 cursor-not-allowed',
                   ].filter(Boolean).join(' ')}
                   style={{ width: 'calc(100% - 8px)' }}
                 >
                   <span className="truncate">{opt.label}</span>
-                  {isSelected && <Check size={14} className="shrink-0 opacity-75" />}
+                  {isSelected && <Check size={14} className="shrink-0" />}
                 </button>
               );
             })}
@@ -171,10 +173,10 @@ const Select = ({
       </div>
 
       {hint && !hasError && (
-        <p className="text-xs text-gray-400">{hint}</p>
+        <p className="text-xs leading-relaxed text-zinc-500">{hint}</p>
       )}
       {hasError && (
-        <p className="text-xs text-red-500 font-medium">{error}</p>
+        <p className="text-xs font-medium text-red-600">{error}</p>
       )}
     </div>
   );

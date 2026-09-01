@@ -4,11 +4,12 @@
  *
  * @policy  All colors from CSS tokens.
  * @policy  Error state uses --color-error token, not a raw red class.
- * @policy  Focus ring uses the global accent token for consistency.
+ * @policy  Focus is shown by darkening the border to zinc-900 rather than a
+ *          wide accent ring, so the field matches the neutral public palette.
  * @policy  Never use a placeholder as a label substitute — the `label` prop is required.
  */
 
-import React, { useId, useState } from 'react';
+import { useId, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
 // =========================================
@@ -52,16 +53,17 @@ const Input = ({
 
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-      {/* Label */}
+      {/* Label. Mono uppercase at a small size, matching the field labels and
+          eyebrows used across the landing page. */}
       <label
         htmlFor={inputId}
-        className="text-sm font-semibold text-gray-700"
+        className="font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase"
       >
         {label}
         {required && (
           <span
             aria-hidden="true"
-            className="ml-1 text-red-500"
+            className="ml-1 text-zinc-400"
           >
             *
           </span>
@@ -71,7 +73,7 @@ const Input = ({
       {/* Input wrapper — allows for left/right elements */}
       <div className="relative flex items-center">
         {leftElement && (
-          <div className="absolute left-3 text-[hsl(var(--color-text-muted))] pointer-events-none">
+          <div className="absolute left-3 text-zinc-400 pointer-events-none">
             {leftElement}
           </div>
         )}
@@ -84,20 +86,21 @@ const Input = ({
           required={required}
           className={[
             // Base structure
-            'w-full rounded-2xl border bg-gray-50',
-            'text-sm text-gray-900',
-            'placeholder:text-gray-400',
+            'w-full rounded-md border bg-white',
+            'text-sm text-zinc-900',
+            'placeholder:text-zinc-400',
             // Padding — account for left/right elements
-            leftElement ? 'pl-10' : 'pl-4',
-            (rightElement || isPassword) ? 'pr-10' : 'pr-4',
-            'py-3',
+            leftElement ? 'pl-10' : 'pl-3.5',
+            (rightElement || isPassword) ? 'pr-10' : 'pr-3.5',
+            'py-2.5',
             // Border and focus transitions
-            'transition-all duration-200',
+            'transition-colors duration-200 ease-out motion-reduce:transition-none',
             'outline-none',
-            // State: default
-            !hasError && 'border-gray-200 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 focus:bg-white',
+            // State: default. A border darkening on focus rather than a wide
+            // ring keeps the form quiet and matches the hero's track input.
+            !hasError && 'border-zinc-200 hover:border-zinc-300 focus:border-zinc-900',
             // State: error
-            hasError && 'border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-50',
+            hasError && 'border-red-400 focus:border-red-500',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -105,12 +108,12 @@ const Input = ({
         />
 
         {(rightElement || isPassword) && (
-          <div className={`absolute right-3 flex items-center text-[hsl(var(--color-text-muted))] ${isPassword && !rightElement ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+          <div className={`absolute right-3 flex items-center text-zinc-400 ${isPassword && !rightElement ? 'pointer-events-auto' : 'pointer-events-none'}`}>
             {isPassword && !rightElement ? (
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="focus:outline-none hover:text-gray-700 transition-colors"
+                className="hover:text-zinc-900 transition-colors duration-200"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -124,7 +127,7 @@ const Input = ({
 
       {/* Hint text */}
       {hint && !hasError && (
-        <p id={hintId} className="text-xs text-gray-400">
+        <p id={hintId} className="text-xs leading-relaxed text-zinc-500">
           {hint}
         </p>
       )}
@@ -134,7 +137,7 @@ const Input = ({
         <p
           id={errorId}
           role="alert"
-          className="text-xs text-red-500 font-medium"
+          className="text-xs font-medium text-red-600"
         >
           {error}
         </p>

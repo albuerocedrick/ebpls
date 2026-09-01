@@ -11,7 +11,7 @@
  *          For self-managed state, use `isOpen` and `onClose` props directly.
  */
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import useUIStore from '../../store/UIStore';
 import Button from './Button';
@@ -107,9 +107,9 @@ const Modal = ({
       {/* Modal panel — sits above the backdrop */}
       <div
         className={[
-          'relative w-full bg-white rounded-3xl',
-          'shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)]',
-          'border border-gray-100',
+          'relative w-full bg-white rounded-lg',
+          'shadow-[0_24px_48px_-24px_rgba(24,24,27,0.45)]',
+          'border border-zinc-200',
           'flex flex-col max-h-[90vh]',
           SIZE_CLASSES[size],
           // Entrance animation
@@ -117,10 +117,10 @@ const Modal = ({
         ].join(' ')}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 shrink-0">
           <h2
             id={`${title}-modal-title`}
-            className="text-base font-bold text-gray-900"
+            className="text-base font-semibold tracking-tight text-zinc-900"
           >
             {title}
           </h2>
@@ -144,7 +144,7 @@ const Modal = ({
 
         {/* Footer — optional */}
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 shrink-0 rounded-b-3xl">
+          <div className="px-6 py-4 border-t border-zinc-200 bg-surface shrink-0 rounded-b-lg">
             {footer}
           </div>
         )}

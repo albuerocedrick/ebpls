@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { 
   CheckCircle2, 
@@ -126,40 +126,54 @@ const StatusTracker = () => {
 
   if (!appId) {
     return (
-      <div className="flex flex-col gap-6 max-w-3xl mx-auto">
+      <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <div>
-          <Link to={ROUTES.APPLICANT_DASHBOARD} className="inline-flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-accent transition-colors mb-4">
-            <ArrowLeft size={16} /> Back to Dashboard
+          <Link
+            to={ROUTES.APPLICANT_DASHBOARD}
+            className="group mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors duration-200 hover:text-zinc-900 motion-reduce:transition-none"
+          >
+            <ArrowLeft
+              size={14}
+              className="transition-transform duration-300 ease-out group-hover:-translate-x-0.5 motion-reduce:transition-none"
+            />
+            Back to dashboard
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Track Application</h1>
-          <p className="text-sm text-gray-500 mt-1">Select an application to view its progress.</p>
+          <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+            Status tracker
+          </span>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">Track application</h1>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+            Select an application to view its progress.
+          </p>
         </div>
 
         {isListLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 size={24} className="animate-spin text-accent" />
+            <Loader2 size={22} className="animate-spin text-zinc-300" />
           </div>
         ) : appList.length === 0 ? (
-          <div className="p-8 bg-gray-50 border border-gray-200 rounded-xl text-center">
-            <FileText size={32} className="text-gray-300 mx-auto mb-3" />
-            <p className="text-sm font-medium text-gray-600">No applications found</p>
-            <p className="text-xs text-gray-400 mt-1">Submit an application first to track its status.</p>
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-8 text-center">
+            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-md border border-zinc-200 bg-white">
+              <FileText size={18} className="text-zinc-400" />
+            </div>
+            <p className="text-sm font-medium text-zinc-900">No applications found</p>
+            <p className="mt-1 text-xs text-zinc-500">Submit an application first to track its status.</p>
           </div>
         ) : (
-          <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
+          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
             {appList.map((app) => (
               <Link
                 key={app.application_no}
                 to={`${ROUTES.APPLICANT_STATUS}?id=${app.application_no}`}
-                className="flex items-center justify-between p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between border-b border-zinc-200 p-4 transition-colors duration-200 last:border-b-0 hover:bg-zinc-50 motion-reduce:transition-none"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <FileText size={16} className="text-gray-500" />
+                  <div className="rounded-md border border-zinc-200 bg-white p-2">
+                    <FileText size={15} className="text-zinc-500" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{app.businesses?.business_name || 'Business'}</p>
-                    <p className="text-xs text-gray-400 font-mono">{app.application_no}</p>
+                    <p className="text-sm font-medium text-zinc-900">{app.businesses?.business_name || 'Business'}</p>
+                    <p className="font-mono text-[11px] text-zinc-500">{app.application_no}</p>
                   </div>
                 </div>
                 <StatusBadge status={app.status} size="sm" />
@@ -173,21 +187,30 @@ const StatusTracker = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Loader2 size={40} className="animate-spin text-accent" />
-        <p className="text-sm font-medium text-gray-500">Tracking application...</p>
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
+        <Loader2 size={28} className="animate-spin text-zinc-300" />
+        <p className="text-sm text-zinc-500">Tracking application…</p>
       </div>
     );
   }
 
   if (error || !applicationData) {
     return (
-      <div className="flex flex-col gap-6 max-w-3xl mx-auto">
-        <Link to={ROUTES.APPLICANT_DASHBOARD} className="inline-flex items-center gap-2 text-sm font-medium text-gray-400 mb-4"><ArrowLeft size={16} /> Back</Link>
-        <div className="p-8 bg-red-50 border border-red-200 rounded-xl text-center">
-          <AlertCircle size={32} className="text-red-500 mx-auto mb-3" />
-          <p className="text-sm font-bold text-red-800">Tracking Failed</p>
-          <p className="text-sm text-red-700 mt-1">{error || 'Application not found.'}</p>
+      <div className="mx-auto flex max-w-3xl flex-col gap-6">
+        <Link
+          to={ROUTES.APPLICANT_DASHBOARD}
+          className="group inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors duration-200 hover:text-zinc-900 motion-reduce:transition-none"
+        >
+          <ArrowLeft
+            size={14}
+            className="transition-transform duration-300 ease-out group-hover:-translate-x-0.5 motion-reduce:transition-none"
+          />
+          Back
+        </Link>
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-8 text-center">
+          <AlertCircle size={24} className="mx-auto mb-3 text-zinc-500" />
+          <p className="font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">Tracking failed</p>
+          <p className="mt-2 text-sm text-zinc-700">{error || 'Application not found.'}</p>
         </div>
       </div>
     );
@@ -205,27 +228,37 @@ const StatusTracker = () => {
   const activeIndex = isReturned ? 1 : currentStepIndex;
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl mx-auto pb-20">
-      
+    <div className="mx-auto flex max-w-3xl flex-col gap-6 pb-20">
+
       <div>
-        <Link to={ROUTES.APPLICANT_DASHBOARD} className="inline-flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-accent transition-colors mb-4">
-          <ArrowLeft size={16} /> Back to Dashboard
+        <Link
+          to={ROUTES.APPLICANT_DASHBOARD}
+          className="group mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors duration-200 hover:text-zinc-900 motion-reduce:transition-none"
+        >
+          <ArrowLeft
+            size={14}
+            className="transition-transform duration-300 ease-out group-hover:-translate-x-0.5 motion-reduce:transition-none"
+          />
+          Back to dashboard
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Track Application</h1>
+        <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+          Status tracker
+        </span>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">Track application</h1>
       </div>
 
       <ProcedureGuide status={currentStatus} />
 
       {/* Main Status Timeline Card */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="bg-gray-50 px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+        <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50 px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-white border border-gray-200 rounded-lg">
-              <FileText size={20} className="text-gray-400" />
+            <div className="rounded-md border border-zinc-200 bg-white p-2.5">
+              <FileText size={18} className="text-zinc-500" />
             </div>
             <div>
-              <p className="font-bold text-gray-900">{businessName}</p>
-              <p className="text-xs font-mono text-gray-400 mt-0.5">Ref: {appId}</p>
+              <p className="text-sm font-medium text-zinc-900">{businessName}</p>
+              <p className="mt-0.5 font-mono text-[11px] text-zinc-500">Ref: {appId}</p>
             </div>
           </div>
           <StatusBadge status={currentStatus} size="md" />
@@ -234,13 +267,20 @@ const StatusTracker = () => {
         <div className="p-6 sm:p-8">
           {/* Returned Edge Case Banner */}
           {isReturned && (
-            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <AlertCircle size={20} className="text-red-600 shrink-0 mt-0.5" />
+            <div className="mb-8 flex items-start gap-3 rounded-md border border-zinc-300 bg-zinc-50 p-4">
+              <AlertCircle size={18} className="mt-0.5 shrink-0 text-zinc-600" />
               <div>
-                <h4 className="text-sm font-bold text-red-800">Application Returned</h4>
-                <p className="text-sm text-red-700 mt-1">{return_remarks || 'Please check your requirements.'}</p>
-                <Link to={`${ROUTES.APPLICANT_UAF}?edit=${appId}`} className="inline-block mt-3 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">
-                  Update Application
+                <h4 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+                  Application returned
+                </h4>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-700">
+                  {return_remarks || 'Please check your requirements.'}
+                </p>
+                <Link
+                  to={`${ROUTES.APPLICANT_UAF}?edit=${appId}`}
+                  className="mt-3 inline-block rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-zinc-800 motion-reduce:transition-none"
+                >
+                  Update application
                 </Link>
               </div>
             </div>
@@ -254,35 +294,39 @@ const StatusTracker = () => {
               const showTimestamp = (isActive || (isReturned && step.status === 'Under Review')) && last_updated;
 
               return (
-                <div key={step.status} className="flex gap-4 sm:gap-6 relative pb-8 last:pb-0">
+                <div key={step.status} className="relative flex gap-4 pb-8 last:pb-0 sm:gap-6">
                   {index !== TIMELINE_STEPS.length - 1 && (
-                    <div className={`absolute top-8 left-[11px] sm:left-[15px] bottom-0 w-[2px] -ml-px ${isPast ? 'bg-emerald-500' : 'bg-gray-100'}`} />
+                    <div className={`absolute top-8 bottom-0 left-[11px] -ml-px w-px sm:left-[15px] ${isPast ? 'bg-zinc-900' : 'bg-zinc-200'}`} />
                   )}
 
-                  <div className="relative z-10 shrink-0 mt-1">
+                  <div className="relative z-10 mt-1 shrink-0">
                     {isPast ? (
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center border border-emerald-200">
-                        <CheckCircle2 size={16} strokeWidth={2.5} />
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 text-white sm:h-8 sm:w-8">
+                        <CheckCircle2 size={15} strokeWidth={2.5} />
                       </div>
                     ) : isActive ? (
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-accent text-white flex items-center justify-center shadow-md shadow-accent/20">
-                        <Clock size={16} strokeWidth={2.5} />
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-zinc-900 ring-2 ring-zinc-900 sm:h-8 sm:w-8">
+                        <Clock size={15} strokeWidth={2.5} />
                       </div>
                     ) : (
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-50 text-gray-200 flex items-center justify-center border border-gray-100">
-                        <Circle size={12} strokeWidth={3} />
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-300 sm:h-8 sm:w-8">
+                        <Circle size={11} strokeWidth={3} />
                       </div>
                     )}
                   </div>
 
-                  <div className="flex-1 min-w-0 pt-1 sm:pt-1.5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
-                      <p className={`text-sm sm:text-base font-semibold ${isPast || isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+                  <div className="min-w-0 flex-1 pt-1 sm:pt-1.5">
+                    <div className="flex flex-col justify-between gap-1 sm:flex-row sm:items-center sm:gap-4">
+                      <p className={`text-sm font-medium sm:text-base ${isPast || isActive ? 'text-zinc-900' : 'text-zinc-400'}`}>
                         {step.label}
                       </p>
-                      {showTimestamp && <p className="text-[10px] sm:text-xs font-medium text-gray-400 shrink-0">{formatDate(last_updated)}</p>}
+                      {showTimestamp && (
+                        <p className="shrink-0 font-mono text-[10px] text-zinc-500 tabular-nums sm:text-[11px]">
+                          {formatDate(last_updated)}
+                        </p>
+                      )}
                     </div>
-                    <p className={`text-xs sm:text-sm mt-1 ${isActive ? 'text-gray-600' : 'text-gray-400'}`}>{step.desc}</p>
+                    <p className={`mt-1 text-xs leading-relaxed sm:text-sm ${isActive ? 'text-zinc-600' : 'text-zinc-400'}`}>{step.desc}</p>
                   </div>
                 </div>
               );
@@ -293,62 +337,62 @@ const StatusTracker = () => {
 
       {/* PHASE 2: ASSESSMENT BREAKDOWN CARD */}
       {assessmentBreakdown && (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <div 
-            className="px-6 py-4 bg-gray-50 flex items-center justify-between cursor-pointer sm:cursor-default"
+        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+          <div
+            className="flex cursor-pointer items-center justify-between border-b border-zinc-200 bg-zinc-50 px-5 py-4 sm:cursor-default"
             onClick={() => setIsBreakdownExpanded(!isBreakdownExpanded)}
           >
             <div>
-              <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                📋 Fee Assessment Breakdown
+              <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+                Fee assessment breakdown
               </h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Assessed: {formatDate(assessmentBreakdown.assessed_at)}
+              <p className="mt-1.5 text-xs text-zinc-500">
+                Assessed {formatDate(assessmentBreakdown.assessed_at)}
               </p>
             </div>
-            <div className="sm:hidden text-gray-400">
-              {isBreakdownExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            <div className="text-zinc-400 sm:hidden">
+              {isBreakdownExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
             </div>
           </div>
-          
-          <div className={`p-6 border-t border-gray-200 ${isBreakdownExpanded ? 'block' : 'hidden sm:block'}`}>
+
+          <div className={`p-6 ${isBreakdownExpanded ? 'block' : 'hidden sm:block'}`}>
             <div className="space-y-4">
               {assessmentBreakdown.line_items.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-start gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
+                <div key={idx} className="flex items-start justify-between gap-4 border-b border-zinc-100 pb-4 last:border-0 last:pb-0">
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900 text-sm">{item.name}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                      └─ {item.computation}
+                    <p className="text-sm font-medium text-zinc-900">{item.name}</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">
+                      {item.computation}
                     </p>
                   </div>
-                  <div className="font-mono text-sm text-gray-900 whitespace-nowrap pt-0.5">
+                  <div className="pt-0.5 font-mono text-sm whitespace-nowrap text-zinc-900 tabular-nums">
                     ₱ {Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-6 pt-4 border-t-2 border-gray-900 flex justify-between items-center">
-              <p className="font-bold text-gray-900">TOTAL AMOUNT DUE</p>
-              <p className="text-lg font-black font-mono text-gray-900">
+            <div className="mt-6 flex items-center justify-between border-t border-zinc-900 pt-4">
+              <p className="font-mono text-[10px] tracking-[0.16em] text-zinc-900 uppercase">Total amount due</p>
+              <p className="font-mono text-lg font-semibold text-zinc-900 tabular-nums">
                 ₱ {assessmentBreakdown.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </p>
             </div>
 
             {assessmentBreakdown.special_notes && assessmentBreakdown.special_notes.length > 0 && (
-              <div className="mt-6 p-4 bg-yellow-50 rounded-lg flex items-start gap-3">
-                <AlertCircle size={16} className="text-yellow-600 shrink-0 mt-0.5" />
+              <div className="mt-6 flex items-start gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
+                <AlertCircle size={15} className="mt-0.5 shrink-0 text-zinc-500" />
                 <div className="space-y-2">
                   {assessmentBreakdown.special_notes.map((note, idx) => (
-                    <p key={idx} className="text-xs text-yellow-800 leading-relaxed">{note}</p>
+                    <p key={idx} className="text-xs leading-relaxed text-zinc-600">{note}</p>
                   ))}
                 </div>
               </div>
             )}
-            
-            <div className="mt-6 pt-6 border-t border-gray-100">
-               <Button variant="secondary" fullWidth className="!bg-white" onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/top/${appId}?token=${token}`, '_blank'); }}>
-                 📄 Download Tax Order of Payment (TOP)
+
+            <div className="mt-6 border-t border-zinc-200 pt-6">
+               <Button variant="secondary" fullWidth leftIcon={<Download size={15} />} onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/top/${appId}?token=${token}`, '_blank'); }}>
+                 Download Tax Order of Payment
                </Button>
             </div>
           </div>
@@ -357,15 +401,20 @@ const StatusTracker = () => {
 
       {/* PHASE 5: PAYMENT OPTIONS CARD */}
       {currentStatus === STATUSES.FOR_PAYMENT && (
-        <div className="bg-blue-600 rounded-xl p-6 text-white shadow-xl shadow-blue-600/20 animate-in slide-in-from-bottom-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+        <div className="rounded-lg bg-zinc-900 p-6 text-white animate-in slide-in-from-bottom-4">
+          <div className="mb-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
             <div>
-              <h3 className="text-lg font-bold">Payment Required</h3>
-              <p className="text-blue-100 text-sm">Please settle your dues to finalize your permit.</p>
+              <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-400 uppercase">
+                Action required
+              </span>
+              <h3 className="mt-2 text-lg font-semibold tracking-tight">Payment required</h3>
+              <p className="mt-1 text-sm text-zinc-400">Settle your dues to finalize your permit.</p>
             </div>
             <div className="text-center sm:text-right">
-              <p className="text-[10px] uppercase font-bold text-blue-200 tracking-widest">Total Amount Due</p>
-              <p className="text-3xl font-black font-mono">₱{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p className="font-mono text-[10px] tracking-[0.16em] text-zinc-400 uppercase">Total amount due</p>
+              <p className="mt-1.5 font-mono text-3xl font-semibold tabular-nums">
+                ₱{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </p>
             </div>
           </div>
 
@@ -373,12 +422,12 @@ const StatusTracker = () => {
           <div className="mb-6">
             <button
               onClick={() => setIsPaymentBreakdownExpanded(!isPaymentBreakdownExpanded)}
-              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 flex items-center justify-between text-white hover:bg-white/20 transition-colors"
+              className="flex w-full items-center justify-between rounded-md border border-zinc-700 bg-zinc-800 px-4 py-3 text-white transition-colors duration-200 hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 focus-visible:outline-none motion-reduce:transition-none"
             >
-              <span className="font-semibold text-sm">
-                {isPaymentBreakdownExpanded ? 'Hide Fee Breakdown' : 'View Fee Breakdown'}
+              <span className="font-mono text-[10px] tracking-[0.12em] uppercase">
+                {isPaymentBreakdownExpanded ? 'Hide fee breakdown' : 'View fee breakdown'}
               </span>
-              {isPaymentBreakdownExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              {isPaymentBreakdownExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
             
             <div 
@@ -386,15 +435,15 @@ const StatusTracker = () => {
                 isPaymentBreakdownExpanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'
               }`}
             >
-              <div className="bg-blue-700/50 rounded-xl p-4 border border-white/10">
+              <div className="rounded-md border border-zinc-700 bg-zinc-800 p-4">
                 {isBreakdownLoading ? (
                   <div className="flex justify-center py-4">
-                    <Loader2 size={24} className="text-blue-200 animate-spin" />
+                    <Loader2 size={20} className="animate-spin text-zinc-400" />
                   </div>
                 ) : !assessmentBreakdown ? (
-                  <p className="text-center text-blue-200 text-sm py-2">Fee details unavailable</p>
+                  <p className="py-2 text-center text-sm text-zinc-400">Fee details unavailable</p>
                 ) : !assessmentBreakdown.line_items || assessmentBreakdown.line_items.length === 0 ? (
-                  <p className="text-center text-blue-200 text-sm py-2">No fee items found.</p>
+                  <p className="py-2 text-center text-sm text-zinc-400">No fee items found.</p>
                 ) : (
                   <div className="space-y-3">
                     {assessmentBreakdown.line_items.map((item, idx) => {
@@ -411,17 +460,17 @@ const StatusTracker = () => {
                       }
                       
                       return (
-                        <div key={idx} className="flex justify-between items-start gap-4 pb-3 border-b border-white/20 last:border-0 last:pb-0">
-                          <p className="text-sm text-white font-medium flex-1">{displayName}</p>
-                          <p className="font-mono text-sm text-white/90 whitespace-nowrap pt-0.5">
+                        <div key={idx} className="flex items-start justify-between gap-4 border-b border-zinc-700 pb-3 last:border-0 last:pb-0">
+                          <p className="flex-1 text-sm font-medium text-white">{displayName}</p>
+                          <p className="pt-0.5 font-mono text-sm whitespace-nowrap text-zinc-300 tabular-nums">
                             ₱ {Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </p>
                         </div>
                       );
                     })}
-                    <div className="pt-3 border-t border-white/40 flex justify-between items-center mt-2">
-                      <p className="font-bold text-white text-sm">TOTAL</p>
-                      <p className="font-mono font-bold text-white">
+                    <div className="mt-2 flex items-center justify-between border-t border-zinc-600 pt-3">
+                      <p className="font-mono text-[10px] tracking-[0.16em] text-white uppercase">Total</p>
+                      <p className="font-mono font-semibold text-white tabular-nums">
                         ₱ {Number(assessmentBreakdown.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </p>
                     </div>
@@ -431,17 +480,35 @@ const StatusTracker = () => {
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="bg-white/10 border border-white/20 p-4 rounded-xl flex flex-col">
-              <div className="flex items-center gap-3 mb-2"><Banknote size={20} className="text-blue-200" /><h4 className="font-bold">Over-the-Counter</h4></div>
-              <p className="text-xs text-blue-100 flex-1">Pay at the Municipal Treasury using your TOP.</p>
-              <Button variant="secondary" fullWidth className="mt-4 !bg-white !text-blue-600" onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/top/${appId}?token=${token}`, '_blank'); }}>Download TOP</Button>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col rounded-md border border-zinc-700 bg-zinc-800 p-4">
+              <div className="mb-2 flex items-center gap-2.5">
+                <Banknote size={17} className="text-zinc-400" />
+                <h4 className="text-sm font-semibold">Over-the-counter</h4>
+              </div>
+              <p className="flex-1 text-xs leading-relaxed text-zinc-400">Pay at the Municipal Treasury using your TOP.</p>
+              <button
+                onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/top/${appId}?token=${token}`, '_blank'); }}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 transition-colors duration-200 hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 focus-visible:outline-none motion-reduce:transition-none"
+              >
+                <Download size={15} /> Download TOP
+              </button>
             </div>
 
-            <div className="bg-white/10 border border-white/20 p-4 rounded-xl flex flex-col">
-              <div className="flex items-center gap-3 mb-2"><Globe size={20} className="text-blue-200" /><h4 className="font-bold">Pay Online</h4></div>
-              <p className="text-xs text-blue-100 flex-1">Instant via GCash, Maya, or Card (PayMongo).</p>
-              <Button variant="primary" fullWidth className="mt-4 !bg-emerald-500 !text-white" onClick={handlePayOnline} loading={isActionLoading}>Pay via GCash/Card</Button>
+            <div className="flex flex-col rounded-md border border-zinc-700 bg-zinc-800 p-4">
+              <div className="mb-2 flex items-center gap-2.5">
+                <Globe size={17} className="text-zinc-400" />
+                <h4 className="text-sm font-semibold">Pay online</h4>
+              </div>
+              <p className="flex-1 text-xs leading-relaxed text-zinc-400">Instant via GCash, Maya, or card (PayMongo).</p>
+              <button
+                onClick={handlePayOnline}
+                disabled={isActionLoading}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 transition-colors duration-200 hover:bg-zinc-200 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
+              >
+                {isActionLoading && <Loader2 size={15} className="animate-spin" />}
+                Pay via GCash / card
+              </button>
             </div>
           </div>
         </div>
@@ -449,25 +516,28 @@ const StatusTracker = () => {
 
       {/* PHASE 5: POLLING UI FOR ONLINE PAYMENT */}
       {currentStatus === STATUSES.PAYMENT_PROCESSING && (
-        <div className="bg-white border border-gray-200 rounded-3xl p-10 text-center flex flex-col items-center">
-          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mb-5">
-            <Loader2 className="w-7 h-7 text-gray-900 animate-spin" />
+        <div className="flex flex-col items-center rounded-lg border border-zinc-200 bg-white p-10 text-center">
+          <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+            <Loader2 className="h-5 w-5 animate-spin text-zinc-900" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 tracking-tight">Confirming Your Payment</h3>
-          <p className="text-sm text-gray-500 mt-2 max-w-sm leading-relaxed">We are waiting for PayMongo to confirm your transaction. This page will update automatically once confirmed.</p>
-          <div className="mt-6 flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-            <span className="w-2 h-2 bg-gray-900 rounded-full animate-ping"></span> Verification in progress
+          <h3 className="text-base font-semibold tracking-tight text-zinc-900">Confirming your payment</h3>
+          <p className="mt-2 max-w-sm text-sm leading-relaxed text-zinc-600">
+            We are waiting for PayMongo to confirm your transaction. This page will update automatically once confirmed.
+          </p>
+          <div className="mt-6 flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+            <span className="h-1.5 w-1.5 animate-ping rounded-full bg-zinc-900 motion-reduce:animate-none"></span>
+            Verification in progress
           </div>
-          
-          <div className="pt-5 border-t border-gray-100 w-full mt-6">
-            <p className="text-xs text-gray-400 mb-3">Taking too long or cancelled the window?</p>
-            <Button 
-              variant="primary" 
+
+          <div className="mt-6 w-full border-t border-zinc-200 pt-5">
+            <p className="mb-3 text-xs text-zinc-500">Taking too long, or cancelled the window?</p>
+            <Button
+              variant="primary"
               size="sm"
               onClick={handlePayOnline}
-              loading={isActionLoading}
+              isLoading={isActionLoading}
             >
-              Retry Online Payment
+              Retry online payment
             </Button>
           </div>
         </div>
@@ -475,22 +545,28 @@ const StatusTracker = () => {
 
       {/* PAID / COMPLETED SECTION — Download buttons */}
       {(currentStatus === STATUSES.PAID || currentStatus === STATUSES.COMPLETED) && (
-        <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
-            <div className="w-10 h-10 bg-gray-100 rounded-2xl flex items-center justify-center">
-              <Award size={18} className="text-gray-700" />
+        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+          <div className="flex items-center gap-3 border-b border-zinc-200 bg-zinc-50 px-5 py-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white">
+              <Award size={16} className="text-zinc-600" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-900">Your Permit is Ready</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Download your official documents below.</p>
+              <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">Permit ready</h3>
+              <p className="mt-1 text-xs text-zinc-500">Download your official documents below.</p>
             </div>
           </div>
-          <div className="p-5 flex flex-col sm:flex-row gap-3">
-            <button onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/permit/${appId}?token=${token}`, '_blank'); }} className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 bg-gray-900 text-white text-sm font-semibold rounded-2xl hover:bg-gray-800 transition-all shadow-sm cursor-pointer">
-              <Award size={17} /> Business Permit <Download size={15} className="ml-auto opacity-60" />
+          <div className="flex flex-col gap-3 p-5 sm:flex-row">
+            <button
+              onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/permit/${appId}?token=${token}`, '_blank'); }}
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
+            >
+              <Award size={16} /> Business permit <Download size={14} className="ml-auto opacity-60" />
             </button>
-            <button onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/eresibo/${appId}?token=${token}`, '_blank'); }} className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 bg-white text-gray-900 text-sm font-semibold rounded-2xl border border-gray-200 hover:bg-gray-50 transition-all cursor-pointer">
-              <Receipt size={17} /> E-Resibo (Receipt) <Download size={15} className="ml-auto opacity-40" />
+            <button
+              onClick={() => { const token = useAuthStore.getState().token; window.open(`${API_BASE_URL}/api/documents/eresibo/${appId}?token=${token}`, '_blank'); }}
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-900 transition-colors duration-200 hover:border-zinc-400 hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
+            >
+              <Receipt size={16} /> E-Resibo <Download size={14} className="ml-auto opacity-40" />
             </button>
           </div>
         </div>

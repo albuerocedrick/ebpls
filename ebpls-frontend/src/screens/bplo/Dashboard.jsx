@@ -3,12 +3,12 @@
  * Real-time queue for pending and under-review applications.
  */
 
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Inbox, AlertTriangle, ArrowUpDown, RefreshCcw, FileSearch, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import Select from '../../components/ui/Select';
 import { apiClient } from '../../utils/apiClient';
 import { API_ENDPOINTS, APP_STATUS, ROUTES } from '../../utils/constants';
 import useUIStore, { TOAST_TYPE } from '../../store/UIStore';
@@ -47,27 +47,45 @@ const BPLODashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [sortDirection, setSortDirection] = useState('asc');
   const [selectedStatus, setSelectedStatus] = useState('All');
+  // Captured when the queue loads rather than read during render, so the
+  // "over 2 days old" marker stays a pure function of state.
+  const [loadedAt, setLoadedAt] = useState(() => Date.now());
 
-  const loadQueue = useCallback(async () => {
+  // Bumped by the Refresh button to re-run the load effect below.
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const loadQueue = () => {
     setIsLoading(true);
-    try {
-      const response = await apiClient.get(API_ENDPOINTS.BPLO_PENDING);
-      const queue = (response?.data || []).map(normalizeApplication);
-      setApplications(queue);
-    } catch (err) {
-      addToast({
-        message: err.message || 'Failed to load BPLO queue.',
-        type: TOAST_TYPE.ERROR,
-      });
-      setApplications([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [addToast]);
+    setRefreshKey((k) => k + 1);
+  };
 
+  // The fetch is inlined so no state is written before the first await, which
+  // keeps the effect free of cascading renders. `isLoading` is already true on
+  // mount and is set by the Refresh handler on subsequent runs.
   useEffect(() => {
-    loadQueue();
-  }, [loadQueue]);
+    let cancelled = false;
+
+    const fetchQueue = async () => {
+      try {
+        const response = await apiClient.get(API_ENDPOINTS.BPLO_PENDING);
+        if (cancelled) return;
+        setApplications((response?.data || []).map(normalizeApplication));
+        setLoadedAt(Date.now());
+      } catch (err) {
+        if (cancelled) return;
+        addToast({
+          message: err.message || 'Failed to load BPLO queue.',
+          type: TOAST_TYPE.ERROR,
+        });
+        setApplications([]);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    fetchQueue();
+    return () => { cancelled = true; };
+  }, [refreshKey, addToast]);
 
   const filteredAndSortedApplications = useMemo(() => {
     let copy = [...applications];
@@ -92,14 +110,17 @@ const BPLODashboard = () => {
   }, [applications]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-            BPLO Dashboard
+          <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+            BPLO
+          </span>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
+            Dashboard
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-2 text-sm leading-relaxed text-zinc-600">
             Pending application queue sorted by submission date.
           </p>
         </div>
@@ -116,65 +137,60 @@ const BPLODashboard = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
-        <div className="group bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-default">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
-              <Inbox size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending Review</p>
-              <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.pendingCount}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="group bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-default">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
-              <FileSearch size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Under Review</p>
-              <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.underReviewCount}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="group bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-default">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
-              <Users size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Applicants</p>
-              <p className="text-2xl font-bold text-gray-900 mt-0.5">{stats.totalCount}</p>
+      {/* Stats. Same card shape and hover as the applicant dashboard's action
+          cards: the border and surface lift, and the icon box inverts to
+          zinc-900. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {[
+          { label: 'Pending review', value: stats.pendingCount, Icon: Inbox },
+          { label: 'Under review', value: stats.underReviewCount, Icon: FileSearch },
+          { label: 'Total applicants', value: stats.totalCount, Icon: Users },
+        ].map(({ label, value, Icon }) => (
+          <div
+            key={label}
+            className="group rounded-lg border border-zinc-200 bg-white p-5 transition-colors duration-200 ease-out hover:border-zinc-300 hover:bg-zinc-50 motion-reduce:transition-none"
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-mono text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums">
+                  {value}
+                </p>
+                <p className="mt-1 font-mono text-[10px] tracking-[0.08em] text-zinc-500 uppercase">
+                  {label}
+                </p>
+              </div>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-700 transition-colors duration-200 ease-out group-hover:border-zinc-900 group-hover:bg-zinc-900 group-hover:text-white motion-reduce:transition-none">
+                <Icon size={18} />
+              </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
       {/* Application Queue Table */}
-      <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
         {/* Table Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h3 className="font-bold text-gray-900 flex items-center gap-2">
-            <Users size={18} className="text-gray-400" />
-            Application Queue
+        <div className="flex flex-col justify-between gap-4 border-b border-zinc-200 bg-zinc-50 px-5 py-4 sm:flex-row sm:items-center">
+          <h3 className="flex items-center gap-2.5 font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+            <Users size={15} className="text-zinc-500" />
+            Application queue
           </h3>
           <div className="flex items-center gap-2">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="text-sm bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium"
-            >
-              <option value="All">All Statuses</option>
-              <option value={APP_STATUS.PENDING}>Pending</option>
-              <option value={APP_STATUS.UNDER_REVIEW}>Under Review</option>
-            </select>
+            {/* Shared Select, so the panel and selected row match every other
+                dropdown in the system. */}
+            <div className="w-44">
+              <Select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                size="sm"
+              >
+                <option value="All">All Statuses</option>
+                <option value={APP_STATUS.PENDING}>Pending</option>
+                <option value={APP_STATUS.UNDER_REVIEW}>Under Review</option>
+              </Select>
+            </div>
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               leftIcon={<ArrowUpDown size={14} />}
               onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
@@ -186,34 +202,38 @@ const BPLODashboard = () => {
 
         {/* Table Body */}
         {isLoading ? (
-          <div className="px-6 py-12 text-center">
-            <p className="text-sm text-gray-400">Loading applications...</p>
+          <div className="px-5 py-12 text-center">
+            <p className="text-sm text-zinc-500">Loading applications…</p>
           </div>
         ) : filteredAndSortedApplications.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <Inbox size={32} className="text-gray-200 mx-auto mb-3" />
-            <p className="text-sm text-gray-400">No applications found.</p>
+          <div className="px-5 py-12 text-center">
+            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+              <Inbox size={18} className="text-zinc-400" />
+            </div>
+            <p className="text-sm text-zinc-500">No applications found.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-zinc-100">
             {filteredAndSortedApplications.map((app) => {
-              const ageMs = app.submittedAt ? Date.now() - new Date(app.submittedAt).getTime() : 0;
-              const urgent = ageMs >= 2 * DAY_MS; // 2 days in ms
+              const ageMs = app.submittedAt ? loadedAt - new Date(app.submittedAt).getTime() : 0;
+              const urgent = ageMs >= 2 * DAY_MS;
 
               return (
                 <div
                   key={app.id}
-                  className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors group"
+                  className="group flex items-center justify-between px-5 py-4 transition-colors duration-200 hover:bg-zinc-50 motion-reduce:transition-none"
                 >
                   <div className="flex items-center gap-4">
                     {urgent && (
-                      <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                      <AlertTriangle size={15} className="shrink-0 text-zinc-500" title="Over 2 days old" />
                     )}
                     <div>
-                      <p className="text-sm font-bold text-gray-900">{app.business}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {app.id} &middot; {formatSubmittedLabel(app.submittedAt)}
-                      </p>
+                      <p className="text-sm font-medium text-zinc-900">{app.business}</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="font-mono text-[11px] text-zinc-500">{app.id}</span>
+                        <span className="text-zinc-300">•</span>
+                        <span className="text-xs text-zinc-500">{formatSubmittedLabel(app.submittedAt)}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

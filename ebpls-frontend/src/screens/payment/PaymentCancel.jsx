@@ -1,6 +1,5 @@
-import React from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, RefreshCcw } from 'lucide-react';
+import { AlertCircle, RefreshCcw } from 'lucide-react';
 import { ROUTES } from '../../utils/constants';
 import Button from '../../components/ui/Button';
 
@@ -10,26 +9,34 @@ const PaymentCancel = () => {
   const retryUrl = appNo ? `${ROUTES.APPLICANT_STATUS}?id=${appNo}` : ROUTES.APPLICANT_DASHBOARD;
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center animate-in zoom-in-95 duration-500">
-        <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <AlertCircle size={40} className="text-amber-600" />
+    <div className="flex min-h-[80vh] items-center justify-center bg-zinc-50 p-6">
+      <div className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-8 duration-500 animate-in fade-in">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+          <AlertCircle size={20} className="text-zinc-600" />
         </div>
-        
-        <h1 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Payment Cancelled</h1>
-        <p className="text-gray-500 text-sm mb-8">
+
+        <span className="mt-6 block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+          Not completed
+        </span>
+        <h1 className="mt-3 text-xl font-semibold tracking-tight text-zinc-900">
+          Payment cancelled
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-zinc-600">
           The payment process was interrupted or cancelled. No charges were made to your account.
         </p>
 
-        <div className="space-y-3">
-          <Link to={retryUrl}>
-            <Button variant="primary" fullWidth leftIcon={<RefreshCcw size={18} />}>
-              Return & Try Again
+        <div className="mt-7 space-y-3">
+          <Link to={retryUrl} className="block">
+            <Button variant="primary" fullWidth leftIcon={<RefreshCcw size={16} />}>
+              Return and try again
             </Button>
           </Link>
-          
-          <Link to={ROUTES.APPLICANT_DASHBOARD} className="block text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors pt-2">
-            Return to Dashboard
+
+          <Link
+            to={ROUTES.APPLICANT_DASHBOARD}
+            className="block pt-1 text-sm font-medium text-zinc-500 transition-colors duration-200 hover:text-zinc-900 motion-reduce:transition-none"
+          >
+            Return to dashboard
           </Link>
         </div>
       </div>

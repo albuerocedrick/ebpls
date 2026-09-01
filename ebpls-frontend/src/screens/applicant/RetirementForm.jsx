@@ -1,7 +1,7 @@
 // src/screens/applicant/RetirementForm.jsx
 // Business Retirement Submission Form — Phase 7
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Calendar, DollarSign, FileText, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import Select from '../../components/ui/Select';
@@ -31,7 +31,7 @@ const RetirementForm = () => {
         setIsLoadingBiz(true);
         const response = await apiClient.get('/api/retirement/my-businesses');
         setBusinesses(response.data || []);
-      } catch (err) {
+      } catch {
         // Fallback: try fetching from applications endpoint
         try {
           const fallback = await apiClient.get('/api/applications/my-businesses');
@@ -102,33 +102,41 @@ const RetirementForm = () => {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl">
       {/* Header */}
       <div className="mb-6">
         <button
           onClick={() => navigate(ROUTES.APPLICANT_DASHBOARD)}
-          className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-900 transition-colors mb-4 font-medium"
+          className="group mb-5 flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors duration-200 hover:text-zinc-900 motion-reduce:transition-none"
         >
-          <ArrowLeft size={16} />
-          Back to Dashboard
+          <ArrowLeft
+            size={14}
+            className="transition-transform duration-300 ease-out group-hover:-translate-x-0.5 motion-reduce:transition-none"
+          />
+          Back to dashboard
         </button>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-          Business Retirement Application
+        <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+          Business retirement
+        </span>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
+          Retire a business
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Submit a request to officially retire/close a registered business.
+        <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+          Submit a request to officially retire or close a registered business.
         </p>
       </div>
 
       {/* Info Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex gap-3">
-        <AlertCircle size={20} className="text-amber-600 shrink-0 mt-0.5" />
-        <div className="text-sm text-amber-800">
-          <p className="font-medium">Important:</p>
-          <ul className="list-disc list-inside mt-1 space-y-1">
-            <li>Final taxes will be computed based on your declared gross sales.</li>
-            <li>Payment is via OTC (Cash or Manager Check) at the Treasury window.</li>
-            <li>Once completed, the business will be permanently marked as retired.</li>
+      <div className="mb-6 flex gap-3 rounded-md border border-zinc-300 bg-zinc-50 p-4">
+        <AlertCircle size={17} className="mt-0.5 shrink-0 text-zinc-600" />
+        <div className="text-sm text-zinc-700">
+          <p className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+            Before you submit
+          </p>
+          <ul className="mt-2 list-inside list-disc space-y-1 text-xs leading-relaxed">
+            <li>Final taxes are computed from your declared gross sales.</li>
+            <li>Payment is over-the-counter (cash or manager&apos;s check) at the Treasury window.</li>
+            <li>Once completed, the business is permanently marked as retired.</li>
           </ul>
         </div>
       </div>
@@ -137,16 +145,16 @@ const RetirementForm = () => {
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Business Selection */}
         <div>
-          <label htmlFor="business_id" className="block text-sm font-medium text-gray-900 mb-1.5">
-            <Building2 size={14} className="inline mr-1" />
-            Select Business to Retire
+          <label htmlFor="business_id" className="mb-2 block font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+            <Building2 size={12} className="mr-1.5 inline" />
+            Select business to retire
           </label>
           {isLoadingBiz ? (
-            <div className="flex items-center gap-2 text-sm text-gray-400">
-              <Loader2 size={14} className="animate-spin" /> Loading businesses...
+            <div className="flex items-center gap-2 text-sm text-zinc-500">
+              <Loader2 size={14} className="animate-spin" /> Loading businesses…
             </div>
           ) : businesses.length === 0 ? (
-            <p className="text-sm text-gray-400">
+            <p className="text-sm leading-relaxed text-zinc-500">
               No active businesses found. You can only retire businesses you own that are not already retired.
             </p>
           ) : (
@@ -157,7 +165,7 @@ const RetirementForm = () => {
               onChange={handleChange}
               error={errors.business_id}
             >
-              <option value="">-- Select a business --</option>
+              <option value="">— Select a business —</option>
               {businesses.map((biz) => (
                 <option key={biz.business_id} value={biz.business_id}>
                   {biz.business_name} {biz.trade_name ? `(${biz.trade_name})` : ''}
@@ -169,9 +177,9 @@ const RetirementForm = () => {
 
         {/* Reason */}
         <div>
-          <label htmlFor="reason" className="block text-sm font-medium text-gray-900 mb-1.5">
-            <FileText size={14} className="inline mr-1" />
-            Reason for Retirement
+          <label htmlFor="reason" className="mb-2 block font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+            <FileText size={12} className="mr-1.5 inline" />
+            Reason for retirement
           </label>
           <textarea
             id="reason"
@@ -179,19 +187,19 @@ const RetirementForm = () => {
             value={formData.reason}
             onChange={handleChange}
             rows={4}
-            placeholder="e.g., Business closure due to relocation, financial reasons, owner decision..."
-            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 text-sm focus:outline-none focus:ring-4 focus:ring-gray-100 focus:bg-white focus:border-gray-400 transition-all resize-none"
+            placeholder="e.g., closure due to relocation, financial reasons, owner decision…"
+            className="w-full resize-none rounded-md border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 transition-colors duration-200 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none motion-reduce:transition-none"
           />
           {errors.reason && (
-            <p className="text-xs text-red-500 mt-1">{errors.reason}</p>
+            <p className="mt-1.5 text-xs text-zinc-700">{errors.reason}</p>
           )}
         </div>
 
         {/* Cessation Date */}
         <div>
-          <label htmlFor="cessation_date" className="block text-sm font-medium text-gray-900 mb-1.5">
-            <Calendar size={14} className="inline mr-1" />
-            Date Business Stopped Operating
+          <label htmlFor="cessation_date" className="mb-2 block font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+            <Calendar size={12} className="mr-1.5 inline" />
+            Date business stopped operating
           </label>
           <input
             type="date"
@@ -200,18 +208,18 @@ const RetirementForm = () => {
             value={formData.cessation_date}
             onChange={handleChange}
             max={today}
-            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 text-sm focus:outline-none focus:ring-4 focus:ring-gray-100 focus:bg-white focus:border-gray-400 transition-all"
+            className="w-full rounded-md border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 tabular-nums transition-colors duration-200 focus:border-zinc-900 focus:outline-none motion-reduce:transition-none"
           />
           {errors.cessation_date && (
-            <p className="text-xs text-red-500 mt-1">{errors.cessation_date}</p>
+            <p className="mt-1.5 text-xs text-zinc-700">{errors.cessation_date}</p>
           )}
         </div>
 
         {/* Final Gross Sales */}
         <div>
-          <label htmlFor="final_gross_sales" className="block text-sm font-medium text-gray-900 mb-1.5">
-            <DollarSign size={14} className="inline mr-1" />
-            Final Gross Sales (PHP)
+          <label htmlFor="final_gross_sales" className="mb-2 block font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+            <DollarSign size={12} className="mr-1.5 inline" />
+            Final gross sales (PHP)
           </label>
           <input
             type="number"
@@ -222,13 +230,13 @@ const RetirementForm = () => {
             min="0"
             step="0.01"
             placeholder="0.00"
-            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 text-sm focus:outline-none focus:ring-4 focus:ring-gray-100 focus:bg-white focus:border-gray-400 transition-all"
+            className="w-full rounded-md border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 tabular-nums transition-colors duration-200 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none motion-reduce:transition-none"
           />
-          <p className="text-xs text-gray-400 mt-1">
-            This will be used by Treasury to compute your final tax liability.
+          <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">
+            Treasury uses this to compute your final tax liability.
           </p>
           {errors.final_gross_sales && (
-            <p className="text-xs text-red-500 mt-1">{errors.final_gross_sales}</p>
+            <p className="mt-1.5 text-xs text-zinc-700">{errors.final_gross_sales}</p>
           )}
         </div>
 
@@ -237,15 +245,15 @@ const RetirementForm = () => {
           <button
             type="submit"
             disabled={isSubmitting || businesses.length === 0}
-            className="w-full py-3 px-4 rounded-2xl bg-gray-900 hover:bg-gray-800 text-white font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
           >
             {isSubmitting ? (
               <>
-                <Loader2 size={16} className="animate-spin" />
-                Submitting...
+                <Loader2 size={15} className="animate-spin" />
+                Submitting…
               </>
             ) : (
-              'Submit Retirement Application'
+              'Submit retirement application'
             )}
           </button>
         </div>

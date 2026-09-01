@@ -73,62 +73,74 @@ const Register = () => {
         setSuccessEmail(fields.email.trim());
         setIsSuccess(true);
       }
-    } catch (err) { /* toasted by useAuth */ }
+    } catch { /* surfaced as a toast by useAuth */ }
   };
 
   const getError = (field) => (touched[field] ? errors[field] : undefined);
 
   if (isSuccess) {
     return (
-      <div className="p-8 sm:p-10 flex flex-col gap-6 items-center text-center">
-        <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
-          <CheckCircle2 size={32} className="text-green-600" />
+      <div className="flex flex-col gap-6 p-7 sm:p-8">
+        {/* Neutral confirmation rather than a green circle: the landing page has
+            no accent hue, and a filled success badge would be the only
+            saturated element in the whole flow. */}
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-900">
+          <CheckCircle2 size={20} className="text-white" />
         </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-extrabold text-gray-900">Check your email</h1>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            We&apos;ve sent a verification link to<br />
-            <strong className="text-gray-900">{successEmail}</strong>
+        <div>
+          <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+            Account created
+          </span>
+          <h1 className="mt-3 text-xl font-semibold tracking-tight text-zinc-900">
+            Check your email
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+            We&apos;ve sent a verification link to{' '}
+            <strong className="font-medium text-zinc-900">{successEmail}</strong>
+            . Open it to activate your account.
           </p>
         </div>
-        <div className="w-full h-px bg-gray-100 my-2" />
+        <div className="h-px w-full bg-zinc-200" />
         <Link
           to={ROUTES.LOGIN}
-          className="w-full inline-flex items-center justify-center rounded-2xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-all"
+          className="inline-flex w-full items-center justify-center rounded-md bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-zinc-800"
         >
-          Back to Sign In
+          Back to sign in
         </Link>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-8 sm:p-10 flex flex-col gap-8" noValidate>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-7 p-7 sm:p-8" noValidate>
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
+      <div>
+        <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+          New account
+        </span>
+        <h1 className="mt-3 text-xl font-semibold tracking-tight text-zinc-900">
           Create your account
         </h1>
-        <p className="text-sm text-gray-500 leading-relaxed">
+        <p className="mt-2 text-sm leading-relaxed text-zinc-600">
           Register to submit and track business permit applications.
         </p>
       </div>
 
       {/* Fields */}
-      <div className="space-y-5">
+      <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           <Input
-            label="First Name"
+            label="First name"
             placeholder="Juan"
             value={fields.firstName}
             onChange={set('firstName')}
             onBlur={blur('firstName')}
             error={getError('firstName')}
             required
-            leftElement={<User size={15} />}
+            leftElement={<User size={15} className="text-zinc-400" />}
           />
           <Input
-            label="Last Name"
+            label="Last name"
             placeholder="dela Cruz"
             value={fields.lastName}
             onChange={set('lastName')}
@@ -139,7 +151,7 @@ const Register = () => {
         </div>
 
         <Input
-          label="Email Address"
+          label="Email address"
           type="email"
           placeholder="you@example.com"
           value={fields.email}
@@ -147,7 +159,7 @@ const Register = () => {
           onBlur={blur('email')}
           error={getError('email')}
           required
-          leftElement={<Mail size={15} />}
+          leftElement={<Mail size={15} className="text-zinc-400" />}
         />
 
         <Input
@@ -159,11 +171,11 @@ const Register = () => {
           onBlur={blur('password')}
           error={getError('password')}
           required
-          leftElement={<Lock size={15} />}
+          leftElement={<Lock size={15} className="text-zinc-400" />}
         />
 
         <Input
-          label="Confirm Password"
+          label="Confirm password"
           type="password"
           placeholder="Repeat your password"
           value={fields.confirmPassword}
@@ -171,7 +183,7 @@ const Register = () => {
           onBlur={blur('confirmPassword')}
           error={getError('confirmPassword')}
           required
-          leftElement={<Lock size={15} />}
+          leftElement={<Lock size={15} className="text-zinc-400" />}
         />
       </div>
 
@@ -181,22 +193,24 @@ const Register = () => {
         fullWidth
         size="lg"
         type="submit"
-        leftIcon={<UserPlus size={17} />}
+        leftIcon={<UserPlus size={16} />}
         isLoading={isLoading}
+        className="font-semibold"
       >
-        Create Account
+        Create account
       </Button>
 
       {/* Login link */}
-      <div className="text-center">
-        <Link
-          to={ROUTES.LOGIN}
-          className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors inline-flex items-center gap-1.5"
-        >
-          <ArrowLeft size={14} />
-          Already have an account? Sign in
-        </Link>
-      </div>
+      <Link
+        to={ROUTES.LOGIN}
+        className="group inline-flex items-center justify-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors duration-200 hover:text-zinc-900"
+      >
+        <ArrowLeft
+          size={14}
+          className="transition-transform duration-300 ease-out group-hover:-translate-x-0.5 motion-reduce:transition-none"
+        />
+        Already have an account? Sign in
+      </Link>
     </form>
   );
 };

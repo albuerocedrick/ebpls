@@ -1,12 +1,16 @@
 /**
  * Sidebar.jsx
- * Dark sidebar navigation — matches the reference design.
+ * Dark sidebar navigation shared by the BPLO, treasury, barangay and admin
+ * portals.
+ *
+ * @policy  Neutral zinc only. The active row is a filled zinc-800 block with a
+ *          hairline left marker rather than a translucent white pill, so it
+ *          reads at the same weight as the rest of the system.
+ * @policy  Section labels are mono uppercase, matching every other eyebrow.
  */
 
-import React from 'react';
 import { NavLink } from 'react-router-dom';
 import useUIStore from '../../store/UIStore';
-import useAuthStore from '../../store/authStore';
 import logo from '../../assets/logo.png';
 
 // =========================================
@@ -21,18 +25,21 @@ const NavItem = ({ to, icon, label, end = false, isActive: customIsActive, onNav
     className={(navLinkProps) => {
       const active = customIsActive ? customIsActive(navLinkProps) : navLinkProps.isActive;
       return [
-        'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium',
-        'transition-all duration-200',
-        'group',
+        'group relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm',
+        'transition-colors duration-200 ease-out motion-reduce:transition-none',
+        'focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2',
+        'focus-visible:ring-offset-zinc-950 focus-visible:outline-none',
         active
-          ? 'bg-white/10 text-white'
-          : 'text-gray-400 hover:bg-white/5 hover:text-gray-200',
+          ? 'bg-zinc-800 font-medium text-white'
+          : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100',
+        // Hairline marker on the active row, echoing the landing page's rails.
+        active
+          ? 'before:absolute before:top-2 before:bottom-2 before:-left-3 before:w-px before:bg-white'
+          : '',
       ].join(' ');
     }}
   >
-    <span className="shrink-0 text-lg opacity-70 group-hover:opacity-100 transition-opacity">
-      {icon}
-    </span>
+    <span className="shrink-0">{icon}</span>
     <span className="truncate">{label}</span>
   </NavLink>
 );
@@ -41,10 +48,17 @@ const NavItem = ({ to, icon, label, end = false, isActive: customIsActive, onNav
 // Nav Section
 // =========================================
 
-const NavSection = ({ sectionLabel, children }) => (
+const NavSection = ({ sectionLabel, isFirst = false, children }) => (
   <div className="flex flex-col gap-0.5">
     {sectionLabel && (
-      <p className="px-4 pt-6 pb-2 text-[0.6rem] font-bold text-gray-500 uppercase tracking-[0.15em] select-none">
+      <p
+        className={[
+          'px-3 pb-2 font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase select-none',
+          // The nav already carries top padding, so the first section label must
+          // not add its own or the gap under the brand block doubles.
+          isFirst ? 'pt-0' : 'pt-6',
+        ].join(' ')}
+      >
         {sectionLabel}
       </p>
     )}
@@ -58,14 +72,13 @@ const NavSection = ({ sectionLabel, children }) => (
 
 const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
   const { isSidebarOpen, closeSidebar } = useUIStore();
-  const user = useAuthStore((s) => s.user);
 
   return (
     <>
       {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm lg:hidden z-[39]"
+          className="fixed inset-0 z-[39] bg-zinc-950/50 backdrop-blur-sm lg:hidden"
           onClick={closeSidebar}
           aria-hidden="true"
         />
@@ -76,9 +89,9 @@ const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
         aria-label="Navigation sidebar"
         className={[
           'fixed top-0 left-0 h-full',
-          panelClassName || 'bg-gray-900',
-          'flex flex-col',
-          'transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          panelClassName || 'bg-zinc-950',
+          'flex flex-col border-r border-zinc-800',
+          'transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         ].join(' ')}
         style={{
@@ -86,20 +99,24 @@ const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
           zIndex: 'var(--z-sticky)',
         }}
       >
-        {/* Brand Logo Section */}
-        <div className="p-5 pb-4 lg:pl-6 border-b border-gray-800/50 flex items-center justify-center lg:justify-start">
+        {/* Brand */}
+        <div
+          className="flex shrink-0 items-center border-b border-zinc-800 px-4"
+          style={{ height: 'var(--navbar-height)' }}
+        >
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 flex items-center justify-center drop-shadow-sm">
-              <img src={logo} alt="BOSS Logo" className="w-full h-full object-contain" />
+            <div className="flex h-7 w-7 items-center justify-center">
+              <img src={logo} alt="" aria-hidden="true" className="h-full w-full object-contain" />
             </div>
-            <h1 className="text-lg font-bold text-white tracking-wide">BOSS</h1>
+            <span className="text-sm font-semibold tracking-tight text-white">Business One Stop Shop</span>
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
+        {/* Navigation. pt-4 gives the first row breathing room under the brand
+            block — previously the first item sat flush against the hairline. */}
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pt-4 pb-4">
           {navItems.map((section, idx) => (
-            <NavSection key={idx} sectionLabel={section.sectionLabel}>
+            <NavSection key={idx} sectionLabel={section.sectionLabel} isFirst={idx === 0}>
               {section.items.map((item) => (
                 <NavItem
                   key={item.to}
@@ -119,7 +136,7 @@ const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
 
         {/* Footer */}
         {footer && (
-          <div className="px-3 py-4 border-t border-gray-800 shrink-0">
+          <div className="shrink-0 border-t border-zinc-800 px-3 py-4">
             {footer}
           </div>
         )}

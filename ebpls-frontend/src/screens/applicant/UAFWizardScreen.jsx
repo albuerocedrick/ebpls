@@ -265,53 +265,55 @@ const UAFWizardScreen = () => {
 
   if (editLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 max-w-4xl mx-auto">
-        <Loader2 size={28} className="animate-spin text-gray-300" />
-        <p className="text-sm text-gray-400">Loading application data...</p>
+      <div className="mx-auto flex min-h-[400px] max-w-4xl flex-col items-center justify-center gap-4">
+        <Loader2 size={24} className="animate-spin text-zinc-300" />
+        <p className="text-sm text-zinc-500">Loading application data…</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
 
       {/* Header & Autosave Status */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Business Permit Application</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Unified Application Form (UAF)
-          </p>
+          <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+            Unified application form
+          </span>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
+            Business permit application
+          </h1>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-medium px-3.5 py-2 rounded-2xl bg-white border border-gray-200 shadow-sm">
+        <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-2 font-mono text-[10px] tracking-[0.08em] uppercase">
           {isSaving ? (
             <>
-              <Loader2 size={14} className="animate-spin text-gray-400" />
-              <span className="text-gray-600">Saving draft...</span>
+              <Loader2 size={13} className="animate-spin text-zinc-400" />
+              <span className="text-zinc-600">Saving draft…</span>
             </>
           ) : lastSavedAt ? (
             <>
-              <Check size={14} className="text-green-600" />
-              <span className="text-gray-500">Saved {formatDateTime(lastSavedAt)}</span>
+              <Check size={13} className="text-zinc-900" />
+              <span className="text-zinc-600">Saved {formatDateTime(lastSavedAt)}</span>
             </>
           ) : (
             <>
-              <Save size={14} className="text-gray-400" />
-              <span className="text-gray-500">Draft saved locally</span>
+              <Save size={13} className="text-zinc-400" />
+              <span className="text-zinc-600">Draft saved locally</span>
             </>
           )}
         </div>
       </div>
 
       {/* Progress Stepper */}
-      <div className="bg-white border border-gray-100 rounded-3xl p-5 sm:p-7 shadow-sm">
-        <div className="flex items-center justify-between relative">
+      <div className="rounded-lg border border-zinc-200 bg-white p-5 sm:p-7">
+        <div className="relative flex items-center justify-between">
           {/* Background track — aligned to center of circles */}
-          <div className="absolute left-0 right-0 top-[18px] sm:top-[22px] h-[3px] bg-gray-100 z-0 rounded-full" />
+          <div className="absolute top-[18px] right-0 left-0 z-0 h-px bg-zinc-200 sm:top-[22px]" />
           {/* Active track */}
           <div
-            className="absolute left-0 top-[18px] sm:top-[22px] h-[3px] bg-blue-500 z-0 rounded-full transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+            className="absolute top-[18px] left-0 z-0 h-px bg-zinc-900 transition-all duration-500 ease-out motion-reduce:transition-none sm:top-[22px]"
             style={{ width: `${((current_step - 1) / (WIZARD_STEPS.length - 1)) * 100}%` }}
           />
 
@@ -324,12 +326,12 @@ const UAFWizardScreen = () => {
               <div key={step.id} className="relative z-10 flex flex-col items-center gap-2.5">
                 <div
                   className={[
-                    'w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center border-2 transition-all duration-300',
+                    'flex h-9 w-9 items-center justify-center rounded-full border transition-colors duration-300 ease-out motion-reduce:transition-none sm:h-11 sm:w-11',
                     isCompleted
-                      ? 'bg-blue-500 border-blue-500 text-white'
+                      ? 'border-zinc-900 bg-zinc-900 text-white'
                       : isActive
-                        ? 'bg-white border-blue-500 text-blue-500 shadow-md shadow-blue-500/20'
-                        : 'bg-gray-50 border-gray-200 text-gray-300',
+                        ? 'border-zinc-900 bg-white text-zinc-900'
+                        : 'border-zinc-200 bg-white text-zinc-300',
                   ].join(' ')}
                 >
                   {isCompleted
@@ -338,8 +340,8 @@ const UAFWizardScreen = () => {
                   }
                 </div>
                 <span className={[
-                  'hidden sm:block text-[11px] font-semibold transition-colors duration-300',
-                  isActive ? 'text-gray-900' : isCompleted ? 'text-gray-700' : 'text-gray-400',
+                  'hidden font-mono text-[10px] tracking-[0.08em] uppercase transition-colors duration-300 motion-reduce:transition-none sm:block',
+                  isActive ? 'text-zinc-900' : isCompleted ? 'text-zinc-600' : 'text-zinc-400',
                 ].join(' ')}>
                   {step.label}
                 </span>
@@ -351,13 +353,15 @@ const UAFWizardScreen = () => {
 
       {/* Inline Validation Error Banner */}
       {stepErrors.length > 0 && (
-        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
-          <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-md border border-zinc-300 bg-zinc-50 p-4 duration-200 animate-in fade-in slide-in-from-top-2">
+          <AlertCircle size={17} className="mt-0.5 shrink-0 text-zinc-600" />
           <div>
-            <p className="text-sm font-bold text-red-900 mb-1">Please fix the following before continuing:</p>
-            <ul className="list-disc list-inside space-y-0.5">
+            <p className="mb-2 font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+              Fix the following before continuing
+            </p>
+            <ul className="list-inside list-disc space-y-0.5">
               {stepErrors.map((err, i) => (
-                <li key={i} className="text-xs text-red-800">{err}</li>
+                <li key={i} className="text-xs text-zinc-700">{err}</li>
               ))}
             </ul>
           </div>
@@ -366,22 +370,26 @@ const UAFWizardScreen = () => {
 
       {/* BPLO Feedback Banner — shown when editing a returned application */}
       {feedback && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+        <div className="rounded-md border border-zinc-300 bg-zinc-50 p-4">
           <div className="flex items-start gap-3">
-            <MessageSquare size={18} className="text-amber-600 shrink-0 mt-0.5" />
+            <MessageSquare size={17} className="mt-0.5 shrink-0 text-zinc-600" />
             <div className="flex-1">
-              <p className="text-sm font-bold text-amber-900">BPLO Officer Remarks</p>
+              <p className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+                BPLO officer remarks
+              </p>
               {feedback.return_remarks && (
-                <p className="text-sm text-amber-800 mt-1 bg-white/60 rounded px-3 py-2 border border-amber-200">
-                  "{feedback.return_remarks}"
+                <p className="mt-2 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-700">
+                  &ldquo;{feedback.return_remarks}&rdquo;
                 </p>
               )}
               {feedback.data_reviews?.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-xs font-semibold text-amber-800 mb-1">Data Discrepancies:</p>
+                  <p className="mb-1.5 font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+                    Data discrepancies
+                  </p>
                   <ul className="space-y-1">
                     {feedback.data_reviews.map((r, i) => (
-                      <li key={i} className="text-xs text-amber-700 bg-white/60 rounded px-2 py-1.5 border border-amber-100">
+                      <li key={i} className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-700">
                         <span className="font-medium capitalize">{r.section.replace(/_/g, ' ')}</span>: {r.remarks}
                       </li>
                     ))}
@@ -390,18 +398,20 @@ const UAFWizardScreen = () => {
               )}
               {feedback.doc_reviews?.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-xs font-semibold text-amber-800 mb-1">Document Issues:</p>
+                  <p className="mb-1.5 font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+                    Document issues
+                  </p>
                   <ul className="space-y-1">
                     {feedback.doc_reviews.map((d, i) => (
-                      <li key={i} className="text-xs text-amber-700 bg-white/60 rounded px-2 py-1.5 border border-amber-100">
+                      <li key={i} className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-700">
                         <span className="font-medium">{d.requirement}</span>: {d.remarks || `Marked as ${d.status}`}
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
-              <p className="text-[11px] text-amber-600 mt-3 italic">
-                Please correct the issues above. Your previously submitted data is pre-filled below.
+              <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+                Correct the issues above. Your previously submitted data is pre-filled below.
               </p>
             </div>
           </div>
@@ -409,20 +419,23 @@ const UAFWizardScreen = () => {
       )}
 
       {/* Main Form Content Area */}
-      <div className="bg-[hsl(var(--color-surface,0,0%,100%))] border border-[hsl(var(--color-border,0,0%,90%))] rounded-xl shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))] overflow-hidden flex flex-col min-h-[400px]">
+      <div className="flex min-h-[400px] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white">
 
-        <div className="bg-[hsl(var(--color-surface-raised,0,0%,96%))] px-6 py-4 border-b border-[hsl(var(--color-border,0,0%,90%))] flex items-center gap-3">
-          <div className="p-2 bg-accent/10 text-accent rounded-md">
-            {React.createElement(WIZARD_STEPS[current_step - 1].icon, { size: 20 })}
+        <div className="flex items-center gap-3 border-b border-zinc-200 bg-zinc-50 px-5 py-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600">
+            {React.createElement(WIZARD_STEPS[current_step - 1].icon, { size: 17 })}
           </div>
           <div>
-            <h2 className="text-lg font-bold text-[hsl(var(--color-text,0,0%,10%))]">
-              Step {current_step}: {WIZARD_STEPS[current_step - 1].label}
+            <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+              Step {current_step} of {WIZARD_STEPS.length}
+            </span>
+            <h2 className="mt-1 text-base font-semibold tracking-tight text-zinc-900">
+              {WIZARD_STEPS[current_step - 1].label}
             </h2>
           </div>
         </div>
 
-        <div className="p-6 flex-1">
+        <div className="flex-1 p-6">
           {current_step === 1 && <Step1_BasicInfo />}
           {current_step === 2 && <Step2_Location />}
           {current_step === 3 && <Step3_Activities />}
@@ -430,34 +443,33 @@ const UAFWizardScreen = () => {
           {current_step === 5 && <Step5_Review />}
         </div>
 
-        <div className="p-6 border-t border-[hsl(var(--color-border,0,0%,90%))] bg-[hsl(var(--color-surface-raised,0,0%,98%))] flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 border-t border-zinc-200 bg-zinc-50 p-5">
           <Button
             onClick={handleBack}
             disabled={current_step === 1}
             variant="secondary"
-            leftIcon={<ChevronLeft size={18} />}
+            leftIcon={<ChevronLeft size={17} />}
           >
             Previous
           </Button>
- 
+
           {current_step === 5 ? (
             <Button
               onClick={handleSubmit}
               disabled={!isAttestationAgreed || isSubmitting}
               isLoading={isSubmitting}
               variant="primary"
-              className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
-              rightIcon={<Check size={18} />}
+              rightIcon={<Check size={17} />}
             >
-              Submit Application
+              Submit application
             </Button>
           ) : (
             <Button
               onClick={handleNext}
               variant="primary"
-              rightIcon={<ChevronRight size={18} />}
+              rightIcon={<ChevronRight size={17} />}
             >
-              Next Step
+              Next step
             </Button>
           )}
         </div>

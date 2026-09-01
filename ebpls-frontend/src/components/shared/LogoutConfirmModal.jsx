@@ -8,7 +8,7 @@
  *   onCancel  — called when user clicks "Cancel" or the backdrop
  */
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { LogOut, X, ShieldAlert } from 'lucide-react';
 
 const LogoutConfirmModal = ({ isOpen, onConfirm, onCancel }) => {
@@ -45,50 +45,53 @@ const LogoutConfirmModal = ({ isOpen, onConfirm, onCancel }) => {
     >
       {/* Panel */}
       <div
-        className="relative bg-white rounded-[20px] p-8 pb-7 w-full max-w-[380px] shadow-2xl text-center animate-[slideUp_0.2s_ease-out]"
+        className="relative w-full max-w-[380px] rounded-lg bg-white p-7 text-left shadow-2xl animate-[slideUp_0.2s_ease-out]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
           onClick={onCancel}
-          className="absolute top-3.5 right-3.5 w-[30px] h-[30px] border-none bg-gray-100 text-gray-500 rounded-full flex items-center justify-center cursor-pointer transition-colors hover:bg-gray-200 hover:text-gray-900"
+          className="absolute top-3.5 right-3.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 transition-colors duration-200 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
           aria-label="Close dialog"
         >
-          <X size={16} />
+          <X size={15} />
         </button>
 
-        {/* Warning icon */}
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 text-amber-700 flex items-center justify-center mx-auto mb-5 shadow-[0_4px_16px_rgba(180,83,9,0.18)]">
-          <ShieldAlert size={28} strokeWidth={1.75} />
+        {/* Icon */}
+        <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-zinc-700">
+          <ShieldAlert size={20} strokeWidth={1.75} />
         </div>
 
         {/* Title */}
-        <h2 id="logout-modal-title" className="text-xl font-bold text-gray-900 mb-2 tracking-tight">
-          Sign Out?
+        <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+          Confirm
+        </span>
+        <h2 id="logout-modal-title" className="mt-3 text-lg font-semibold tracking-tight text-zinc-900">
+          Sign out?
         </h2>
 
         {/* Body */}
-        <p className="text-sm text-gray-500 leading-relaxed mb-7">
+        <p className="mt-2 mb-7 text-sm leading-relaxed text-zinc-600">
           You are about to sign out of your session. Any unsaved changes may
-          be lost. Are you sure you want to continue?
+          be lost.
         </p>
 
         {/* Action buttons */}
-        <div className="flex gap-3 justify-center">
+        <div className="flex justify-center gap-3">
           <button
             id="logout-cancel-btn"
             onClick={onCancel}
-            className="flex-1 px-5 py-2.5 rounded-[10px] border-[1.5px] border-gray-200 bg-white text-gray-700 text-sm font-semibold cursor-pointer transition-colors hover:bg-gray-50 hover:border-gray-300 hover:text-gray-900"
+            className="flex-1 cursor-pointer rounded-md border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-colors duration-200 hover:border-zinc-400 hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
           >
             Cancel
           </button>
           <button
             id="logout-confirm-btn"
             onClick={onConfirm}
-            className="flex-1 px-5 py-2.5 rounded-[10px] border-none bg-gradient-to-br from-red-500 to-red-600 text-white text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(239,68,68,0.35)] hover:opacity-90 hover:-translate-y-[1px] hover:shadow-[0_6px_18px_rgba(239,68,68,0.45)] active:opacity-100 active:translate-y-0"
+            className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
           >
-            <LogOut size={16} strokeWidth={2} />
-            Yes, Sign Out
+            <LogOut size={15} strokeWidth={2} />
+            Sign out
           </button>
         </div>
       </div>

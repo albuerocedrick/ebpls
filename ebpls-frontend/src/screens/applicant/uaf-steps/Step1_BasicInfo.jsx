@@ -1,8 +1,8 @@
 // src/screens/applicant/uaf-steps/Step1_BasicInfo.jsx
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import useApplicationStore from '../../../store/applicationStore';
-import { Building, Tag, Info } from 'lucide-react';
+import { Building, Tag } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 import { API_ENDPOINTS } from '../../../utils/constants';
 import Select from '../../../components/ui/Select';
@@ -35,7 +35,7 @@ const Step1_BasicInfo = () => {
         if (res.success && res.data?.organization_types?.length > 0) {
           setOrgTypes(res.data.organization_types);
         }
-      } catch (err) {
+      } catch {
         console.warn('Failed to fetch dynamic lookups, using fallback.');
       }
     };
@@ -58,17 +58,20 @@ const Step1_BasicInfo = () => {
     }
   };
 
-  const inputClasses = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 focus:outline-none focus:border-gray-400 focus:ring-4 focus:ring-gray-100 focus:bg-white transition-all cursor-pointer";
-  const labelClasses = "block text-sm font-semibold text-gray-700 mb-2";
+  // Shared field tokens — mirrors components/ui/Input so hand-rolled inputs in
+  // this wizard match the primitive: rounded-md, hairline border, focus by
+  // darkening the border to zinc-900 rather than a wide ring.
+  const inputClasses = "w-full rounded-md border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 transition-colors duration-200 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none motion-reduce:transition-none";
+  const labelClasses = "mb-2 block font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase";
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      
+    <div className="flex flex-col gap-6 duration-300 animate-in fade-in slide-in-from-bottom-2">
+
       {/* Section 1: Application Type */}
-      <div className="p-5 border border-[hsl(var(--color-border,0,0%,90%))] rounded-lg bg-[hsl(var(--color-surface-raised,0,0%,98%))]">
-        <h3 className="text-sm font-bold flex items-center gap-2 mb-4 text-[hsl(var(--color-text,0,0%,10%))]">
-          <Tag size={18} className="text-accent" />
-          Application Details
+      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-5">
+        <h3 className="mb-4 flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+          <Tag size={14} className="text-zinc-500" />
+          Application details
         </h3>
         <div className="grid grid-cols-1 gap-4">
           <div>
@@ -89,16 +92,16 @@ const Step1_BasicInfo = () => {
       </div>
 
       {/* Section 2: Business Information */}
-      <div className="p-5 border border-[hsl(var(--color-border,0,0%,90%))] rounded-lg bg-[hsl(var(--color-surface-raised,0,0%,98%))]">
-        <h3 className="text-sm font-bold flex items-center gap-2 mb-4 text-[hsl(var(--color-text,0,0%,10%))]">
-          <Building size={18} className="text-accent" />
-          Business Identity
+      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-5">
+        <h3 className="mb-4 flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+          <Building size={14} className="text-zinc-500" />
+          Business identity
         </h3>
-        
+
         <div className="grid grid-cols-1 gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className={labelClasses}>Business Name (Exact legal name) <span className="text-red-500">*</span></label>
+              <label className={labelClasses}>Business name (exact legal name) <span className="text-zinc-900">*</span></label>
               <input 
                 type="text" 
                 name="business_name" 
@@ -109,7 +112,7 @@ const Step1_BasicInfo = () => {
               />
             </div>
             <div>
-              <label className={labelClasses}>Trade Name / Franchise (DBA)</label>
+              <label className={labelClasses}>Trade name / franchise (DBA)</label>
               <input 
                 type="text" 
                 name="trade_name" 
@@ -121,7 +124,7 @@ const Step1_BasicInfo = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <Select
                 label="Organization Type"
@@ -137,7 +140,7 @@ const Step1_BasicInfo = () => {
               </Select>
             </div>
             <div>
-              <label className={labelClasses}>DTI / SEC / CDA Registration No.</label>
+              <label className={labelClasses}>DTI / SEC / CDA registration no.</label>
               <input 
                 type="text" 
                 name="dti_sec_cda_reg_no" 
@@ -150,21 +153,21 @@ const Step1_BasicInfo = () => {
           </div>
 
           {/* Franchise Toggle Area */}
-          <div className="mt-2 pt-4 border-t border-[hsl(var(--color-border,0,0%,90%))]">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input 
-                type="checkbox" 
-                name="is_franchise" 
-                checked={data.is_franchise} 
-                onChange={handleChange} 
-                className="w-4 h-4 text-accent border-gray-300 rounded focus:ring-accent" 
+          <div className="mt-2 border-t border-zinc-200 pt-4">
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                name="is_franchise"
+                checked={data.is_franchise}
+                onChange={handleChange}
+                className="h-4 w-4 rounded border-zinc-300 text-zinc-900 accent-zinc-900 focus:ring-2 focus:ring-zinc-900"
               />
-              <span className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))]">This business is operated under a franchise agreement.</span>
+              <span className="text-sm text-zinc-700">This business is operated under a franchise agreement.</span>
             </label>
 
             {data.is_franchise && (
               <div className="mt-3 pl-7 animate-in fade-in slide-in-from-top-1">
-                <label className={labelClasses}>Franchisor Name <span className="text-red-500">*</span></label>
+                <label className={labelClasses}>Franchisor name <span className="text-zinc-900">*</span></label>
                 <input 
                   type="text" 
                   name="franchisor_name" 

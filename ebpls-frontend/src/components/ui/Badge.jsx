@@ -10,7 +10,6 @@
  * @policy  Text must be legible — foreground/background pairs are pre-validated.
  */
 
-import React from 'react';
 import { APP_STATUS } from '../../utils/constants';
 
 // =========================================
@@ -19,35 +18,35 @@ import { APP_STATUS } from '../../utils/constants';
 // =========================================
 
 const STATUS_STYLES = {
-  [APP_STATUS.DRAFT]: { bg: 'bg-gray-50', text: 'text-gray-500', ring: '' },
-  [APP_STATUS.PENDING]: { bg: 'bg-gray-50', text: 'text-gray-500', ring: '' },
-  [APP_STATUS.UNDER_REVIEW]: { bg: 'bg-gray-100', text: 'text-gray-600', ring: '' },
-  [APP_STATUS.RETURNED]: { bg: 'bg-gray-800', text: 'text-gray-200', ring: '' },
-  [APP_STATUS.VERIFIED]: { bg: 'bg-gray-200', text: 'text-gray-700', ring: '' },
-  [APP_STATUS.FOR_ASSESSMENT]: { bg: 'bg-gray-100', text: 'text-gray-600', ring: '' },
-  [APP_STATUS.ASSESSED]: { bg: 'bg-gray-200', text: 'text-gray-700', ring: '' },
-  [APP_STATUS.FOR_PAYMENT]: { bg: 'bg-gray-200', text: 'text-gray-700', ring: '' },
-  [APP_STATUS.PAID]: { bg: 'bg-gray-300', text: 'text-gray-800', ring: '' },
-  [APP_STATUS.COMPLETED]: { bg: 'bg-gray-900', text: 'text-white', ring: '' },
-  [APP_STATUS.PAYMENT_PROCESSING]: { bg: 'bg-gray-100', text: 'text-gray-600', ring: '' },
+  [APP_STATUS.DRAFT]: { bg: 'bg-surface', text: 'text-zinc-500', ring: 'ring-zinc-200' },
+  [APP_STATUS.PENDING]: { bg: 'bg-surface', text: 'text-zinc-500', ring: 'ring-zinc-200' },
+  [APP_STATUS.UNDER_REVIEW]: { bg: 'bg-zinc-100', text: 'text-zinc-600', ring: 'ring-zinc-200' },
+  [APP_STATUS.RETURNED]: { bg: 'bg-zinc-800', text: 'text-zinc-100', ring: 'ring-zinc-800' },
+  [APP_STATUS.VERIFIED]: { bg: 'bg-zinc-200', text: 'text-zinc-700', ring: 'ring-zinc-300' },
+  [APP_STATUS.FOR_ASSESSMENT]: { bg: 'bg-zinc-100', text: 'text-zinc-600', ring: 'ring-zinc-200' },
+  [APP_STATUS.ASSESSED]: { bg: 'bg-zinc-200', text: 'text-zinc-700', ring: 'ring-zinc-300' },
+  [APP_STATUS.FOR_PAYMENT]: { bg: 'bg-zinc-200', text: 'text-zinc-700', ring: 'ring-zinc-300' },
+  [APP_STATUS.PAID]: { bg: 'bg-zinc-300', text: 'text-zinc-800', ring: 'ring-zinc-400' },
+  [APP_STATUS.COMPLETED]: { bg: 'bg-zinc-900', text: 'text-white', ring: 'ring-zinc-900' },
+  [APP_STATUS.PAYMENT_PROCESSING]: { bg: 'bg-zinc-100', text: 'text-zinc-600', ring: 'ring-zinc-200' },
   // Retirements
-  [APP_STATUS.RETIREMENT_PENDING]: { bg: 'bg-gray-50', text: 'text-gray-500', ring: '' },
-  [APP_STATUS.RETIREMENT_ASSESSED]: { bg: 'bg-gray-200', text: 'text-gray-700', ring: '' },
-  [APP_STATUS.RETIREMENT_PAID]: { bg: 'bg-gray-300', text: 'text-gray-800', ring: '' },
-  [APP_STATUS.RETIRED]: { bg: 'bg-gray-900', text: 'text-white', ring: '' },
+  [APP_STATUS.RETIREMENT_PENDING]: { bg: 'bg-surface', text: 'text-zinc-500', ring: 'ring-zinc-200' },
+  [APP_STATUS.RETIREMENT_ASSESSED]: { bg: 'bg-zinc-200', text: 'text-zinc-700', ring: 'ring-zinc-300' },
+  [APP_STATUS.RETIREMENT_PAID]: { bg: 'bg-zinc-300', text: 'text-zinc-800', ring: 'ring-zinc-400' },
+  [APP_STATUS.RETIRED]: { bg: 'bg-zinc-900', text: 'text-white', ring: 'ring-zinc-900' },
 };
 
 // Fallback for unknown statuses
 const DEFAULT_STYLE = {
-  bg: 'bg-gray-100',
-  text: 'text-gray-600',
-  ring: '',
+  bg: 'bg-zinc-100',
+  text: 'text-zinc-600',
+  ring: 'ring-zinc-200',
 };
 
 const SIZE_CLASSES = {
-  sm: 'text-xs px-2 py-0.5',
-  md: 'text-xs px-2.5 py-1',
-  lg: 'text-sm px-3 py-1',
+  sm: 'text-[10px] px-2 py-0.5 tracking-[0.08em]',
+  md: 'text-[10px] px-2.5 py-1 tracking-[0.1em]',
+  lg: 'text-xs px-3 py-1.5 tracking-[0.1em]',
 };
 
 // =========================================
@@ -75,7 +74,9 @@ const Badge = ({
     <span
       className={[
         'inline-flex items-center justify-center',
-        'font-medium rounded-full',
+        // Mono uppercase, matching the eyebrow and caption treatment used on
+        // the public pages. A status is a label, not prose.
+        'font-mono uppercase rounded-full',
         'leading-none whitespace-nowrap',
         style.bg,
         style.text,

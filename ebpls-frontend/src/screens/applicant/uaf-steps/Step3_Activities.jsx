@@ -1,8 +1,8 @@
 // src/screens/applicant/uaf-steps/Step3_Activities.jsx
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import useApplicationStore from '../../../store/applicationStore';
-import { Store, Plus, Trash2, Info, PhilippinePeso } from 'lucide-react';
+import { Plus, Trash2, Info, PhilippinePeso } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 import { API_ENDPOINTS } from '../../../utils/constants';
 import Select from '../../../components/ui/Select';
@@ -38,12 +38,12 @@ const Step3_Activities = () => {
           setBusinessActivities(res.data.business_activities);
           setActivityMetrics(res.data.business_activity_metrics || {});
         }
-      } catch (err) {
+      } catch {
         console.warn('Failed to fetch dynamic lookups, using fallback.');
       }
     };
     fetchLookups();
-  }, [data.lineOfBusinesses, setFormField]);
+  }, [data.lineOfBusinesses, setFormField, setActivityMetrics]);
 
   const lobs = data.lineOfBusinesses || [];
 
@@ -70,20 +70,25 @@ const Step3_Activities = () => {
     setFormField('step3', 'lineOfBusinesses', updatedLOBs);
   };
 
-  const inputClasses = "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 focus:outline-none focus:border-gray-400 focus:ring-4 focus:ring-gray-100 focus:bg-white transition-all cursor-pointer";
-  const labelClasses = "block text-sm font-semibold text-gray-700 mb-2";
+  // Shared field tokens — mirrors components/ui/Input (rounded-md, hairline
+  // border, focus by darkening the border rather than a wide ring).
+  const inputClasses = "w-full rounded-md border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 transition-colors duration-200 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none motion-reduce:transition-none";
+  const labelClasses = "mb-2 block font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase";
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      
+    <div className="flex flex-col gap-6 duration-300 animate-in fade-in slide-in-from-bottom-2">
+
       {/* Information Banner */}
-      <div className="p-4 bg-accent/5 border border-accent/20 rounded-lg flex items-start gap-3">
-        <Info size={20} className="text-accent shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
+        <Info size={17} className="mt-0.5 shrink-0 text-zinc-500" />
         <div>
-          <h4 className="text-sm font-bold text-[hsl(var(--color-text,0,0%,10%))]">Declare all Business Activities</h4>
-          <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,40%))] mt-1">
-            A single establishment may have multiple lines of business (e.g., a Retail Store that also operates a small Eatery). 
-            Please add all applicable activities. Your Mayor's Permit Fee will be assessed based on these declarations.
+          <h4 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+            Declare all business activities
+          </h4>
+          <p className="mt-2 text-xs leading-relaxed text-zinc-600">
+            A single establishment may have multiple lines of business (e.g., a retail store that also
+            operates a small eatery). Add all applicable activities — your Mayor&apos;s Permit Fee is
+            assessed from these declarations.
           </p>
         </div>
       </div>
@@ -93,11 +98,11 @@ const Step3_Activities = () => {
         {lobs.map((lob, index) => (
           <div 
             key={index} 
-            className="p-5 border border-[hsl(var(--color-border,0,0%,90%))] rounded-lg bg-[hsl(var(--color-surface-raised,0,0%,98%))] relative"
+            className="relative rounded-lg border border-zinc-200 bg-zinc-50 p-5"
           >
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-              
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+
+              <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-12">
                 {/* LOB Type */}
                 <div className="md:col-span-6">
                   <Select
@@ -115,9 +120,9 @@ const Step3_Activities = () => {
 
                 {/* Capital Investment / Gross Sales */}
                 <div className="md:col-span-4">
-                  <label className={labelClasses}>Capital Investment (₱) <span className="text-red-500">*</span></label>
+                  <label className={labelClasses}>Capital investment (₱) <span className="text-zinc-900">*</span></label>
                   <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--color-border,0,0%,80%))]">
+                    <div className="absolute top-1/2 left-3 -translate-y-1/2 text-zinc-400">
                       <PhilippinePeso size={14} />
                     </div>
                     <input 
@@ -127,7 +132,7 @@ const Step3_Activities = () => {
                       value={lob.capital_investment} 
                       onChange={(e) => handleChange(index, 'capital_investment', e.target.value)} 
                       placeholder="0.00" 
-                      className={`${inputClasses} pl-8`} 
+                      className={`${inputClasses} pl-8 tabular-nums`} 
                     />
                   </div>
                 </div>
@@ -140,15 +145,15 @@ const Step3_Activities = () => {
                     min="1"
                     value={lob.units} 
                     onChange={(e) => handleChange(index, 'units', e.target.value)} 
-                    className={inputClasses} 
+                    className={`${inputClasses} tabular-nums`} 
                   />
                 </div>
 
                 {/* Conditional Metric Count */}
                 {activityMetrics[lob.name] && (
-                  <div className="md:col-span-12 md:w-1/3 mt-2">
+                  <div className="mt-2 md:col-span-12 md:w-1/3">
                     <label htmlFor={`lob-metric-${index}`} className={labelClasses}>
-                      {activityMetrics[lob.name].metric} <span className="text-red-500">*</span>
+                      {activityMetrics[lob.name].metric} <span className="text-zinc-900">*</span>
                     </label>
                     <input
                       id={`lob-metric-${index}`}
@@ -157,7 +162,7 @@ const Step3_Activities = () => {
                       value={lob.metric_count || ''}
                       onChange={(e) => handleChange(index, 'metric_count', e.target.value)}
                       placeholder="0"
-                      className={inputClasses}
+                      className={`${inputClasses} tabular-nums`}
                     />
                   </div>
                 )}
@@ -168,10 +173,11 @@ const Step3_Activities = () => {
                 <button 
                   type="button"
                   onClick={() => handleRemoveLOB(index)}
-                  className="mt-6 p-2 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors self-end md:self-auto shrink-0 border border-transparent hover:border-red-200"
-                  title="Remove Line of Business"
+                  className="mt-6 shrink-0 self-end rounded-md border border-zinc-200 bg-white p-2 text-zinc-500 transition-colors duration-200 hover:border-zinc-300 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none md:self-auto"
+                  title="Remove line of business"
+                  aria-label="Remove line of business"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={16} />
                 </button>
               )}
               
@@ -184,10 +190,10 @@ const Step3_Activities = () => {
       <button 
         type="button"
         onClick={handleAddLOB}
-        className="self-start flex items-center gap-2 px-4 py-2 text-sm font-semibold text-accent border border-accent rounded-lg hover:bg-accent hover:text-white transition-colors"
+        className="flex items-center gap-2 self-start rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition-colors duration-200 hover:border-zinc-900 hover:bg-zinc-900 hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
       >
-        <Plus size={16} />
-        Add Another Line of Business
+        <Plus size={15} />
+        Add another line of business
       </button>
 
     </div>

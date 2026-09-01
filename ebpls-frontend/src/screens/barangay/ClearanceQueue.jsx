@@ -12,12 +12,11 @@
 import { useState, useEffect } from 'react';
 import {
   ClipboardCheck, CheckCircle2, XCircle, Eye, MapPin,
-  Building2, FileSearch, Filter, User, FileText, ChevronRight,
+  Building2, FileSearch, User, FileText, ChevronRight,
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Select from '../../components/ui/Select';
@@ -127,25 +126,38 @@ const ClearanceQueue = () => {
   const [barangayList, setBarangayList] = useState(BARANGAYS_LILIW);
   const [selectedStatus, setSelectedStatus] = useState('Pending');
 
-  const fetchPendingClearances = async (statusOverride) => {
+  // Bumped to force a refetch without writing state inside an effect.
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const refetchClearances = () => {
     setLoading(true);
-    try {
-      const currentStatus = statusOverride !== undefined ? statusOverride : selectedStatus;
-      const response = await apiClient.get('/api/barangay/clearances/pending', {
-        params: { status: currentStatus }
-      });
-      const fetched = response.data?.data || response.data;
-      setClearances(Array.isArray(fetched) ? fetched : []);
-    } catch (err) {
-      console.error('Fetch error:', err);
-    } finally {
-      setLoading(false);
-    }
+    setReloadKey((k) => k + 1);
   };
 
-  useEffect(() => { 
-    fetchPendingClearances(selectedStatus);
-  }, [selectedStatus]);
+  // The fetch is inlined so nothing is set synchronously in the effect body.
+  // `loading` starts true on mount and is set by refetchClearances afterwards.
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPendingClearances = async () => {
+      try {
+        const response = await apiClient.get('/api/barangay/clearances/pending', {
+          params: { status: selectedStatus }
+        });
+        if (cancelled) return;
+        const fetched = response.data?.data || response.data;
+        setClearances(Array.isArray(fetched) ? fetched : []);
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Fetch error:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchPendingClearances();
+    return () => { cancelled = true; };
+  }, [selectedStatus, reloadKey]);
 
   useEffect(() => {
     const fetchBarangays = async () => {
@@ -165,7 +177,7 @@ const ClearanceQueue = () => {
     try {
       await apiClient.put(`/api/barangay/clearances/${id}/issue`);
       toast.success('Clearance Issued Successfully');
-      fetchPendingClearances(selectedStatus);
+      refetchClearances();
     } catch {
       toast.error('Failed to issue clearance');
     }
@@ -178,7 +190,7 @@ const ClearanceQueue = () => {
       toast.success('Clearance rejected successfully.');
       setIsRejectModalOpen(false);
       setRemarks('');
-      fetchPendingClearances(selectedStatus);
+      refetchClearances();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to reject clearance.');
     }
@@ -234,10 +246,15 @@ const ClearanceQueue = () => {
     <div className="flex flex-col gap-6">
 
       {/* Header + Filter */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Clearance Queue</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+            Barangay
+          </span>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
+            Clearance queue
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-600">
             Review application details, documents, and location pins before issuing clearances.
           </p>
         </div>
@@ -267,38 +284,41 @@ const ClearanceQueue = () => {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="group bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-default">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
-              <ClipboardCheck size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending Clearances</p>
-              <p className="text-2xl font-bold text-gray-900 mt-0.5">{loading ? '—' : filteredClearances.length}</p>
+      {/* Stats. Same card shape and hover as the applicant dashboard's action
+          cards: the border and surface lift, and the icon box inverts to
+          zinc-900. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {[
+          { label: 'Pending clearances', Icon: ClipboardCheck },
+          { label: 'Action needed', Icon: CheckCircle2 },
+        ].map(({ label, Icon }) => (
+          <div
+            key={label}
+            className="group rounded-lg border border-zinc-200 bg-white p-5 transition-colors duration-200 ease-out hover:border-zinc-300 hover:bg-zinc-50 motion-reduce:transition-none"
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-mono text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums">
+                  {loading ? '--' : filteredClearances.length}
+                </p>
+                <p className="mt-1 font-mono text-[10px] tracking-[0.08em] text-zinc-500 uppercase">
+                  {label}
+                </p>
+              </div>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-700 transition-colors duration-200 ease-out group-hover:border-zinc-900 group-hover:bg-zinc-900 group-hover:text-white motion-reduce:transition-none">
+                <Icon size={18} />
+              </div>
             </div>
           </div>
-        </div>
-        <div className="group bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-default">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
-              <CheckCircle2 size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Action Needed</p>
-              <p className="text-2xl font-bold text-gray-900 mt-0.5">{loading ? '—' : filteredClearances.length}</p>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Queue List */}
-      <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-2">
-          <ClipboardCheck size={16} className="text-gray-400" />
-          <p className="text-sm font-bold text-gray-900">
-            {selectedStatus === 'All' ? 'All Requests' : `${selectedStatus} Requests`}
+      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+        <div className="flex items-center gap-2.5 border-b border-zinc-200 bg-zinc-50 px-5 py-4">
+          <ClipboardCheck size={15} className="text-zinc-500" />
+          <p className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+            {selectedStatus === 'All' ? 'All requests' : `${selectedStatus} requests`}
           </p>
         </div>
         <div className="divide-y divide-gray-100">

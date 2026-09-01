@@ -12,7 +12,6 @@
  *          changing the variant (e.g., use `ghost` inside cards).
  */
 
-import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 // =========================================
@@ -21,31 +20,31 @@ import { Loader2 } from 'lucide-react';
 
 const VARIANT_CLASSES = {
   primary: [
-    'bg-gray-900 text-white',
-    'hover:bg-gray-800',
+    'bg-zinc-900 text-white',
+    'hover:bg-zinc-800',
     'border border-transparent',
-    'focus-visible:ring-4 focus-visible:ring-gray-200 focus-visible:ring-offset-0',
-    'shadow-sm hover:shadow-md hover:shadow-gray-900/10',
+    'focus-visible:ring-2 focus-visible:ring-zinc-900/15 focus-visible:ring-offset-0',
+    'shadow-sm hover:shadow-md hover:shadow-zinc-900/10',
   ].join(' '),
 
   secondary: [
-    'bg-white text-gray-700',
-    'hover:bg-gray-50 hover:border-gray-300',
-    'border border-gray-200',
-    'focus-visible:ring-4 focus-visible:ring-gray-100',
+    'bg-white text-zinc-800',
+    'hover:bg-zinc-50 hover:border-zinc-300',
+    'border border-zinc-200',
+    'focus-visible:ring-2 focus-visible:ring-zinc-900/10',
     'shadow-sm',
   ].join(' '),
 
   outline: [
-    'bg-transparent text-gray-700',
-    'hover:bg-gray-50',
-    'border border-gray-200',
-    'focus-visible:ring-4 focus-visible:ring-gray-100',
+    'bg-transparent text-zinc-700',
+    'hover:bg-zinc-50 hover:border-zinc-300',
+    'border border-zinc-200',
+    'focus-visible:ring-2 focus-visible:ring-zinc-900/10',
   ].join(' '),
 
   ghost: [
-    'bg-transparent text-gray-500',
-    'hover:bg-gray-100 hover:text-gray-900',
+    'bg-transparent text-zinc-500',
+    'hover:bg-zinc-100 hover:text-zinc-900',
     'border border-transparent',
   ].join(' '),
 
@@ -53,7 +52,7 @@ const VARIANT_CLASSES = {
     'bg-red-600 text-white',
     'hover:bg-red-700',
     'border border-transparent',
-    'focus-visible:ring-4 focus-visible:ring-red-100',
+    'focus-visible:ring-2 focus-visible:ring-red-600/20',
     'shadow-sm',
   ].join(' '),
 };
@@ -61,7 +60,7 @@ const VARIANT_CLASSES = {
 const SIZE_CLASSES = {
   sm: 'px-3 py-1.5 text-sm gap-1.5',
   md: 'px-4 py-2 text-sm gap-2',
-  lg: 'px-5 py-2.5 text-base gap-2',
+  lg: 'px-5 py-3 text-sm gap-2',
 };
 
 // =========================================
@@ -98,16 +97,17 @@ const Button = ({
     <button
       disabled={isDisabled}
       className={[
-        // Base structure
-        'inline-flex items-center justify-center font-medium rounded-2xl',
+        // Base structure. `rounded-md` matches the landing page's button
+        // radius; the previous `rounded-2xl` read as a different design system.
+        'inline-flex items-center justify-center font-medium rounded-md',
         'select-none whitespace-nowrap',
         // Variant & size
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],
         // Animation — per frontend-developer.md minimum animation policy
         'transition-[color,background-color,border-color,box-shadow,transform]',
-        'duration-200 ease-in-out',
-        'active:scale-95',
+        'duration-200 ease-out',
+        'active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100',
         // Full width
         fullWidth ? 'w-full' : '',
         // Disabled state

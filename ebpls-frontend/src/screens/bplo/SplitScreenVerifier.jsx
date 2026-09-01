@@ -26,6 +26,7 @@ import {
   XCircle,
   AlertCircle,
   ChevronDown,
+  Check,
   Eye,
   Save,
   MapPin,
@@ -69,10 +70,10 @@ const PASS_STATUSES = [DOC_STATUS.YES, DOC_STATUS.NOT_NEEDED];
 
 // Dropdown options for BPLO officer
 const STATUS_OPTIONS = [
-  { value: DOC_STATUS.PENDING, label: 'Pending', color: 'text-gray-500' },
-  { value: DOC_STATUS.YES, label: 'Yes', color: 'text-gray-900' },
-  { value: DOC_STATUS.NO, label: 'No', color: 'text-gray-700' },
-  { value: DOC_STATUS.NOT_NEEDED, label: 'Not Needed', color: 'text-gray-400' },
+  { value: DOC_STATUS.PENDING, label: 'Pending' },
+  { value: DOC_STATUS.YES, label: 'Yes' },
+  { value: DOC_STATUS.NO, label: 'No' },
+  { value: DOC_STATUS.NOT_NEEDED, label: 'Not needed' },
 ];
 
 // =========================================
@@ -82,48 +83,69 @@ const STATUS_OPTIONS = [
 const iconForStatus = (status) => {
   switch (status) {
     case DOC_STATUS.YES:
-      return <CheckCircle2 size={16} className="text-gray-900 shrink-0" />;
+      return <CheckCircle2 size={16} className="shrink-0 text-zinc-900" />;
     case DOC_STATUS.NOT_NEEDED:
-      return <MinusCircle size={16} className="text-gray-400 shrink-0" />;
+      return <MinusCircle size={16} className="shrink-0 text-zinc-400" />;
     case DOC_STATUS.NO:
-      return <XCircle size={16} className="text-gray-600 shrink-0" />;
+      return <XCircle size={16} className="shrink-0 text-zinc-600" />;
     case DOC_STATUS.AWAITING_ISSUANCE:
-      return <Clock size={16} className="text-gray-500 shrink-0" />;
+      return <Clock size={16} className="shrink-0 text-zinc-500" />;
     default:
-      return <AlertCircle size={16} className="text-gray-400 shrink-0" />;
+      return <AlertCircle size={16} className="shrink-0 text-zinc-300" />;
   }
 };
 
+// Progression by fill weight, not hue — consistent with StatusBadge.
 const statusBgColor = (status) => {
   switch (status) {
-    case DOC_STATUS.YES: return 'bg-gray-900 text-white';
-    case DOC_STATUS.NO: return 'bg-gray-800 text-gray-200';
-    case DOC_STATUS.NOT_NEEDED: return 'bg-gray-200 text-gray-700';
-    case DOC_STATUS.AWAITING_ISSUANCE: return 'bg-gray-100 text-gray-600';
-    default: return 'bg-gray-50 text-gray-500';
+    case DOC_STATUS.YES: return 'bg-zinc-900 text-white';
+    case DOC_STATUS.NO: return 'bg-zinc-800 text-zinc-100';
+    case DOC_STATUS.NOT_NEEDED: return 'bg-zinc-200 text-zinc-700';
+    case DOC_STATUS.AWAITING_ISSUANCE: return 'bg-zinc-100 text-zinc-600';
+    default: return 'bg-zinc-100 text-zinc-500';
   }
 };
 
-// Custom inline status dropdown (replaces native <select>)
+/**
+ * Inline status dropdown for the verification checklist.
+ *
+ * @policy  Mirrors components/ui/Select: rounded-md trigger, hairline border
+ *          that darkens to zinc-900 when open, zinc-900 selected row with a
+ *          check, and a panel offset 6px below the trigger. It stays a separate
+ *          component because it renders as a compact pill inside a table row
+ *          rather than a labelled form field.
+ * @policy  The panel is position:fixed so it escapes the scrolling checklist
+ *          pane; its coordinates are measured from the trigger on open.
+ */
 const StatusDropdown = ({ disabled, value, onChange, options, statusBgColor: getBgColor, label }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const [openUp, setOpenUp] = useState(false);
+  const [coords, setCoords] = useState(null);
 
   useEffect(() => {
     if (!open) return;
     const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', onKey);
+    };
   }, [open]);
 
-  // Determine if dropdown should open upward based on position
   const handleOpen = () => {
     if (disabled) return;
-    if (ref.current) {
+    if (!open && ref.current) {
       const rect = ref.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      setOpenUp(spaceBelow < 200);
+      const panelHeight = options.length * 34 + 8;
+      const flipUp = window.innerHeight - rect.bottom < panelHeight + 12;
+      setCoords({
+        right: window.innerWidth - rect.right,
+        ...(flipUp
+          ? { bottom: window.innerHeight - rect.top + 6 }
+          : { top: rect.bottom + 6 }),
+      });
     }
     setOpen(!open);
   };
@@ -136,46 +158,49 @@ const StatusDropdown = ({ disabled, value, onChange, options, statusBgColor: get
         type="button"
         disabled={disabled}
         onClick={handleOpen}
-        className={[
-          'text-xs font-semibold pl-3 pr-7 py-1.5 rounded-xl border cursor-pointer transition-all',
-          'focus:outline-none focus:ring-2 focus:ring-gray-100',
-          getBgColor(value),
-          disabled ? 'cursor-not-allowed opacity-80' : '',
-        ].join(' ')}
+        aria-expanded={open}
         aria-label={`Status for ${label}`}
+        className={[
+          'relative cursor-pointer rounded-md border pr-7 pl-2.5 py-1',
+          'font-mono text-[10px] tracking-[0.08em] uppercase',
+          'transition-colors duration-200 ease-out motion-reduce:transition-none',
+          'focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none',
+          getBgColor(value),
+          open ? 'border-zinc-900' : 'border-transparent',
+          disabled ? 'cursor-not-allowed opacity-70' : '',
+        ].join(' ')}
       >
         {currentLabel}
-        <ChevronDown size={11} className={`absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={11}
+          className={`absolute top-1/2 right-2 -translate-y-1/2 transition-transform duration-200 motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+        />
       </button>
 
-      {open && (
+      {open && coords && (
         <div
-          className={[
-            'absolute right-0 z-[100] bg-white border border-gray-100 rounded-xl shadow-[0_8px_24px_-4px_rgba(0,0,0,0.15)] py-1.5 min-w-[150px]',
-            openUp ? 'bottom-full mb-1' : 'top-full mt-1',
-          ].join(' ')}
-          style={{ position: 'fixed', ...(ref.current ? (() => {
-            const rect = ref.current.getBoundingClientRect();
-            if (openUp) {
-              return { bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right };
-            }
-            return { top: rect.bottom + 4, right: window.innerWidth - rect.right };
-          })() : {}) }}
+          className="fixed z-[100] min-w-[160px] rounded-md border border-zinc-200 bg-white py-1 shadow-[0_16px_32px_-16px_rgba(24,24,27,0.35)] duration-150 animate-in fade-in slide-in-from-top-1"
+          style={coords}
         >
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => { onChange(opt.value); setOpen(false); }}
-              className={[
-                'w-full text-left px-3 py-2 text-xs font-medium transition-colors rounded-lg mx-0.5',
-                opt.value === value ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50',
-              ].join(' ')}
-              style={{ width: 'calc(100% - 4px)' }}
-            >
-              {opt.label}
-            </button>
-          ))}
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                className={[
+                  'mx-1 flex items-center justify-between gap-2 rounded-sm px-3 py-2 text-left text-sm font-medium',
+                  'transition-colors duration-150 motion-reduce:transition-none',
+                  isSelected ? 'bg-zinc-900 text-white' : 'text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900',
+                ].join(' ')}
+                style={{ width: 'calc(100% - 8px)' }}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check size={14} className="shrink-0" />}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

@@ -11,8 +11,6 @@
  *          Example: Card uses radius-lg (1rem), inner uses radius-md (0.5rem), so padding >= 0.5rem.
  */
 
-import React from 'react';
-
 // =========================================
 // Variant Definitions
 // =========================================
@@ -21,13 +19,13 @@ const VARIANT_CLASSES = {
   // Default white card on the neutral canvas
   default: [
     'bg-white',
-    'border border-gray-100',
+    'border border-zinc-200',
   ].join(' '),
 
   // Slightly tinted — use as the "inner" element inside a default card
   tinted: [
-    'bg-gray-50',
-    'border border-gray-100',
+    'bg-surface',
+    'border border-zinc-200',
   ].join(' '),
 
   // No border, no bg — transparent wrapper for grouping with spacing only
@@ -38,9 +36,9 @@ const VARIANT_CLASSES = {
 
 const PADDING_CLASSES = {
   none: '',
-  sm: 'p-3',
-  md: 'p-4',
-  lg: 'p-6',
+  sm: 'p-4',
+  md: 'p-5',
+  lg: 'p-7',
 };
 
 // =========================================
@@ -68,15 +66,18 @@ const Card = ({
   return (
     <div
       className={[
-        'rounded-3xl overflow-hidden',
+        // `rounded-lg` matches the landing-page cards. The former `rounded-3xl`
+        // was large enough to read as a different product.
+        'rounded-lg overflow-hidden',
         VARIANT_CLASSES[variant],
         PADDING_CLASSES[padding],
         // Shadow — base at rest; hover lift if hoverable
         variant !== 'ghost' && 'shadow-sm',
         hoverable && [
           'cursor-pointer',
-          'transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
-          'hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.15)] hover:-translate-y-0.5',
+          'transition-all duration-300 ease-out motion-reduce:transition-none',
+          'hover:-translate-y-1 hover:border-zinc-300 hover:shadow-md',
+          'motion-reduce:hover:translate-y-0',
         ].join(' '),
         fullHeight && 'h-full',
         className,
@@ -100,7 +101,7 @@ const Card = ({
 Card.Header = function CardHeader({ className = '', children, ...props }) {
   return (
     <div
-      className={`px-6 py-4 border-b border-gray-100 bg-gray-50/50 ${className}`}
+      className={`px-6 py-4 border-b border-zinc-200 bg-surface ${className}`}
       {...props}
     >
       {children}
@@ -125,7 +126,7 @@ Card.Body = function CardBody({ className = '', children, ...props }) {
 Card.Footer = function CardFooter({ className = '', children, ...props }) {
   return (
     <div
-      className={`px-6 py-4 border-t border-gray-100 bg-gray-50/50 shrink-0 ${className}`}
+      className={`px-6 py-4 border-t border-zinc-200 bg-surface shrink-0 ${className}`}
       {...props}
     >
       {children}

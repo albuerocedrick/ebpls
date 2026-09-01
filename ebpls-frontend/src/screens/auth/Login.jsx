@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+/**
+ * Login.jsx
+ * Sign-in form. Presentation only — the auth flow is unchanged.
+ */
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LogIn, Mail, Lock, ArrowRight } from 'lucide-react';
 import Input from '../../components/ui/Input';
@@ -18,21 +22,24 @@ const Login = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-7 sm:p-8 flex flex-col gap-6">
-      {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold text-zinc-900 tracking-tight">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-7 p-7 sm:p-8">
+      {/* Header. Mono eyebrow above the title, as every landing section does. */}
+      <div>
+        <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
+          Account access
+        </span>
+        <h1 className="mt-3 text-xl font-semibold tracking-tight text-zinc-900">
           Sign in to your account
         </h1>
-        <p className="text-xs text-zinc-500 leading-relaxed font-normal">
-          Enter your credentials below to access the e-BPLS portal.
+        <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+          Enter your credentials to reach the Business One Stop Shop portal.
         </p>
       </div>
 
       {/* Fields */}
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         <Input
-          label="Email Address"
+          label="Email address"
           type="email"
           placeholder="you@example.com"
           value={email}
@@ -50,10 +57,10 @@ const Login = () => {
             required
             leftElement={<Lock size={15} className="text-zinc-400" />}
           />
-          <div className="flex justify-end mt-2">
+          <div className="mt-2 flex justify-end">
             <Link
               to={ROUTES.FORGOT_PASSWORD}
-              className="text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+              className="text-xs font-medium text-zinc-500 transition-colors duration-200 hover:text-zinc-900"
             >
               Forgot password?
             </Link>
@@ -61,7 +68,6 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Submit Button */}
       <Button
         variant="primary"
         fullWidth
@@ -70,25 +76,31 @@ const Login = () => {
         leftIcon={<LogIn size={16} />}
         isLoading={isLoading}
         disabled={!email || !password}
-        className="bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-xl py-3 shadow-xs transition-all"
+        className="font-semibold"
       >
-        Sign In
+        Sign in
       </Button>
 
       {/* Divider */}
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-zinc-200" />
-        <span className="text-[11px] text-zinc-400 font-mono">New here?</span>
-        <div className="flex-1 h-px bg-zinc-200" />
+        <div className="h-px flex-1 bg-zinc-200" />
+        <span className="font-mono text-[10px] tracking-[0.12em] text-zinc-400 uppercase">
+          New here?
+        </span>
+        <div className="h-px flex-1 bg-zinc-200" />
       </div>
 
-      {/* Register Link */}
+      {/* Register link, kept as the secondary action rather than a second
+          filled button so the primary path stays unambiguous. */}
       <Link
         to={ROUTES.REGISTER}
-        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-zinc-200/90 text-xs font-semibold text-zinc-800 hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-2xs"
+        className="group flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-800 transition-colors duration-200 hover:border-zinc-300 hover:bg-zinc-50"
       >
         Create an account
-        <ArrowRight size={14} />
+        <ArrowRight
+          size={14}
+          className="transition-transform duration-300 ease-out group-hover:translate-x-0.5 motion-reduce:transition-none"
+        />
       </Link>
     </form>
   );

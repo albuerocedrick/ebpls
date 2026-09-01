@@ -1,88 +1,36 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, ArrowRight } from 'lucide-react';
+import {
+  X,
+  ArrowRight,
+  Search,
+  CheckCircle2,
+  ClipboardList,
+  CreditCard,
+  AlertTriangle,
+  FileText,
+  Megaphone,
+} from 'lucide-react';
 import useNotificationStore from '../../store/notificationStore';
 
+/**
+ * Per-type presentation.
+ *
+ * @policy  Neutral zinc only — the type is conveyed by a Lucide glyph and an
+ *          eyebrow label, never by hue. `emphasis: true` marks notifications
+ *          that need the applicant to act, and renders a solid zinc-900 header
+ *          instead of a hairline one.
+ */
 const TYPE_CONFIG = {
-  APPLICATION_UNDER_REVIEW: { 
-    icon: '🔍', 
-    colors: {
-      borderOuter: 'border-blue-100',
-      headerBg: 'bg-blue-50',
-      headerBorder: 'border-blue-100',
-      textPrimary: 'text-blue-700',
-      closeBtn: 'text-blue-400 hover:text-blue-700 hover:bg-blue-100',
-      actionBtn: 'bg-blue-600 hover:bg-blue-700 text-white',
-    }
-  },
-  APPLICATION_VERIFIED: { 
-    icon: '✅', 
-    colors: {
-      borderOuter: 'border-green-100',
-      headerBg: 'bg-green-50',
-      headerBorder: 'border-green-100',
-      textPrimary: 'text-green-700',
-      closeBtn: 'text-green-400 hover:text-green-700 hover:bg-green-100',
-      actionBtn: 'bg-green-600 hover:bg-green-700 text-white',
-    }
-  },
-  APPLICATION_ASSESSED: { 
-    icon: '📋', 
-    colors: {
-      borderOuter: 'border-orange-100',
-      headerBg: 'bg-orange-50',
-      headerBorder: 'border-orange-100',
-      textPrimary: 'text-orange-700',
-      closeBtn: 'text-orange-400 hover:text-orange-700 hover:bg-orange-100',
-      actionBtn: 'bg-orange-600 hover:bg-orange-700 text-white',
-    }
-  },
-  PAYMENT_CONFIRMED: { 
-    icon: '💳', 
-    colors: {
-      borderOuter: 'border-emerald-100',
-      headerBg: 'bg-emerald-50',
-      headerBorder: 'border-emerald-100',
-      textPrimary: 'text-emerald-700',
-      closeBtn: 'text-emerald-400 hover:text-emerald-700 hover:bg-emerald-100',
-      actionBtn: 'bg-emerald-600 hover:bg-emerald-700 text-white',
-    }
-  },
-  APPLICATION_RETURNED: { 
-    icon: '⚠️', 
-    colors: {
-      borderOuter: 'border-red-100',
-      headerBg: 'bg-red-50',
-      headerBorder: 'border-red-100',
-      textPrimary: 'text-red-700',
-      closeBtn: 'text-red-400 hover:text-red-700 hover:bg-red-100',
-      actionBtn: 'bg-red-600 hover:bg-red-700 text-white',
-    }
-  },
-  CERT_READY: { 
-    icon: '📄', 
-    colors: {
-      borderOuter: 'border-green-100',
-      headerBg: 'bg-green-50',
-      headerBorder: 'border-green-100',
-      textPrimary: 'text-green-700',
-      closeBtn: 'text-green-400 hover:text-green-700 hover:bg-green-100',
-      actionBtn: 'bg-green-600 hover:bg-green-700 text-white',
-    }
-  },
+  APPLICATION_UNDER_REVIEW: { Icon: Search, label: 'Under review' },
+  APPLICATION_VERIFIED: { Icon: CheckCircle2, label: 'Verified' },
+  APPLICATION_ASSESSED: { Icon: ClipboardList, label: 'Assessed', emphasis: true },
+  PAYMENT_CONFIRMED: { Icon: CreditCard, label: 'Payment confirmed' },
+  APPLICATION_RETURNED: { Icon: AlertTriangle, label: 'Action required', emphasis: true },
+  CERT_READY: { Icon: FileText, label: 'Certificate ready', emphasis: true },
 };
 
-const DEFAULT_CONFIG = { 
-  icon: '📢', 
-  colors: {
-    borderOuter: 'border-gray-200',
-    headerBg: 'bg-gray-100',
-    headerBorder: 'border-gray-200',
-    textPrimary: 'text-gray-700',
-    closeBtn: 'text-gray-400 hover:text-gray-700 hover:bg-gray-200',
-    actionBtn: 'bg-gray-800 hover:bg-gray-900 text-white',
-  }
-};
+const DEFAULT_CONFIG = { Icon: Megaphone, label: 'Notification' };
 
 const timeAgo = (dateString) => {
   if (!dateString) return '';
@@ -144,48 +92,73 @@ const NotificationPopup = () => {
   };
 
   const config = TYPE_CONFIG[popup.type] || DEFAULT_CONFIG;
-  const { colors, icon } = config;
+  const { Icon, label, emphasis } = config;
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 sm:px-0 animate-in slide-in-from-top-4 fade-in duration-300">
-      <div className={`bg-white rounded-xl shadow-2xl border ${colors.borderOuter} overflow-hidden flex flex-col`}>
+    <div className="fixed top-4 left-1/2 z-[100] w-full max-w-md -translate-x-1/2 px-4 duration-300 animate-in fade-in slide-in-from-top-4 sm:px-0">
+      <div className="flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
         {/* Header */}
-        <div className={`${colors.headerBg} border-b ${colors.headerBorder} px-4 py-3 flex items-center justify-between`}>
-          <div className={`flex items-center gap-2 ${colors.textPrimary}`}>
-            <span className="text-lg">{icon}</span>
-            <h3 className="font-bold text-sm tracking-tight">{popup.title || 'Notification'}</h3>
+        <div
+          className={[
+            'flex items-center justify-between px-4 py-3',
+            emphasis ? 'bg-zinc-900' : 'border-b border-zinc-200 bg-zinc-50',
+          ].join(' ')}
+        >
+          <div className={`flex items-center gap-2.5 ${emphasis ? 'text-white' : 'text-zinc-900'}`}>
+            <Icon size={15} className={emphasis ? 'text-zinc-400' : 'text-zinc-500'} />
+            <div className="flex flex-col">
+              <span
+                className={[
+                  'font-mono text-[9px] tracking-[0.16em] uppercase',
+                  emphasis ? 'text-zinc-400' : 'text-zinc-500',
+                ].join(' ')}
+              >
+                {label}
+              </span>
+              <h3 className="text-sm font-medium tracking-tight">{popup.title || 'Notification'}</h3>
+            </div>
           </div>
-          <button 
+          <button
             onClick={handleDismiss}
-            className={`${colors.closeBtn} p-1 rounded-md transition-colors`}
+            aria-label="Dismiss notification"
+            className={[
+              'rounded-md p-1 transition-colors duration-200 focus-visible:outline-none motion-reduce:transition-none',
+              emphasis
+                ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white focus-visible:ring-2 focus-visible:ring-white'
+                : 'text-zinc-400 hover:bg-zinc-200 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-900',
+            ].join(' ')}
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
-        
+
         {/* Body */}
-        <div className="px-4 py-3 bg-white">
-          <p className="text-sm text-gray-700 leading-relaxed font-medium">
+        <div className="bg-white px-4 py-3">
+          <p className="text-sm leading-relaxed text-zinc-700">
             {popup.message}
           </p>
-          <p className="text-xs text-gray-400 mt-2 font-medium">
+          <p className="mt-2 font-mono text-[10px] tracking-[0.08em] text-zinc-500 uppercase">
             {timeText}
           </p>
         </div>
-        
+
         {/* Footer Actions */}
-        <div className="px-4 py-3 border-t border-gray-50 flex items-center justify-end gap-2 bg-gray-50/50">
-          <button 
+        <div className="flex items-center justify-end gap-2 border-t border-zinc-200 bg-zinc-50 px-4 py-3">
+          <button
             onClick={handleDismiss}
-            className="px-4 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors duration-200 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:outline-none motion-reduce:transition-none"
           >
             Dismiss
           </button>
-          <button 
+          <button
             onClick={handleViewApplication}
-            className={`flex items-center gap-1.5 px-4 py-1.5 ${colors.actionBtn} text-xs font-bold rounded-lg shadow-sm transition-colors`}
+            className="group flex items-center gap-1.5 rounded-md bg-zinc-900 px-4 py-1.5 text-xs font-semibold text-white transition-colors duration-200 hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
           >
-            View Details <ArrowRight size={14} />
+            View details
+            <ArrowRight
+              size={13}
+              className="transition-transform duration-300 ease-out group-hover:translate-x-0.5 motion-reduce:transition-none"
+            />
           </button>
         </div>
       </div>

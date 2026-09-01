@@ -1,7 +1,7 @@
 // src/components/shared/DocumentUploadPanel.jsx
 
-import React, { useState, useRef, useCallback } from 'react';
-import { UploadCloud, FileText, X, CheckCircle2, Image as ImageIcon, Trash2, Loader2, AlertCircle, Plus } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { UploadCloud, FileText, CheckCircle2, Trash2, Loader2, AlertCircle, Plus } from 'lucide-react';
 import apiClient from '../../utils/apiClient';
 import { API_ENDPOINTS } from '../../utils/constants';
 
@@ -114,28 +114,28 @@ const SingleDropzone = ({ value, onChange, onRemove, disabled, onUploadStart, on
   const isImage = value?.file_type?.startsWith('image/');
 
   return (
-    <div className="flex flex-col gap-2 h-full">
+    <div className="flex h-full flex-col gap-2">
       {label && (
-        <span className="text-xs font-semibold text-[hsl(var(--color-text-muted,0,0%,40%))] uppercase tracking-wider">
+        <span className="font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
           {label}
         </span>
       )}
-      <div className={`flex-1 flex flex-col min-h-[140px] border border-[hsl(var(--color-border,0,0%,90%))] rounded-md overflow-hidden bg-[hsl(var(--color-surface,0,0%,100%))] ${disabled && !isUploading ? 'opacity-70' : ''}`}>
+      <div className={`flex min-h-[140px] flex-1 flex-col overflow-hidden rounded-md border border-zinc-200 bg-white ${disabled && !isUploading ? 'opacity-70' : ''}`}>
         {value ? (
-          <div className="flex flex-col h-full items-center p-4 bg-[hsl(var(--color-surface-raised,0,0%,98%))]">
-            <div className="w-16 h-16 shrink-0 rounded bg-white border border-[hsl(var(--color-border,0,0%,90%))] flex items-center justify-center overflow-hidden mb-3">
+          <div className="flex h-full flex-col items-center bg-zinc-50 p-4">
+            <div className="mb-3 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-zinc-200 bg-white">
               {isImage && value.url ? (
-                <img src={value.url} alt={value.file_name} className="w-full h-full object-cover" />
+                <img src={value.url} alt={value.file_name} className="h-full w-full object-cover" />
               ) : (
-                <FileText size={32} className="text-[hsl(var(--color-text-muted,0,0%,40%))]" />
+                <FileText size={26} className="text-zinc-400" />
               )}
             </div>
-            
-            <div className="flex-1 w-full text-center min-w-0 mb-3">
-              <p className="text-sm font-medium text-[hsl(var(--color-text,0,0%,10%))] truncate w-full" title={value.file_name}>
+
+            <div className="mb-3 min-w-0 w-full flex-1 text-center">
+              <p className="w-full truncate text-sm font-medium text-zinc-900" title={value.file_name}>
                 {value.file_name}
               </p>
-              <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,40%))]">
+              <p className="mt-0.5 font-mono text-[10px] tracking-[0.08em] text-zinc-500 uppercase">
                 {formatFileSize(value.file_size)}
                 {value.file_size ? ' • ' : ''}
                 {isImage ? 'Image' : 'Document'}
@@ -146,25 +146,25 @@ const SingleDropzone = ({ value, onChange, onRemove, disabled, onUploadStart, on
               type="button"
               onClick={handleRemoveClick}
               disabled={disabled}
-              className={`w-full py-2 px-3 rounded-md transition-colors flex items-center justify-center gap-2 text-sm font-medium border ${disabled ? 'text-gray-400 border-gray-200 cursor-not-allowed bg-gray-50' : 'text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300'}`}
+              className={`flex w-full items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none ${disabled ? 'cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400' : 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900'}`}
             >
-              <Trash2 size={16} /> Remove
+              <Trash2 size={15} /> Remove
             </button>
           </div>
         ) : 
 
         isUploading ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-4 border-2 border-dashed border-accent m-2 rounded-md bg-accent/5">
-            <Loader2 size={28} className="text-accent animate-spin mb-3" />
-            <p className="text-xs font-medium text-[hsl(var(--color-text,0,0%,10%))]">Uploading...</p>
-            
-            <div className="w-full max-w-[150px] mt-3 h-1.5 bg-white border border-accent/20 rounded-full overflow-hidden">
+          <div className="m-2 flex flex-1 flex-col items-center justify-center rounded-md border border-dashed border-zinc-400 bg-zinc-50 p-4">
+            <Loader2 size={22} className="mb-3 animate-spin text-zinc-500" />
+            <p className="font-mono text-[10px] tracking-[0.12em] text-zinc-600 uppercase">Uploading</p>
+
+            <div className="mt-3 h-px w-full max-w-[150px] overflow-hidden bg-zinc-200">
               <div 
-                className="h-full bg-accent transition-all duration-300 ease-out"
+                className="h-full bg-zinc-900 transition-all duration-300 ease-out motion-reduce:transition-none"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,40%))] mt-1">{uploadProgress}%</p>
+            <p className="mt-1.5 font-mono text-[10px] text-zinc-500 tabular-nums">{uploadProgress}%</p>
           </div>
         ) : 
         (
@@ -173,10 +173,10 @@ const SingleDropzone = ({ value, onChange, onRemove, disabled, onUploadStart, on
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => { if (!disabled) fileInputRef.current?.click(); }}
-            className={`flex-1 flex flex-col items-center justify-center p-4 m-2 border-2 border-dashed rounded-md transition-colors 
-              ${disabled ? 'border-[hsl(var(--color-border,0,0%,90%))] bg-[hsl(var(--color-surface-raised,0,0%,96%))] cursor-not-allowed opacity-60' 
-              : isDragging ? 'border-accent bg-accent/5 cursor-pointer' 
-              : 'border-[hsl(var(--color-border,0,0%,80%))] bg-[hsl(var(--color-surface-raised,0,0%,98%))] hover:bg-[hsl(var(--color-surface-raised,0,0%,96%))] cursor-pointer'}`}
+            className={`m-2 flex flex-1 flex-col items-center justify-center rounded-md border border-dashed p-4 transition-colors duration-200 motion-reduce:transition-none
+              ${disabled ? 'cursor-not-allowed border-zinc-200 bg-zinc-50 opacity-60' 
+              : isDragging ? 'cursor-pointer border-zinc-900 bg-zinc-100' 
+              : 'cursor-pointer border-zinc-300 bg-zinc-50 hover:border-zinc-400 hover:bg-zinc-100'}`}
           >
             <input 
               type="file" 
@@ -186,14 +186,14 @@ const SingleDropzone = ({ value, onChange, onRemove, disabled, onUploadStart, on
               onChange={handleFileSelect}
               disabled={disabled}
             />
-            <div className={`w-10 h-10 rounded-full bg-white border border-[hsl(var(--color-border,0,0%,90%))] flex items-center justify-center mb-3 shadow-sm ${disabled ? 'opacity-50' : ''}`}>
-              <UploadCloud size={20} className={isDragging ? 'text-accent' : 'text-[hsl(var(--color-text-muted,0,0%,40%))]'} />
+            <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 bg-white ${disabled ? 'opacity-50' : ''}`}>
+              <UploadCloud size={18} className={isDragging ? 'text-zinc-900' : 'text-zinc-500'} />
             </div>
-            <p className="text-sm font-medium text-[hsl(var(--color-text,0,0%,10%))] text-center">
+            <p className="text-center text-sm font-medium text-zinc-900">
               Click or drag
             </p>
-            <p className="text-[10px] text-[hsl(var(--color-text-muted,0,0%,40%))] mt-1 text-center">
-              PDF/JPG/PNG (5MB)
+            <p className="mt-1 text-center font-mono text-[10px] tracking-[0.08em] text-zinc-500 uppercase">
+              PDF / JPG / PNG · 5 MB
             </p>
           </div>
         )}
@@ -309,9 +309,9 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove, di
                type="button"
                disabled={disabled}
                onClick={() => setVisibleSlots(prev => Math.min(maxFiles, prev + 1))}
-               className={`self-start px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${disabled ? 'text-gray-400 bg-gray-50 cursor-not-allowed' : 'text-accent bg-accent/10 hover:bg-accent/20'}`}
+               className={`flex items-center gap-2 self-start rounded-md border px-4 py-2 text-sm font-medium transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none ${disabled ? 'cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400' : 'border-zinc-300 bg-white text-zinc-900 hover:border-zinc-900 hover:bg-zinc-900 hover:text-white'}`}
             >
-              <Plus size={16} /> Add another file
+              <Plus size={15} /> Add another file
             </button>
           )}
         </div>
@@ -338,22 +338,22 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove, di
     : !!value;
 
   return (
-    <div className={`flex flex-col border border-[hsl(var(--color-border,0,0%,90%))] rounded-lg overflow-hidden bg-[hsl(var(--color-surface,0,0%,100%))] shadow-[var(--shadow-sm,0_1px_2px_0_rgba(0,0,0,0.05))] transition-shadow duration-200 ${disabled ? 'opacity-70' : 'hover:shadow-[var(--shadow-md,0_4px_6px_-1px_rgba(0,0,0,0.1))]'}`}>
-      
-      <div className="bg-[hsl(var(--color-surface-raised,0,0%,96%))] p-3.5 border-b border-[hsl(var(--color-border,0,0%,90%))]">
-        <h4 className="text-sm font-semibold text-[hsl(var(--color-text,0,0%,10%))] flex items-center justify-between">
+    <div className={`flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white transition-colors duration-200 motion-reduce:transition-none ${disabled ? 'opacity-70' : 'hover:border-zinc-300'}`}>
+
+      <div className="border-b border-zinc-200 bg-zinc-50 p-3.5">
+        <h4 className="flex items-center justify-between text-sm font-medium text-zinc-900">
           {title}
-          {isCompleted && <CheckCircle2 size={16} className="text-green-600" />}
+          {isCompleted && <CheckCircle2 size={15} className="text-zinc-900" />}
         </h4>
         {description && (
-          <p className="text-xs text-[hsl(var(--color-text-muted,0,0%,40%))] mt-1">
+          <p className="mt-1 text-xs leading-relaxed text-zinc-500">
             {description}
           </p>
         )}
         {feedback && (
-          <div className="mt-2 flex items-start gap-1.5 p-2 rounded bg-red-50 border border-red-100">
-            <AlertCircle size={14} className="text-red-600 shrink-0 mt-0.5" />
-            <p className="text-[11px] font-medium text-red-800 leading-tight">
+          <div className="mt-2 flex items-start gap-1.5 rounded-md border border-zinc-300 bg-white p-2">
+            <AlertCircle size={13} className="mt-0.5 shrink-0 text-zinc-600" />
+            <p className="text-[11px] leading-snug text-zinc-700">
               {feedback}
             </p>
           </div>
