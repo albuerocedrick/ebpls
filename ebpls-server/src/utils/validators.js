@@ -6,6 +6,7 @@
 // =================================================================
 
 const { z } = require('zod');
+const { CORRECTABLE_FIELDS } = require('./constants');
 
 // -----------------------------------------------------------------
 // 1. Draft Payload Schema
@@ -100,8 +101,24 @@ const UploadRequestPayloadSchema = z.object({
   }),
 });
 
+// -----------------------------------------------------------------
+// 4. Correction Request Payload Schemas
+// -----------------------------------------------------------------
+const CorrectionRequestSchema = z.object({
+  application_no:  z.string().min(1),
+  field_name:      z.enum(CORRECTABLE_FIELDS),
+  new_value:       z.string().min(1).max(500),
+  proof_file_path: z.string().optional(),
+});
+
+const CorrectionRejectSchema = z.object({
+  remarks: z.string().min(1, 'Remarks are required for rejection'),
+});
+
 module.exports = {
   DraftPayloadSchema,
   UAFSubmissionPayloadSchema,
   UploadRequestPayloadSchema,
+  CorrectionRequestSchema,
+  CorrectionRejectSchema,
 };

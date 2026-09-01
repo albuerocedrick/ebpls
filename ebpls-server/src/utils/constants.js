@@ -60,6 +60,25 @@ const VALID_TRANSITIONS = Object.freeze({
 });
 
 // -----------------------------------------------------------------
+// CORRECTION STATUS
+// -----------------------------------------------------------------
+const CORRECTION_STATUS = Object.freeze({
+  PENDING:  'Pending',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+});
+
+// -----------------------------------------------------------------
+// CORRECTABLE FIELDS
+// -----------------------------------------------------------------
+const CORRECTABLE_FIELDS = Object.freeze([
+  'address_line1', 'barangay', 'latitude', 'longitude',
+  'contact_no',
+  'business_name', 'trade_name',
+  'first_name', 'middle_name', 'last_name',
+]);
+
+// -----------------------------------------------------------------
 // AUDIT ACTIONS
 // Source: supabase/migrations/011_audit_logs.sql
 // -----------------------------------------------------------------
@@ -108,6 +127,11 @@ const AUDIT_ACTIONS = Object.freeze({
   
   // Notifications (Phase 5)
   CERT_READY_NOTIFIED:        'CERT_READY_NOTIFIED',
+
+  // Corrections (Phase 1)
+  CORRECTION_REQUESTED:       'CORRECTION_REQUESTED',
+  CORRECTION_APPROVED:        'CORRECTION_APPROVED',
+  CORRECTION_REJECTED:        'CORRECTION_REJECTED',
 });
 
 // -----------------------------------------------------------------
@@ -140,6 +164,8 @@ const EMAIL_TRIGGERS = Object.freeze({
   PERMIT_READY:               'PERMIT_READY',
   RETIREMENT_COMPLETE:        'RETIREMENT_COMPLETE',
   CERT_READY_NOTIFICATION:    'CERT_READY_NOTIFICATION',
+  CORRECTION_APPROVED:        'CORRECTION_APPROVED',
+  CORRECTION_REJECTED:        'CORRECTION_REJECTED',
 });
 
 // -----------------------------------------------------------------
@@ -163,4 +189,6 @@ module.exports = {
   ERROR_CODES,
   EMAIL_TRIGGERS,
   DOC_VERIFICATION_STATUS,
+  CORRECTION_STATUS,
+  CORRECTABLE_FIELDS,
 };
