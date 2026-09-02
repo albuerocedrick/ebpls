@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, XCircle, Save, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -175,6 +175,14 @@ const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onC
                 ? `${business.latitude}, ${business.longitude}`
                 : 'Not pinned'
             } />
+            {applicationData?.location_mismatch && (
+              <div className="my-3 p-3 rounded-md bg-red-50 border border-red-200 flex items-start gap-2">
+                <AlertTriangle size={16} className="text-red-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-red-800">
+                  <strong className="font-semibold text-red-900">System Flag:</strong> The pinned location falls outside the boundary of {business?.barangay || 'the selected barangay'}. Please verify manually.
+                </p>
+              </div>
+            )}
             {business?.latitude && business?.longitude ? (
               <div className="pt-2 pb-1">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--color-text-muted))] mb-1.5">Map Pin</p>

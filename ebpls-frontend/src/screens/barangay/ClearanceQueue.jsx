@@ -12,7 +12,7 @@
 import { useState, useEffect } from 'react';
 import {
   ClipboardCheck, CheckCircle2, XCircle, Eye, MapPin,
-  Building2, FileSearch, User, FileText, ChevronRight,
+  Building2, FileSearch, User, FileText, ChevronRight, AlertTriangle
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
@@ -446,6 +446,14 @@ const ClearanceQueue = () => {
                     <InfoRow label="Province"   value={scBiz?.province} />
                     <InfoRow label="Coordinates" value={hasCoords ? `${scBiz.latitude}, ${scBiz.longitude}` : 'Not pinned'} />
                   </div>
+                  {scApp?.location_mismatch && (
+                    <div className="mt-4 p-3 rounded-md bg-red-50 border border-red-200 flex items-start gap-2">
+                      <AlertTriangle size={16} className="text-red-600 mt-0.5 shrink-0" />
+                      <p className="text-xs text-red-800">
+                        <strong className="font-semibold text-red-900">System Flag:</strong> The pinned location falls outside {scBiz?.barangay}. Please verify before issuing.
+                      </p>
+                    </div>
+                  )}
                   {hasCoords && (
                     <button
                       onClick={() => setModalTab('map')}
@@ -508,6 +516,12 @@ const ClearanceQueue = () => {
               <div className="flex flex-col overflow-hidden max-h-[60vh]">
                 {hasCoords ? (
                   <>
+                    {scApp?.location_mismatch && (
+                      <div className="px-4 py-2 bg-red-50 border-b text-xs text-red-800 flex items-center gap-2">
+                        <AlertTriangle size={14} className="text-red-600 shrink-0" />
+                        <span><strong>System Flag:</strong> Location pin falls outside {scBiz?.barangay}.</span>
+                      </div>
+                    )}
                     <div className="px-4 py-2 bg-blue-50 border-b text-xs text-blue-700">
                       📍 Declared address: <strong>{scBiz.address_line1}, {scBiz.barangay}</strong> · Coords: {scBiz.latitude}, {scBiz.longitude}
                     </div>
