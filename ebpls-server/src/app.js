@@ -19,6 +19,9 @@ const bploRoutes = require("./routes/bplo.routes");
 // Phase 3 Route Import
 const notificationRoutes = require('./routes/notification.routes');
 
+// Phase 1 Route Import (Corrections)
+const correctionRoutes = require('./routes/correction.routes');
+
 // Phase 5 Route Imports
 const treasuryRoutes = require('./routes/treasury.routes');
 const treasuryOnlineRoutes = require('./routes/treasury.online.routes');
@@ -79,6 +82,9 @@ app.use("/api/barangay", barangayRoutes);
 
 // Phase 3: Notifications
 app.use("/api/notifications", notificationRoutes);
+
+// Phase 1: Corrections
+app.use("/api/corrections", correctionRoutes);
 
 // Phase 5: Treasury & Online Payments
 app.use("/api/treasury", treasuryOnlineRoutes);
