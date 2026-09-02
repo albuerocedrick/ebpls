@@ -20,9 +20,7 @@ import {
   AdminLayout,
 } from './layouts';
 
-import BPLORetirements from './screens/bplo/BPLORetirements';
-import CorrectionQueue from './screens/bplo/CorrectionQueue'; // Phase 1 sub-task
-import BPLOCompleted from './screens/bplo/BPLOCompleted';
+const CorrectionQueue = lazy(() => import('./screens/bplo/CorrectionQueue'));
 import ProtectedRoute  from './components/shared/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import ToastContainer  from './components/shared/ToastContainer';
