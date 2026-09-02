@@ -7,6 +7,7 @@
 const express = require('express');
 
 const bploController = require('../controllers/bplo.controller');
+const correctionController = require('../controllers/correction.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
 const { authorize } = require('../middlewares/rbac.middleware');
 const { ROLES } = require('../utils/constants');
@@ -84,5 +85,37 @@ router.put('/applications/verify/:app_no', bploController.verifyApplication);
  * @access  BPLO_Officer, Admin
  */
 router.put('/applications/return/:app_no', bploController.returnApplication);
+
+// =================================================================
+// BPLO Correction Review Routes (Phase 1 Sub-Task)
+// =================================================================
+
+/**
+ * @route   GET /api/bplo/corrections/pending
+ * @desc    Returns all pending correction requests for review
+ * @access  BPLO_Officer, Admin
+ */
+router.get('/corrections/pending', correctionController.listPendingCorrectionRequests);
+
+/**
+ * @route   GET /api/bplo/corrections/:id
+ * @desc    Get detailed info of a single correction request
+ * @access  BPLO_Officer, Admin
+ */
+router.get('/corrections/:id', correctionController.getCorrectionRequestDetail);
+
+/**
+ * @route   PUT /api/bplo/corrections/:id/approve
+ * @desc    Approves a correction request and updates the target table
+ * @access  BPLO_Officer, Admin
+ */
+router.put('/corrections/:id/approve', correctionController.approveCorrectionRequest);
+
+/**
+ * @route   PUT /api/bplo/corrections/:id/reject
+ * @desc    Rejects a correction request
+ * @access  BPLO_Officer, Admin
+ */
+router.put('/corrections/:id/reject', correctionController.rejectCorrectionRequest);
 
 module.exports = router;
