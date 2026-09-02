@@ -74,8 +74,8 @@ const UAFSubmissionPayloadSchema = z.object({
   province: z.string().default('Laguna'),
 
   // Geolocation Data
-  latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
-  longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+  latitude: z.coerce.number({ required_error: 'Latitude is required' }).min(-90).max(90),
+  longitude: z.coerce.number({ required_error: 'Longitude is required' }).min(-180).max(180),
 }).refine((data) => {
   // Enforce franchisor name requirement if it is a franchise
   if (data.is_franchise && (!data.franchisor_name || data.franchisor_name.trim() === '')) {

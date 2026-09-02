@@ -302,6 +302,7 @@ const getApplicationDetails = async (req, res, next) => {
         status,
         submitted_at,
         type_id,
+        location_mismatch,
         application_types ( name ),
         businesses (
           business_name,

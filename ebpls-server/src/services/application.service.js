@@ -9,6 +9,7 @@ const { supabaseAdmin } = require('../config/supabase');
 const requirementService = require('./requirement.service');
 const { createError }   = require('../middlewares/error.middleware');
 const { ERROR_CODES, STATUSES, VALID_TRANSITIONS } = require('../utils/constants');
+const { checkBarangayMatch } = require('../utils/geoValidation');
 
 // -----------------------------------------------------------------
 // STATE MACHINE HELPERS
@@ -304,6 +305,15 @@ const submitApplication = async (taxpayerId, payload) => {
   }
 
   // 3. Application Record (Upsert or Insert)
+  
+  // Geo-boundary validation (re-evaluated on every submission)
+  const isInsideBarangay = checkBarangayMatch(
+    payload.latitude,
+    payload.longitude,
+    payload.barangay
+  );
+  const locationMismatch = !isInsideBarangay;
+
   const applicationPayload = {
     application_no: appNo,
     business_id: businessId,
@@ -312,6 +322,7 @@ const submitApplication = async (taxpayerId, payload) => {
     status: STATUSES.PENDING,
     submitted_at: new Date().toISOString(),
     return_remarks: null, // Clear remarks on resubmission
+    location_mismatch: locationMismatch,
   };
 
   const { error: appError } = await supabaseAdmin

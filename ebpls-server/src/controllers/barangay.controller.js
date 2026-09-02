@@ -18,6 +18,7 @@ const getPendingClearances = async (req, res, next) => {
                     application_no, 
                     business_id, 
                     status,
+                    location_mismatch,
                     application_types ( name ),
                     businesses (
                         business_name,
