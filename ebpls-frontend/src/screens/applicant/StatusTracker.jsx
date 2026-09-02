@@ -23,6 +23,8 @@ import apiClient from '../../utils/apiClient';
 import useAuthStore from '../../store/authStore';
 import Button from '../../components/ui/Button';
 import useApplicationStatus from '../../hooks/useApplicationStatus'; // Import the Hook
+import CorrectionRequestModal from '../../components/shared/CorrectionRequestModal';
+import StatusBadge from '../../components/shared/StatusBadge';
 
 // Timeline definition
 const TIMELINE_STEPS = [
@@ -46,11 +48,22 @@ const StatusTracker = () => {
   
   const [isActionLoading, setIsActionLoading] = useState(false);
 
-  // Assessment Breakdown state
   const [assessmentBreakdown, setAssessmentBreakdown] = useState(null);
   const [isBreakdownLoading, setIsBreakdownLoading] = useState(false);
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   const [isPaymentBreakdownExpanded, setIsPaymentBreakdownExpanded] = useState(false);
+
+  // Correction Request State
+  const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
+  const [correctionRequests, setCorrectionRequests] = useState([]);
+  const [isCorrectionsLoading, setIsCorrectionsLoading] = useState(false);
+  
+  // Correction Eligible Statuses
+  const CORRECTION_ELIGIBLE_STATUSES = [
+    STATUSES.VERIFIED, STATUSES.FOR_ASSESSMENT, STATUSES.ASSESSED, 
+    STATUSES.FOR_PAYMENT, STATUSES.PAYMENT_PROCESSING, STATUSES.PAID, STATUSES.COMPLETED
+  ];
+  const isEligibleForCorrection = CORRECTION_ELIGIBLE_STATUSES.includes(currentStatus);
 
   useEffect(() => {
     if (appId && currentStatus) {
@@ -80,6 +93,28 @@ const StatusTracker = () => {
       }
     }
   }, [appId, currentStatus]);
+
+  // Fetch Correction Requests
+  useEffect(() => {
+    if (appId) {
+      const fetchCorrections = async () => {
+        try {
+          setIsCorrectionsLoading(true);
+          const res = await apiClient.get(API_ENDPOINTS.CORRECTIONS_MY);
+          if (res.success) {
+            // Filter corrections for this specific application
+            const appCorrections = res.data.filter(req => req.application_no === appId);
+            setCorrectionRequests(appCorrections);
+          }
+        } catch (err) {
+          console.error('Failed to fetch correction requests', err);
+        } finally {
+          setIsCorrectionsLoading(false);
+        }
+      };
+      fetchCorrections();
+    }
+  }, [appId]);
 
   // ---------------------------------------------------------------------------
   // ONLINE PAYMENT HANDLER
@@ -263,6 +298,23 @@ const StatusTracker = () => {
           </div>
           <StatusBadge status={currentStatus} size="md" />
         </div>
+
+        {/* Correction Button in Header if eligible */}
+        {isEligibleForCorrection && (
+          <div className="border-b border-zinc-200 bg-white px-5 py-3 flex justify-between items-center">
+            <div>
+              <h3 className="text-sm font-medium text-zinc-900">Found an error in your application?</h3>
+              <p className="text-xs text-zinc-500">You can request a data correction for fields like address, name, or contact number.</p>
+            </div>
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={() => setIsCorrectionModalOpen(true)}
+            >
+              Request Correction
+            </Button>
+          </div>
+        )}
 
         <div className="p-6 sm:p-8">
           {/* Returned Edge Case Banner */}
@@ -572,6 +624,61 @@ const StatusTracker = () => {
         </div>
       )}
 
+      {/* PHASE 1: CORRECTION REQUESTS HISTORY */}
+      {correctionRequests.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+          <div className="flex items-center gap-3 border-b border-zinc-200 bg-zinc-50 px-5 py-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white">
+              <AlertCircle size={16} className="text-zinc-600" />
+            </div>
+            <div>
+              <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">Correction Requests</h3>
+              <p className="mt-1 text-xs text-zinc-500">History of data corrections you submitted.</p>
+            </div>
+          </div>
+          
+          <div className="divide-y divide-zinc-200">
+            {correctionRequests.map((req) => (
+              <div key={req.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-zinc-900 capitalize">{req.field_name.replace(/_/g, ' ')}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                      req.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                      req.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {req.status}
+                    </span>
+                  </div>
+                  <p className="text-sm text-zinc-600">
+                    <span className="line-through opacity-70">{req.old_value || '(empty)'}</span> 
+                    <span className="mx-2 text-zinc-400">→</span> 
+                    <span className="font-medium">{req.new_value}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-400">Submitted {formatDate(req.created_at)}</p>
+                  
+                  {req.status === 'Rejected' && req.remarks && (
+                    <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">
+                      <span className="font-semibold">Reason:</span> {req.remarks}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Correction Request Modal */}
+      <CorrectionRequestModal
+        isOpen={isCorrectionModalOpen}
+        onClose={() => setIsCorrectionModalOpen(false)}
+        applicationNo={appId}
+        onSuccess={(newRequest) => {
+          setCorrectionRequests([newRequest, ...correctionRequests]);
+        }}
+      />
     </div>
   );
 };

@@ -208,6 +208,14 @@ export const API_ENDPOINTS = Object.freeze({
   NOTIFICATIONS_UNREAD: '/api/notifications/unread',
   NOTIFICATIONS_MARK_READ: (id) => `/api/notifications/${id}/read`,
   NOTIFICATIONS_READ_ALL: '/api/notifications/read-all',
+  // Corrections (Phase 1 Sub-Task)
+  CORRECTIONS_SUBMIT: '/api/corrections',
+  CORRECTIONS_UPLOAD: '/api/corrections/upload',
+  CORRECTIONS_MY: '/api/corrections/my',
+  BPLO_CORRECTIONS_PENDING: '/api/bplo/corrections/pending',
+  BPLO_CORRECTIONS_DETAIL: (id) => `/api/bplo/corrections/${id}`,
+  BPLO_CORRECTIONS_APPROVE: (id) => `/api/bplo/corrections/${id}/approve`,
+  BPLO_CORRECTIONS_REJECT: (id) => `/api/bplo/corrections/${id}/reject`,
 });
 
 // =========================================
@@ -265,3 +273,17 @@ export const DOC_VERIFICATION_STATUS = Object.freeze({
   NOT_NEEDED:        'Not Needed',
   AWAITING_ISSUANCE: 'Awaiting Issuance',
 });
+
+export const CORRECTION_STATUS = Object.freeze({
+  PENDING:  'Pending',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+});
+
+export const CORRECTABLE_FIELDS = Object.freeze([
+  'address_line1', 'barangay', 'latitude', 'longitude',
+  'contact_no',
+  'business_name', 'trade_name',
+  'first_name', 'middle_name', 'last_name',
+]);
+
