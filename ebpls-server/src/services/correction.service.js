@@ -2,8 +2,9 @@ const { supabaseAdmin } = require('../config/supabase');
 const storageService = require('./storage.service');
 const auditService = require('./audit.service');
 const { createError } = require('../middlewares/error.middleware');
-const { ERROR_CODES, CORRECTION_STATUS, CORRECTABLE_FIELDS } = require('../utils/constants');
+const { ERROR_CODES, CORRECTION_STATUS, CORRECTABLE_FIELDS, STATUSES, EMAIL_TRIGGERS } = require('../utils/constants');
 const { CorrectionRequestSchema } = require('../utils/validators');
+const emailService = require('./email.service');
 
 // Locked post-review statuses where corrections are allowed
 const CORRECTION_ELIGIBLE_STATUSES = [
@@ -274,6 +275,8 @@ const approveCorrectionRequest = async (id, bploUserId, ipAddress = null) => {
   
   // We need the business_id or taxpayer_id depending on what we update
   const appData = await getApplicationAndVerifyOwnership(application_no, request.requested_by);
+  const applicantName = appData.businesses?.taxpayers ? `${appData.businesses.taxpayers.first_name} ${appData.businesses.taxpayers.last_name}` : 'Applicant';
+  const applicantEmail = appData.businesses?.taxpayers?.user_id ? (await supabaseAdmin.from('users').select('email').eq('user_id', appData.businesses.taxpayers.user_id).single()).data?.email : null;
   
   // 3. Update the target table
   if (isTaxpayerField) {
@@ -323,6 +326,33 @@ const approveCorrectionRequest = async (id, bploUserId, ipAddress = null) => {
     console.error('[correction.service] CRITICAL: Failed to update correction_request status after applying changes:', statusError.message);
   }
 
+  // 4b. Invalidate Permit if application is Completed
+  if (appData.status === STATUSES.COMPLETED) {
+    // Delete the permit so it gets regenerated next time it is requested or via a trigger
+    const { error: permitError } = await supabaseAdmin
+      .from('permits')
+      .delete()
+      .eq('application_no', application_no);
+      
+    if (permitError) {
+      console.error('[correction.service] Failed to invalidate permit after correction:', permitError.message);
+    } else {
+      // Regenerate the permit and send PERMIT_READY email with updated PDFs
+      if (applicantEmail) {
+        emailService.dispatchEmail({
+          triggerEvent: EMAIL_TRIGGERS.PERMIT_READY,
+          recipientEmail: applicantEmail,
+          applicationNo: application_no,
+          payload: {
+            name: applicantName,
+            applicationNo: application_no,
+            businessName: appData.businesses?.business_name || 'Business'
+          }
+        });
+      }
+    }
+  }
+
   // 5. Log audit event
   await auditService.logAction({
     userId: bploUserId,
@@ -333,6 +363,20 @@ const approveCorrectionRequest = async (id, bploUserId, ipAddress = null) => {
     newValue: { [field_name]: new_value },
     ipAddress
   });
+
+  // 6. Send Approval Email
+  if (applicantEmail) {
+    emailService.dispatchEmail({
+      triggerEvent: EMAIL_TRIGGERS.CORRECTION_APPROVED,
+      recipientEmail: applicantEmail,
+      applicationNo: application_no,
+      payload: {
+        name: applicantName,
+        applicationNo: application_no,
+        fieldName: field_name.replace(/_/g, ' ')
+      }
+    });
+  }
 
   return updatedRequest;
 };
@@ -349,7 +393,7 @@ const rejectCorrectionRequest = async (id, bploUserId, remarks, ipAddress = null
   // 2. Fetch request
   const { data: request, error: reqError } = await supabaseAdmin
     .from('correction_requests')
-    .select('status, field_name, application_no')
+    .select('status, field_name, application_no, requested_by')
     .eq('id', id)
     .single();
 
@@ -388,6 +432,26 @@ const rejectCorrectionRequest = async (id, bploUserId, remarks, ipAddress = null
     newValue: { remarks: remarks.trim() },
     ipAddress
   });
+
+  // 5. Send Rejection Email
+  const appData = await getApplicationAndVerifyOwnership(request.application_no, request.requested_by);
+  const applicantName = appData.businesses?.taxpayers ? `${appData.businesses.taxpayers.first_name} ${appData.businesses.taxpayers.last_name}` : 'Applicant';
+  const applicantEmailData = await supabaseAdmin.from('users').select('email').eq('user_id', request.requested_by).single();
+  const applicantEmail = applicantEmailData.data?.email;
+
+  if (applicantEmail) {
+    emailService.dispatchEmail({
+      triggerEvent: EMAIL_TRIGGERS.CORRECTION_REJECTED,
+      recipientEmail: applicantEmail,
+      applicationNo: request.application_no,
+      payload: {
+        name: applicantName,
+        applicationNo: request.application_no,
+        fieldName: request.field_name.replace(/_/g, ' '),
+        remarks: remarks.trim()
+      }
+    });
+  }
 
   return updatedRequest;
 };

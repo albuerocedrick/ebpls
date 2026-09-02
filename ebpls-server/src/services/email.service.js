@@ -254,6 +254,38 @@ const templates = {
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
       </div>`,
   }),
+
+  [EMAIL_TRIGGERS.CORRECTION_APPROVED]: ({ name, applicationNo, fieldName }) => ({
+    subject: `eBPLS — Data Correction Approved (${applicationNo})`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #16a34a;">Data Correction Approved</h2>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>Your request to correct the <strong>${fieldName}</strong> for application <strong>${applicationNo}</strong> has been approved and applied to your record.</p>
+        <p>If your application has already been completed, your updated business permit will be regenerated shortly.</p>
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
+        <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
+      </div>`,
+  }),
+
+  [EMAIL_TRIGGERS.CORRECTION_REJECTED]: ({ name, applicationNo, fieldName, remarks }) => ({
+    subject: `eBPLS — Data Correction Rejected (${applicationNo})`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #dc2626;">Data Correction Rejected</h2>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>We regret to inform you that your request to correct the <strong>${fieldName}</strong> for application <strong>${applicationNo}</strong> was rejected by the BPLO office.</p>
+        <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; border-radius: 4px; margin: 16px 0;">
+          <strong>Officer's Remarks:</strong>
+          <p style="margin: 8px 0 0;">${remarks || 'No remarks provided.'}</p>
+        </div>
+        <p>Please review the remarks and submit a new correction request with the correct supporting documents if necessary.</p>
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
+        <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>
+      </div>`,
+  }),
 };
 
 // =================================================================
