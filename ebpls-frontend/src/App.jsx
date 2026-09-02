@@ -20,6 +20,9 @@ import {
   AdminLayout,
 } from './layouts';
 
+import BPLORetirements from './screens/bplo/BPLORetirements';
+import CorrectionQueue from './screens/bplo/CorrectionQueue'; // Phase 1 sub-task
+import BPLOCompleted from './screens/bplo/BPLOCompleted';
 import ProtectedRoute  from './components/shared/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import ToastContainer  from './components/shared/ToastContainer';
@@ -187,6 +190,7 @@ function App() {
               <Route path="verify/:appNo" element={<SplitScreenVerifier />} />
               <Route path="verify" element={<SplitScreenVerifier />} />
               <Route path="retirements" element={<RetirementQueue />} />
+              <Route path="corrections" element={<CorrectionQueue />} />
               <Route path="completed" element={<CompletedQueue />} />
             </Route>
           </Route>

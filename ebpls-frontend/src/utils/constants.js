@@ -119,6 +119,7 @@ export const ROUTES = Object.freeze({
   BPLO_DASHBOARD: '/bplo/dashboard',
   BPLO_VERIFIER: '/bplo/verify/:appNo',
   BPLO_RETIREMENTS: '/bplo/retirements',
+  BPLO_CORRECTIONS: '/bplo/corrections',
   BPLO_COMPLETED: '/bplo/completed',
   // Treasury
   TREASURY_ASSESSMENT: '/treasury/assess',

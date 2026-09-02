@@ -18,6 +18,7 @@ import { LayoutDashboard, XCircle, CheckCircle2 } from 'lucide-react';
 import { Navbar, Sidebar } from '../components/layout';
 import { ROUTES } from '../utils/constants';
 import useUIStore from '../store/UIStore';
+import { PenTool } from 'lucide-react';
 
 // =========================================
 // BPLO Nav Config (injected into Sidebar)
@@ -36,6 +37,11 @@ const BPLO_NAV = [
         to: ROUTES.BPLO_RETIREMENTS,
         icon: <XCircle size={18} />,
         label: 'Retirements',
+      },
+      {
+        to: ROUTES.BPLO_CORRECTIONS || '/bplo/corrections',
+        icon: <PenTool size={18} />,
+        label: 'Corrections',
       },
       {
         to: ROUTES.BPLO_COMPLETED,
