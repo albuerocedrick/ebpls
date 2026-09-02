@@ -53,6 +53,8 @@ const validateStep = (step, formData, requirements = [], activityMetrics = {}) =
       errors.push('Address Line 1 (Bldg. No. / Street) is required.');
     if (!s.barangay?.trim())
       errors.push('Barangay is required.');
+    if (!s.latitude || !s.longitude)
+      errors.push('Please pin your business location on the map.');
   }
 
   if (step === 3) {

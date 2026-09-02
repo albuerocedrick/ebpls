@@ -3,16 +3,34 @@
 import { useState, useEffect } from 'react';
 import useApplicationStore from '../../../store/applicationStore';
 import InteractiveLocationPin from '../../../components/shared/InteractiveLocationPin';
-import { MapPin, Building2, Lock, Home, CheckCircle2 } from 'lucide-react';
+import { MapPin, Building2, Lock, Home, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { BARANGAYS_LILIW, API_ENDPOINTS } from '../../../utils/constants';
 import apiClient from '../../../utils/apiClient';
 import Select from '../../../components/ui/Select';
+import { checkBarangayMatch } from '../../../utils/geoValidation';
 
 const Step2_Location = () => {
   const data = useApplicationStore((state) => state.formData.step2);
   const isRenting = data.is_renting ?? false;
   const setFormField = useApplicationStore((state) => state.setFormField);
   const [barangayList, setBarangayList] = useState(BARANGAYS_LILIW);
+  const [geoWarning, setGeoWarning] = useState(null);
+
+  const runGeoCheck = (lat, lng, barangay) => {
+    if (!lat || !lng || !barangay) {
+      setGeoWarning(null);
+      setFormField('step2', 'location_mismatch', false);
+      return;
+    }
+    const { isMatch, detectedBarangay } = checkBarangayMatch(lat, lng, barangay);
+    if (!isMatch) {
+      setGeoWarning({ detectedBarangay });
+      setFormField('step2', 'location_mismatch', true);
+    } else {
+      setGeoWarning(null);
+      setFormField('step2', 'location_mismatch', false);
+    }
+  };
 
   useEffect(() => {
     const fetchBarangays = async () => {
@@ -36,12 +54,14 @@ const Step2_Location = () => {
   const handleLocationChange = (coords) => {
     setFormField('step2', 'latitude', coords.lat);
     setFormField('step2', 'longitude', coords.lng);
+    runGeoCheck(coords.lat, coords.lng, data.barangay);
   };
 
   // When the barangay dropdown changes, update the form field
   const handleBarangayChange = (e) => {
     const selectedName = e.target.value;
     setFormField('step2', 'barangay', selectedName);
+    runGeoCheck(data.latitude, data.longitude, selectedName);
   };
 
   const handleRentalToggle = (value) => {
@@ -128,7 +148,7 @@ const Step2_Location = () => {
       <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-5">
         <h3 className="mb-4 flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
           <MapPin size={14} className="text-zinc-500" />
-          Geographical coordinates
+          Geographical coordinates <span className="text-zinc-900">*</span>
         </h3>
         
         <InteractiveLocationPin 
@@ -136,6 +156,19 @@ const Step2_Location = () => {
           onChange={handleLocationChange}
         />
         
+        {geoWarning && (
+          <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-800">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-500" />
+            <p>
+              <strong>Warning:</strong> Your map pin appears to be outside{' '}
+              <strong>{data.barangay}</strong>.
+              {geoWarning.detectedBarangay && (
+                <> The system detected it in <strong>{geoWarning.detectedBarangay}</strong>.</>
+              )}
+              {' '}Please verify your pin or selected barangay. You may still proceed.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Section 3: Business Location Ownership (Rental Status) */}

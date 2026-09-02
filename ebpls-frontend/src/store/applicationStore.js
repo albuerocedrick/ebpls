@@ -27,6 +27,7 @@ const initialFormState = {
     latitude: null,            // Decimal (from Leaflet)
     longitude: null,           // Decimal (from Leaflet)
     is_renting: false,
+    location_mismatch: false,
   },
   step3: {
     // Array to hold multiple Line of Business activities
