@@ -41,18 +41,17 @@ const { ERROR_CODES }    = require('../utils/constants');
 const authenticate = async (req, res, next) => {
   try {
     // ---------------------------------------------------------------
-    // STEP 1: Extract the Bearer token from the Authorization header.
-    // Expected format: "Authorization: Bearer <token>"
+    // STEP 1: Extract the Bearer token from the Authorization header
+    // or from the query string (used for PDF generation via window.open).
     // ---------------------------------------------------------------
+    let token = null;
     const authHeader = req.headers['authorization'];
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json(
-        errorResponse(ERROR_CODES.UNAUTHORIZED, 'Authentication required.')
-      );
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.query && req.query.token) {
+      token = req.query.token;
     }
-
-    const token = authHeader.split(' ')[1];
 
     if (!token) {
       return res.status(401).json(
