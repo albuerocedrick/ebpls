@@ -24,7 +24,6 @@ import useAuthStore from '../../store/authStore';
 import Button from '../../components/ui/Button';
 import useApplicationStatus from '../../hooks/useApplicationStatus'; // Import the Hook
 import CorrectionRequestModal from '../../components/shared/CorrectionRequestModal';
-import StatusBadge from '../../components/shared/StatusBadge';
 
 // Timeline definition
 const TIMELINE_STEPS = [
