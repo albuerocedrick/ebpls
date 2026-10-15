@@ -112,3 +112,33 @@ We have completely overhauled how the system communicates with the applicant, en
 ### 4.3 Barangay Clearance Queue — Status Filtering
 * **What was changed**: Just like BPLO, the Barangay officers get new organizational tools.
 * **Complete Details**: The Clearance Queue now features a status filter dropdown. Officers can filter the view by **"Pending"**, **"Issued"**, or **"Rejected"**. This works perfectly alongside their existing Barangay location filter!
+
+---
+
+## 🛡️ 5. Treasury Price Override Safeguards & Reliable Email Delivery
+
+### 5.1 Auto-Revert to Default Price on Blank Input
+* **What was changed**: Safeguards added when modifying fee amounts in the Treasury Assessment Grid.
+* **Complete Details**:
+  * If a Treasury officer clears the price field (leaves it blank or erases the amount) and clicks out or blurs the input, the system automatically reverts the input back to the official default calculated price from the Revenue Code.
+  * An inline **Cancel (`X`) button** is also provided so officers can immediately discard changes and restore the default price at any time.
+
+### 5.2 Mandatory Remarks Enforcement ("Di Pwede" Without Remarks)
+* **What was changed**: Prevents unauthorized or unjustified fee alterations.
+* **Complete Details**:
+  * When attempting to save a price override without providing a justification or remarks, the system strictly blocks the operation ("d pede").
+  * A clear error toast warns the officer that remarks are mandatory to override fees, and the price automatically reverts to default to protect audit trail integrity.
+  * The backend controller strictly validates both price and non-empty remarks (`400 Validation Error`), preventing invalid overrides through API calls.
+
+### 5.3 One-Click Revert to Default Price (`PUT /api/treasury/assess/:id/reset`)
+* **What was changed**: Effortlessly restore default fees on previously overridden line items.
+* **Complete Details**:
+  * Overridden items now feature an inline **"Default" (`RotateCcw`) button** in the Assessment Grid.
+  * Clicking it invokes the `PUT /api/treasury/assess/:id/reset` endpoint, resetting the fee back to the baseline Revenue Code formula, recalculating dependent fees (such as Fire Safety = 10% of Mayor's Permit), and synchronizing the assessment total.
+
+### 5.4 Reliable Gmail SMTP Transmission via IPv4 Binding
+* **What was changed**: Resolved intermittent connection timeouts and undelivered signup emails.
+* **Complete Details**:
+  * Configured Nodemailer to enforce IPv4 address resolution (`family: 4`) when connecting to Gmail SMTP on port 465.
+  * This eliminates Windows/dual-stack IPv6 routing unreachable errors (`ENETUNREACH`) and ensures 100% reliable delivery for account creation verification links and all status notifications.
+

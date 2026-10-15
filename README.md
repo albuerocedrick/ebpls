@@ -305,7 +305,7 @@ ebpls-backend/
 │   ├── controllers/             # Route handlers organized by architectural module
 │   │   ├── application.controller.js  # Module A: UAF submissions, drafts
 │   │   ├── bplo.controller.js         # Module B: Document verification
-│   │   ├── treasury.controller.js     # Module C: Fees, TOP, OTC Payments
+│   │   ├── treasury.controller.js     # Module C: Fees, TOP, Overrides, Default Reset, OTC Payments
 │   │   ├── barangay.controller.js     # Module D: Barangay Clearances
 │   │   ├── retirement.controller.js   # Module E: Business Retirements
 │   │   └── document.controller.js     # Module F: PDF generation endpoints
@@ -395,7 +395,7 @@ ebpls-frontend/
 │   │   │   ├── Dashboard.jsx          # Application queue with SLAs
 │   │   │   └── SplitScreenVerifier.jsx # Document verification interface
 │   │   ├── treasury/
-│   │   │   ├── AssessmentGrid.jsx     # Fee calculation override grid
+│   │   │   ├── AssessmentGrid.jsx     # Fee calculation override and default reset grid
 │   │   │   └── CashierPOS.jsx         # High-contrast OTC payment logger
 │   │   ├── barangay/
 │   │   │   └── ClearanceQueue.jsx     # Pending clearance requests

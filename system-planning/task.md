@@ -45,6 +45,13 @@
   - [x] 6.4 BPLO Dashboard status filter dropdown
   - [x] 6.5 Fee Schedule collapsible accordion sections
   - [x] 6.6 Clearance Queue status filter dropdown
+  - [x] 6.7 Treasury Price Override Reversion & Email Delivery Fix
+    - [x] Configure IPv4 enforcement (`family: 4`) in `mailer.js` to resolve Gmail SMTP timeouts
+    - [x] Add auto-revert to default calculated price on blank input or blur in `AssessmentGrid.jsx`
+    - [x] Strictly require remarks on price override ("d pede" without remarks; auto-revert to default)
+    - [x] Add backend `resetLineItem` in `assessment.service.js` and `PUT /api/treasury/assess/:id/reset`
+    - [x] Add inline "Default" (`RotateCcw`) and Cancel (`X`) buttons in `AssessmentGrid.jsx`
 
 - [ ] **Phase 7 — Final Integration Testing**
   - [ ] Run through all 103 frontend test cases manually
+

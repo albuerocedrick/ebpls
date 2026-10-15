@@ -597,7 +597,8 @@ Completed → [*]
 |---|---|---|---|
 | **GET** | **`/api/treasury/fee-schedule`** | **Fetch tiered fee schedules** *(New in v3.0)* | **Treasury_Officer** |
 | POST | `/api/treasury/assess` | Calculate fees, generate assessment + TOP | Treasury_Officer |
-| PUT | `/api/treasury/assess/:id/override` | Override line item (audit-logged) | Treasury_Officer |
+| PUT | `/api/treasury/assess/:id/override` | Override line item (strictly requires remarks; blank/empty reverts to default; audit-logged) | Treasury_Officer |
+| PUT | `/api/treasury/assess/:id/reset` | Revert fee line item back to default calculated price | Treasury_Officer |
 | GET | `/api/documents/top/:app_no` | Generate TOP PDF | Treasury_Officer |
 | POST | `/api/treasury/payments/otc` | Record OTC payment (auto-generates `OTC-YYYYMMDD-NNNNNN`) | Treasury_Officer |
 | POST | `/api/treasury/payments/online` | Initiate PayMongo Payment Intent; transition to PaymentProcessing | Applicant or Treasury_Officer |
@@ -653,7 +654,7 @@ Completed → [*]
 
 ## 7. Email Notification System
 
-All notifications use Nodemailer via Gmail SMTP or Brevo. The `PAYMENT_RECORDED` trigger fires for both OTC and online payment paths using the same template; the OR number format distinguishes the channel. **In-app pop-ups are dynamically tied to these transitions for instantaneous feedback.**
+All notifications use Nodemailer via Gmail SMTP (configured with `family: 4` IPv4 binding for dual-stack reliability) or Brevo. The `PAYMENT_RECORDED` trigger fires for both OTC and online payment paths using the same template; the OR number format distinguishes the channel. **In-app pop-ups are dynamically tied to these transitions for instantaneous feedback.**
 
 | Trigger Event | Recipient | Subject / Content |
 |---|---|---|

@@ -179,10 +179,12 @@ graph LR
 | Method | Endpoint | Purpose | Auth |
 |---|---|---|---|
 | POST | `/api/treasury/assess` | Calculate fees (via digitized Revenue Code), generate TOP | Treasury_Officer |
-| PUT | `/api/treasury/assess/:id/override` | Override line item (audit-logged) | Treasury_Officer |
+| PUT | `/api/treasury/assess/:id/override` | Override line item (strictly requires remarks; blank/empty reverts to default; audit-logged) | Treasury_Officer |
+| PUT | `/api/treasury/assess/:id/reset` | Revert fee line item back to default calculated price | Treasury_Officer |
 | GET | `/api/documents/top/:app_no` | Generate TOP PDF | Treasury_Officer |
 | POST | `/api/treasury/payments/otc` | Record OTC payment (Cash / Manager Check) — **auto-generates OR number** | Treasury_Officer |
 | **POST** | **`/api/treasury/payments/online`** | **Initiate PayMongo Payment Intent; create pending transaction; transition to PaymentProcessing** | **Applicant or Treasury_Officer** |
+
 
 #### Module D — Barangay Clearance
 
