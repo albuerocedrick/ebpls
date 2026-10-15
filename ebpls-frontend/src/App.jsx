@@ -8,8 +8,8 @@
  *   - Aligned ROLES with constants.js
  */
 
-import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
 import {
   AuthLayout,
@@ -120,11 +120,33 @@ const NotFound = () => (
 // App — Root Router
 // =========================================
 
+function AuthHashHandler() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    if (!hash) return;
+
+    if (hash.includes('access_token=') && (hash.includes('type=signup') || hash.includes('type=email_change'))) {
+      navigate(ROUTES.VERIFY_SUCCESS, { replace: true });
+    } else if (hash.includes('error_code=otp_expired') || hash.includes('otp_expired')) {
+      navigate(`${ROUTES.VERIFY_SUCCESS}#otp_expired`, { replace: true });
+    } else if (hash.includes('access_token=') && hash.includes('type=recovery')) {
+      navigate(`${ROUTES.RESET_PASSWORD}${hash}`, { replace: true });
+    }
+  }, [navigate, location]);
+
+  return null;
+}
+
 function App() {
   return (
     <>
     <Toaster position="top-right" />
     <BrowserRouter>
+      <AuthHashHandler />
       <Suspense fallback={<PageLoader />}>
 
         <Routes>

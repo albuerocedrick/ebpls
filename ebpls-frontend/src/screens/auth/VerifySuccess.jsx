@@ -1,12 +1,18 @@
-/**
- * VerifySuccess.jsx
- * Shown after an email verification link is opened.
- */
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { ROUTES } from '../../utils/constants';
 
 const VerifySuccess = () => {
+  const [isAlreadyVerified] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      return hash.includes('otp_expired') || search.includes('otp_expired') || hash.includes('error_code=otp_expired');
+    }
+    return false;
+  });
+
   return (
     <div className="flex flex-col gap-6 p-7 duration-500 animate-in fade-in sm:p-8">
       <div className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-900">
@@ -15,14 +21,15 @@ const VerifySuccess = () => {
 
       <div>
         <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-500 uppercase">
-          Email verified
+          {isAlreadyVerified ? 'Account verification' : 'Email verified'}
         </span>
         <h1 className="mt-3 text-xl font-semibold tracking-tight text-zinc-900">
-          Your account is active
+          {isAlreadyVerified ? 'Your account is ready' : 'Your account is active'}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-zinc-600">
-          You can now sign in to file an application, track its progress, and
-          settle assessments online.
+          {isAlreadyVerified
+            ? 'This verification link has already been used or your email is confirmed. You can sign in now to access your account.'
+            : 'You can now sign in to file an application, track its progress, and settle assessments online.'}
         </p>
       </div>
 

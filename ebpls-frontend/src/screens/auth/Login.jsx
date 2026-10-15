@@ -15,6 +15,16 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  const [authBanner] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || window.location.search;
+      if (hash.includes('otp_expired')) {
+        return 'Your verification link has already been used or your email is confirmed. Please sign in below.';
+      }
+    }
+    return null;
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return;
@@ -35,6 +45,12 @@ const Login = () => {
           Enter your credentials to reach the Business One Stop Shop portal.
         </p>
       </div>
+
+      {authBanner && (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-800">
+          {authBanner}
+        </div>
+      )}
 
       {/* Fields */}
       <div className="flex flex-col gap-4">
