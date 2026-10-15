@@ -83,13 +83,64 @@ const sendViaBrevoAPI = (to, subject, html, attachments = []) => {
   });
 };
 
+/**
+ * Sends email using the Resend REST API (over HTTPS port 443) to bypass SMTP blocking on cloud platforms.
+ */
+const sendViaResendAPI = (to, subject, html, attachments = []) => {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({
+      from: env.EMAIL_FROM || 'eBPLS Municipality of Liliw <onboarding@resend.dev>',
+      to: [to],
+      subject: subject,
+      html: html,
+      attachments: attachments.length > 0 ? attachments.map(a => ({
+        filename: a.filename,
+        content: Buffer.isBuffer(a.content) ? a.content.toString('base64') : Buffer.from(a.content || '').toString('base64')
+      })) : undefined
+    });
+
+    const options = {
+      hostname: 'api.resend.com',
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY || env.SMTP_PASS}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try {
+            const json = JSON.parse(data);
+            console.log(`✉️  Email sent via Resend API: ${json.id} → ${to}`);
+            resolve({ messageId: json.id, previewUrl: null });
+          } catch (e) {
+            resolve({ messageId: 'resend-success-no-id', previewUrl: null });
+          }
+        } else {
+          reject(new Error(`Resend API Error: ${res.statusCode} ${data}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+};
+
 const dns = require('dns');
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
 
 /**
- * Sends an email. Automatically routes to Brevo API if configured, else Ethereal.
+ * Sends an email. Automatically routes to Brevo API / Resend API if configured, else Gmail SMTP / Ethereal.
  * @param {object} options
  * @param {string} options.to - Recipient email address.
  * @param {string} options.subject - Email subject line.
@@ -98,7 +149,17 @@ if (dns.setDefaultResultOrder) {
  * @returns {Promise<{messageId: string, previewUrl?: string}>}
  */
 const sendEmail = async ({ to, subject, html, attachments = [] }) => {
-  // 1. Gmail SMTP via Nodemailer
+  // 1. Resend REST API (HTTPS port 443 — works seamlessly on Render free tier)
+  if (process.env.RESEND_API_KEY || (env.SMTP_PASS && env.SMTP_PASS.startsWith('re_'))) {
+    return sendViaResendAPI(to, subject, html, attachments);
+  }
+
+  // 2. Brevo REST API (HTTPS port 443 — works seamlessly on Render free tier)
+  if (env.BREVO_API_KEY || (env.SMTP_HOST && env.SMTP_HOST.includes('brevo.com')) || (env.SMTP_PASS && env.SMTP_PASS.startsWith('xkeysib-'))) {
+    return sendViaBrevoAPI(to, subject, html, attachments);
+  }
+
+  // 3. Gmail SMTP via Nodemailer (Direct TCP on port 465/587)
   if (env.SMTP_HOST && env.SMTP_HOST.includes('gmail.com') && env.SMTP_PASS) {
     let host = env.SMTP_HOST || 'smtp.gmail.com';
     const servername = 'smtp.gmail.com';
@@ -117,6 +178,9 @@ const sendEmail = async ({ to, subject, html, attachments = [] }) => {
       host,
       port: env.SMTP_PORT ? Number(env.SMTP_PORT) : 465,
       secure: env.SMTP_PORT ? Number(env.SMTP_PORT) === 465 : true,
+      connectionTimeout: 8000, // Fail fast (8s) instead of hanging worker on blocked cloud networks
+      greetingTimeout: 5000,
+      socketTimeout: 8000,
       auth: {
         user: env.SMTP_USER,
         pass: env.SMTP_PASS,
@@ -141,8 +205,6 @@ const sendEmail = async ({ to, subject, html, attachments = [] }) => {
       throw err;
     }
   }
-
-  // 2. Brevo REST API
   if (env.SMTP_HOST && env.SMTP_HOST.includes('brevo.com') && env.SMTP_PASS) {
     return sendViaBrevoAPI(to, subject, html, attachments);
   }

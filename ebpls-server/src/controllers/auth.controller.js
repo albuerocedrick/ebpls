@@ -164,6 +164,13 @@ const register = async (req, res, next) => {
               });
             }
 
+            // Direct Cloud Mailer Fallback
+            supabaseAdmin.auth.resend({
+              type: 'signup',
+              email: input.email,
+              options: { redirectTo: `${env.FRONTEND_URL}/verify-success` }
+            }).catch(e => console.warn('[auth.controller] Supabase direct resend notice:', e?.message));
+
             return res.status(200).json(
               successResponse('An unverified account with this email was found. A new verification link has been sent to your email.', {
                 userId: existingUser.id,
@@ -250,6 +257,17 @@ const register = async (req, res, next) => {
         }
       });
     }
+
+    // Direct Cloud Mailer Fallback:
+    // On free cloud hosts (like Render) where raw TCP SMTP ports (25, 465, 587) are blackholed,
+    // Supabase sends the verification email from its own cloud infrastructure to ensure 100% delivery.
+    supabaseAdmin.auth.resend({
+      type: 'signup',
+      email: input.email,
+      options: { redirectTo: `${env.FRONTEND_URL}/verify-success` }
+    }).catch(supabaseErr => {
+      console.warn('[auth.controller] Supabase direct email fallback notice:', supabaseErr?.message);
+    });
 
     // -----------------------------------------------------------
     // STEP 6: Return success. Do not return the password.
