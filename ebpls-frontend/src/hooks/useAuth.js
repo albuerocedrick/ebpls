@@ -116,11 +116,16 @@ function useAuth() {
           // Mock: simulate a short network delay then succeed.
           await new Promise((r) => setTimeout(r, 600));
         } else {
+          const redirectTo = typeof window !== 'undefined'
+            ? `${window.location.origin}/verify-success`
+            : undefined;
+
           const response = await apiClient.post(API_ENDPOINTS.AUTH_REGISTER, {
             firstName,
             lastName,
             email,
             password,
+            redirectTo,
           });
           return response; // Return the full response for the UI to handle
         }
@@ -146,7 +151,11 @@ function useAuth() {
       setIsLoading(true);
       try {
         if (!isMockMode) {
-          await apiClient.post(API_ENDPOINTS.AUTH_FORGOT_PASSWORD, { email });
+          const redirectTo = typeof window !== 'undefined'
+            ? `${window.location.origin}/reset-password`
+            : undefined;
+
+          await apiClient.post(API_ENDPOINTS.AUTH_FORGOT_PASSWORD, { email, redirectTo });
         } else {
           await new Promise((r) => setTimeout(r, 600));
         }

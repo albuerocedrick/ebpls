@@ -51,6 +51,10 @@
     - [x] Strictly require remarks on price override ("d pede" without remarks; auto-revert to default)
     - [x] Add backend `resetLineItem` in `assessment.service.js` and `PUT /api/treasury/assess/:id/reset`
     - [x] Add inline "Default" (`RotateCcw`) and Cancel (`X`) buttons in `AssessmentGrid.jsx`
+  - [x] 6.8 Signup & Reset Password Redirect URL Dynamic Resolution
+    - [x] Pass dynamic `redirectTo` (`window.location.origin`) from `useAuth.js` during registration & password reset
+    - [x] Implement `getTargetRedirectUrl` and `sanitizeActionLink` in `auth.controller.js` to reject unwanted `localhost:3000`
+    - [x] Document Supabase and Render URL Configuration requirements for production verification redirects
 
 - [ ] **Phase 7 — Final Integration Testing**
   - [ ] Run through all 103 frontend test cases manually
