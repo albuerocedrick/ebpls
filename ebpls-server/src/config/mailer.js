@@ -83,6 +83,11 @@ const sendViaBrevoAPI = (to, subject, html, attachments = []) => {
   });
 };
 
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 /**
  * Sends an email. Automatically routes to Brevo API if configured, else Ethereal.
  * @param {object} options
@@ -95,14 +100,29 @@ const sendViaBrevoAPI = (to, subject, html, attachments = []) => {
 const sendEmail = async ({ to, subject, html, attachments = [] }) => {
   // 1. Gmail SMTP via Nodemailer
   if (env.SMTP_HOST && env.SMTP_HOST.includes('gmail.com') && env.SMTP_PASS) {
+    let host = env.SMTP_HOST || 'smtp.gmail.com';
+    const servername = 'smtp.gmail.com';
+
+    // Force resolve to IPv4 address to eliminate ENETUNREACH on dual-stack environments (Linux/Render containers)
+    try {
+      const resolved = await dns.promises.lookup('smtp.gmail.com', { family: 4 });
+      if (resolved && resolved.address) {
+        host = resolved.address;
+      }
+    } catch (dnsErr) {
+      console.warn('[mailer] IPv4 pre-resolve failed, using default hostname:', dnsErr.message);
+    }
+
     const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
+      host,
       port: env.SMTP_PORT ? Number(env.SMTP_PORT) : 465,
       secure: env.SMTP_PORT ? Number(env.SMTP_PORT) === 465 : true,
-      family: 4, // Force IPv4 to prevent ENETUNREACH / connection timeout on dual-stack networks
       auth: {
         user: env.SMTP_USER,
         pass: env.SMTP_PASS,
+      },
+      tls: {
+        servername, // Ensures TLS certificate validation against smtp.gmail.com
       },
     });
 

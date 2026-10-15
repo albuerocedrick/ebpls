@@ -135,8 +135,48 @@ const register = async (req, res, next) => {
       // Supabase returns specific error codes. Map them to our error codes.
       if (authError.message?.toLowerCase().includes('already registered') ||
           authError.code === 'email_exists') {
+        // If the user already registered but is unverified, resend their verification link gracefully
+        try {
+          const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+          const existingUser = users?.find(u => u.email?.toLowerCase() === input.email.toLowerCase());
+
+          if (existingUser && !existingUser.email_confirmed_at) {
+            // Update password to the newly provided password
+            await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { password: input.password });
+
+            // Generate fresh verification link
+            const { data: resendLinkData } = await supabaseAdmin.auth.admin.generateLink({
+              type: 'magiclink',
+              email: input.email,
+              options: { redirectTo: `${env.FRONTEND_URL}/verify-success` }
+            });
+
+            const actionLink = resendLinkData?.properties?.action_link;
+            if (actionLink) {
+              dispatchEmail({
+                triggerEvent: EMAIL_TRIGGERS.ACCOUNT_CREATED,
+                recipientEmail: input.email,
+                applicationNo: null,
+                payload: {
+                  name: `${input.firstName} ${input.lastName}`,
+                  actionLink: actionLink
+                }
+              });
+            }
+
+            return res.status(200).json(
+              successResponse('An unverified account with this email was found. A new verification link has been sent to your email.', {
+                userId: existingUser.id,
+                email: input.email,
+              })
+            );
+          }
+        } catch (checkErr) {
+          console.error('[auth.controller] Error checking unconfirmed user:', checkErr.message);
+        }
+
         return next(createError(
-          'An account with this email already exists.',
+          'An account with this email already exists. Please log in or reset your password.',
           409,
           ERROR_CODES.CONFLICT
         ));
@@ -161,13 +201,13 @@ const register = async (req, res, next) => {
     // -----------------------------------------------------------
     const { error: taxpayerError } = await supabaseAdmin
       .from('taxpayers')
-      .insert({
+      .upsert({
         user_id:     newUserId,
         first_name:  input.firstName,
         last_name:   input.lastName,
         middle_name: input.middleName || null,
         contact_no:  input.contactNo  || null,
-      });
+      }, { onConflict: 'user_id' });
 
     if (taxpayerError) {
       // Taxpayer insert failed — the auth.users and public.users rows
