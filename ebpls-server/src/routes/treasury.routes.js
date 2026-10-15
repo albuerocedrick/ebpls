@@ -52,6 +52,13 @@ router.put('/assess/:app_no/finalize', treasuryController.finalizeAssessment);
 router.put('/assess/:id/override', treasuryController.overrideFeeItem);
 
 /**
+ * @route   PUT /api/treasury/assess/:id/reset
+ * @desc    Reset an overridden fee line item back to default calculated price
+ */
+router.put('/assess/:id/reset', treasuryController.resetFeeItem);
+
+
+/**
  * @route   GET /api/treasury/queue
  * @desc    Get applications ready for assessment or payment
  */

@@ -1,7 +1,7 @@
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 import geojsonRaw from '../data/liliw-barangays.geojson?raw';
-const geojsonData = JSON.parse(geojsonRaw);
+export const geojsonData = JSON.parse(geojsonRaw);
 
 /**
  * Checks whether a lat/lng coordinate falls within the polygon for a given

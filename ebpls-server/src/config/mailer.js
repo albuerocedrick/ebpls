@@ -96,7 +96,10 @@ const sendEmail = async ({ to, subject, html, attachments = [] }) => {
   // 1. Gmail SMTP via Nodemailer
   if (env.SMTP_HOST && env.SMTP_HOST.includes('gmail.com') && env.SMTP_PASS) {
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: env.SMTP_PORT ? Number(env.SMTP_PORT) : 465,
+      secure: env.SMTP_PORT ? Number(env.SMTP_PORT) === 465 : true,
+      family: 4, // Force IPv4 to prevent ENETUNREACH / connection timeout on dual-stack networks
       auth: {
         user: env.SMTP_USER,
         pass: env.SMTP_PASS,

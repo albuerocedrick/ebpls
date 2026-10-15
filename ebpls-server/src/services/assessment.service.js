@@ -208,8 +208,100 @@ const overrideLineItem = async (lineItemId, newAmount, reason, officerUserId) =>
   return updatedAssessment;
 };
 
+/**
+ * Resets an overridden fee line item back to the system-calculated default price.
+ */
+const resetLineItem = async (lineItemId, officerUserId) => {
+  // 1. Fetch current item with assessment and application_no
+  const { data: currentItem, error: fetchError } = await supabaseAdmin
+    .from('assessment_line_items')
+    .select('*, assessments(id, application_no)')
+    .eq('id', lineItemId)
+    .single();
+
+  if (fetchError || !currentItem) {
+    throw createError('Line item not found.', 404, ERROR_CODES.NOT_FOUND);
+  }
+
+  const assessmentId = currentItem.assessment_id;
+  const applicationNo = currentItem.assessments?.application_no;
+
+  // 2. Calculate the default fee for this line item
+  let defaultAmount = 0;
+  if (applicationNo) {
+    const calculatedData = await calculateFees(applicationNo);
+    const matchedItem = calculatedData.lineItems.find(
+      (item) => item.fee_type_id === currentItem.fee_type_id
+    );
+    if (matchedItem) {
+      defaultAmount = matchedItem.amount;
+    }
+  }
+
+  // 3. Update the line item back to default
+  const { error: updateError } = await supabaseAdmin
+    .from('assessment_line_items')
+    .update({
+      amount: defaultAmount,
+      is_override: false,
+      override_reason: null
+    })
+    .eq('id', lineItemId);
+
+  if (updateError) {
+    throw createError('Failed to reset line item.', 500, ERROR_CODES.INTERNAL_ERROR);
+  }
+
+  // 4. Recalculate dependent percentage fees
+  const { data: dependentFees } = await supabaseAdmin
+    .from('fee_types')
+    .select('id, percentage_value')
+    .eq('percentage_of_id', currentItem.fee_type_id)
+    .eq('computation_basis', 'Percentage')
+    .eq('is_active', true);
+
+  if (dependentFees && dependentFees.length > 0) {
+    for (const depFee of dependentFees) {
+      const depAmount = Math.round((defaultAmount * Number(depFee.percentage_value || 0)) * 100) / 100;
+      await supabaseAdmin
+        .from('assessment_line_items')
+        .update({ amount: depAmount })
+        .eq('assessment_id', assessmentId)
+        .eq('fee_type_id', depFee.id);
+    }
+  }
+
+  // 5. Recalculate total assessment amount
+  const { data: allItems } = await supabaseAdmin
+    .from('assessment_line_items')
+    .select('amount')
+    .eq('assessment_id', assessmentId);
+
+  const newTotal = (allItems || []).reduce((sum, item) => sum + Number(item.amount), 0);
+
+  const { data: updatedAssessment } = await supabaseAdmin
+    .from('assessments')
+    .update({ total_amount: newTotal })
+    .eq('id', assessmentId)
+    .select()
+    .single();
+
+  // 6. Audit Logging
+  await logAction({
+    userId: officerUserId,
+    action: AUDIT_ACTIONS.FEE_OVERRIDE,
+    entityType: 'assessment_line_items',
+    entityId: lineItemId,
+    oldValue: { amount: currentItem.amount, is_override: currentItem.is_override, reason: currentItem.override_reason },
+    newValue: { amount: defaultAmount, is_override: false, reason: 'Reverted to system default fee' }
+  });
+
+  return updatedAssessment;
+};
+
 module.exports = {
   calculateFees,
   createAssessment,
-  overrideLineItem
-};
+  overrideLineItem,
+  resetLineItem
+};

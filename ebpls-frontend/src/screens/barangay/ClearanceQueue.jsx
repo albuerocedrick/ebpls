@@ -14,9 +14,10 @@ import {
   ClipboardCheck, CheckCircle2, XCircle, Eye, MapPin,
   Building2, FileSearch, User, FileText, ChevronRight, AlertTriangle
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { geojsonData } from '../../utils/geoValidation';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Select from '../../components/ui/Select';
@@ -525,16 +526,30 @@ const ClearanceQueue = () => {
                     <div className="px-4 py-2 bg-blue-50 border-b text-xs text-blue-700">
                       📍 Declared address: <strong>{scBiz.address_line1}, {scBiz.barangay}</strong> · Coords: {scBiz.latitude}, {scBiz.longitude}
                     </div>
-                    <div className="flex-1 min-h-[450px]">
-                      <MapContainer
-                        center={[scBiz.latitude, scBiz.longitude]}
-                        zoom={17}
+                    <div className="flex-1 min-h-[450px] relative z-0">
+                      <MapContainer 
+                        center={[scBiz.latitude, scBiz.longitude]} 
+                        zoom={15} 
                         scrollWheelZoom={true}
                         style={{ height: '100%', width: '100%', minHeight: '450px' }}
                       >
                         <TileLayer
                           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <GeoJSON 
+                          data={geojsonData} 
+                          style={{ color: '#3b82f6', weight: 2, fillOpacity: 0.1 }} 
+                          onEachFeature={(feature, layer) => {
+                            const name = feature.properties?.name || feature.properties?.ADM4_EN;
+                            if (name) {
+                              layer.bindTooltip(name, {
+                                permanent: true,
+                                direction: 'center',
+                                className: '!bg-transparent !border-none !shadow-none text-[10px] font-bold text-blue-900 drop-shadow-md'
+                              });
+                            }
+                          }}
                         />
                         <Marker position={[scBiz.latitude, scBiz.longitude]} icon={defaultIcon} />
                       </MapContainer>

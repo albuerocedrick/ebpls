@@ -1,10 +1,11 @@
 // src/components/shared/InteractiveLocationPin.jsx
 
 import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, GeoJSON } from 'react-leaflet';
 import { MapPin, Info } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { geojsonData } from '../../utils/geoValidation';
 
 // Fix for React-Leaflet missing default marker icon issue
 const defaultIcon = new L.Icon({
@@ -82,6 +83,20 @@ const InteractiveLocationPin = ({ value, onChange }) => {
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <GeoJSON 
+            data={geojsonData} 
+            style={{ color: '#3b82f6', weight: 2, fillOpacity: 0.1 }} 
+            onEachFeature={(feature, layer) => {
+              const name = feature.properties?.name || feature.properties?.ADM4_EN;
+              if (name) {
+                layer.bindTooltip(name, {
+                  permanent: true,
+                  direction: 'center',
+                  className: '!bg-transparent !border-none !shadow-none text-[10px] font-bold text-blue-900 drop-shadow-md'
+                });
+              }
+            }}
           />
           <LocationMarker position={value} onChange={onChange} />
         </MapContainer>

@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calculator, Save, AlertCircle, Loader2, ArrowLeft, Printer, ArrowRight } from 'lucide-react';
+import { Calculator, Save, AlertCircle, Loader2, ArrowLeft, Printer, ArrowRight, RotateCcw, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../utils/apiClient';
 import { API_BASE_URL } from '../../utils/constants';
 import useAuthStore from '../../store/authStore';
@@ -35,6 +36,7 @@ const AssessmentGrid = () => {
         setLineItems(response.data.assessment_line_items.map(item => ({
           ...item,
           tempAmount: item.amount,
+          default_amount: item.default_amount ?? item.amount,
           tempReason: item.override_reason || '',
           isModified: false
         })));
@@ -57,26 +59,99 @@ const AssessmentGrid = () => {
     finally { setIsProcessing(false); }
   };
 
+  const handleAmountChange = (itemId, val) => {
+    setLineItems(prev => prev.map(i => {
+      if (i.id !== itemId) return i;
+      return {
+        ...i,
+        tempAmount: val,
+        isModified: true
+      };
+    }));
+  };
+
+  const handleAmountBlur = (itemId) => {
+    setLineItems(prev => prev.map(i => {
+      if (i.id !== itemId) return i;
+      const trimmed = String(i.tempAmount ?? '').trim();
+      // If left blank, revert to default price and cancel modification
+      if (trimmed === '' || isNaN(parseFloat(trimmed))) {
+        toast('Price left blank. Reverted to default price.', { icon: 'ℹ️' });
+        return {
+          ...i,
+          tempAmount: i.default_amount ?? i.amount,
+          tempReason: i.override_reason || '',
+          isModified: false
+        };
+      }
+      return i;
+    }));
+  };
+
+  const handleCancelModification = (itemId) => {
+    setLineItems(prev => prev.map(i => {
+      if (i.id !== itemId) return i;
+      return {
+        ...i,
+        tempAmount: i.default_amount ?? i.amount,
+        tempReason: i.override_reason || '',
+        isModified: false
+      };
+    }));
+  };
+
   const handleOverride = async (itemId) => {
     const item = lineItems.find(i => i.id === itemId);
-    if (!item.tempReason.trim()) return alert("Reason required for override.");
+    if (!item) return;
+
+    const trimmedAmount = String(item.tempAmount ?? '').trim();
+    if (trimmedAmount === '' || isNaN(parseFloat(trimmedAmount)) || parseFloat(trimmedAmount) < 0) {
+      toast.error('Valid price is required. Reverting to default price.');
+      handleCancelModification(itemId);
+      return;
+    }
+
+    if (!item.tempReason || !item.tempReason.trim()) {
+      toast.error('Remarks/Reason is required to override price. Cannot proceed without remarks. Reverting to default price.');
+      handleCancelModification(itemId);
+      return;
+    }
+
     try {
       setIsProcessing(true);
       await apiClient.put(`/api/treasury/assess/${itemId}/override`, {
         new_amount: parseFloat(item.tempAmount),
-        reason: item.tempReason
+        reason: item.tempReason.trim()
       });
+      toast.success('Price overridden successfully.');
       await fetchData();
-    } catch (err) { alert(err.message); }
-    finally { setIsProcessing(false); }
+    } catch (err) {
+      toast.error(err.message || 'Failed to override fee.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleResetToDefault = async (itemId) => {
+    try {
+      setIsProcessing(true);
+      await apiClient.put(`/api/treasury/assess/${itemId}/reset`);
+      toast.success('Fee reverted to default price.');
+      await fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to reset fee.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleFinalize = async () => {
     try {
       setIsProcessing(true);
       await apiClient.put(`/api/treasury/assess/${appNo}/finalize`);
+      toast.success('Assessment finalized successfully.');
       await fetchData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
     finally { setIsProcessing(false); }
   };
 
@@ -180,63 +255,111 @@ const AssessmentGrid = () => {
             <div className="grid grid-cols-3 px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 bg-gray-50/50">
               <span>Fee Description</span>
               <span className="text-right">Amount</span>
-              <span className="text-right">Override</span>
+              <span className="text-right">Override / Default</span>
             </div>
 
             {/* Table Rows */}
             <div className="divide-y divide-gray-50">
-              {lineItems.map((item) => (
-                <div key={item.id} className="grid grid-cols-3 px-6 py-4 items-center hover:bg-gray-50/50 transition-colors">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium text-gray-900">{item.fee_types?.name}</span>
-                    {item.is_override && (
-                      <span className="text-[10px] text-amber-600 font-medium">
-                        Overridden: {item.override_reason}
-                      </span>
-                    )}
-                  </div>
+              {lineItems.map((item) => {
+                const currentItemState = lineItems.find(i => i.id === item.id) || item;
+                return (
+                  <div key={item.id} className="grid grid-cols-3 px-6 py-4 items-center hover:bg-gray-50/50 transition-colors">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-medium text-gray-900">{item.fee_types?.name}</span>
+                      {item.is_override && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-amber-600 font-medium bg-amber-50 px-1.5 py-0.5 rounded">
+                            Overridden: {item.override_reason}
+                          </span>
+                          {item.default_amount !== undefined && (
+                            <span className="text-[10px] text-gray-400">
+                              (Default: ₱{parseFloat(item.default_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-                  <span className="text-right font-mono text-sm font-semibold text-gray-900">
-                    ₱{parseFloat(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
+                    <span className="text-right font-mono text-sm font-semibold text-gray-900">
+                      ₱{parseFloat(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
 
-                  <div className="flex justify-end items-center gap-2">
-                    {item.fee_type_id !== 8 && !isForPayment ? (
-                      <div className="flex flex-col items-end gap-2">
-                        <input
-                          type="number"
-                          placeholder="0.00"
-                          className="w-28 text-right px-3 py-1.5 rounded-xl text-xs font-mono text-gray-900 bg-gray-50 border border-gray-200 placeholder:text-gray-300 outline-none focus:ring-2 focus:ring-gray-100 focus:border-gray-400 transition-all"
-                          value={lineItems.find(i => i.id === item.id).tempAmount}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setLineItems(prev => prev.map(i => i.id === item.id ? { ...i, tempAmount: val, isModified: true } : i));
-                          }}
-                        />
-                        {lineItems.find(i => i.id === item.id).isModified && (
-                          <div className="flex items-center gap-2">
+                    <div className="flex justify-end items-center gap-2">
+                      {item.fee_type_id !== 8 && !isForPayment ? (
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex items-center gap-1.5">
                             <input
-                              placeholder="Reason..."
-                              className="bg-gray-50 border border-gray-200 px-2.5 py-1 text-[11px] text-gray-900 rounded-lg w-36 outline-none focus:border-gray-400"
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setLineItems(prev => prev.map(i => i.id === item.id ? { ...i, tempReason: val } : i));
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              className="w-28 text-right px-3 py-1.5 rounded-xl text-xs font-mono text-gray-900 bg-gray-50 border border-gray-200 placeholder:text-gray-300 outline-none focus:ring-2 focus:ring-gray-100 focus:border-gray-400 transition-all"
+                              value={currentItemState.tempAmount}
+                              onChange={(e) => handleAmountChange(item.id, e.target.value)}
+                              onBlur={() => handleAmountBlur(item.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') handleCancelModification(item.id);
+                                if (e.key === 'Enter' && currentItemState.isModified) handleOverride(item.id);
                               }}
                             />
-                            <button onClick={() => handleOverride(item.id)} className="bg-gray-900 hover:bg-gray-800 text-white p-1.5 rounded-lg transition-colors">
-                              <Save size={11} />
-                            </button>
+                            {item.is_override && !currentItemState.isModified && (
+                              <button
+                                type="button"
+                                onClick={() => handleResetToDefault(item.id)}
+                                disabled={isProcessing}
+                                title="Revert overridden price back to default"
+                                className="text-xs text-gray-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-colors flex items-center gap-1 border border-gray-200 hover:border-amber-200"
+                              >
+                                <RotateCcw size={11} />
+                                <span className="text-[10px] hidden sm:inline">Default</span>
+                              </button>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-gray-300 font-medium">
-                        {item.fee_type_id === 8 ? 'Auto' : '—'}
-                      </span>
-                    )}
+
+                          {currentItemState.isModified && (
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                placeholder="Remarks (Required)..."
+                                value={currentItemState.tempReason}
+                                className="bg-gray-50 border border-gray-200 px-2.5 py-1 text-[11px] text-gray-900 rounded-lg w-36 outline-none focus:border-gray-400"
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setLineItems(prev => prev.map(i => i.id === item.id ? { ...i, tempReason: val } : i));
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleOverride(item.id);
+                                  if (e.key === 'Escape') handleCancelModification(item.id);
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleOverride(item.id)}
+                                disabled={isProcessing}
+                                title="Save Override (Requires remarks)"
+                                className="bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white p-1.5 rounded-lg transition-colors shadow-sm"
+                              >
+                                <Save size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCancelModification(item.id)}
+                                disabled={isProcessing}
+                                title="Cancel & Revert to default price"
+                                className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-1.5 rounded-lg transition-colors"
+                              >
+                                <X size={11} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-gray-300 font-medium">
+                          {item.fee_type_id === 8 ? 'Auto (10%)' : '—'}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

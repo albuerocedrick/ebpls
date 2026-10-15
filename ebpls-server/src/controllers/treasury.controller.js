@@ -190,20 +190,55 @@ const overrideFeeItem = async (req, res, next) => {
     const { id } = req.params; // line item ID
     const { new_amount, reason } = req.body;
 
-    if (new_amount === undefined || new_amount < 0 || !reason) {
-      throw createError('Valid amount and override reason are required.', 400, ERROR_CODES.VALIDATION_ERROR);
+    const parsedAmount = Number(new_amount);
+    if (
+      new_amount === undefined ||
+      new_amount === null ||
+      String(new_amount).trim() === '' ||
+      isNaN(parsedAmount) ||
+      parsedAmount < 0 ||
+      !reason ||
+      !reason.trim()
+    ) {
+      throw createError(
+        'Valid price amount and override remarks/reason are required. Blank remarks or amount cannot be submitted.',
+        400,
+        ERROR_CODES.VALIDATION_ERROR
+      );
     }
 
     const updatedAssessment = await assessmentService.overrideLineItem(
       id, 
-      new_amount, 
-      reason, 
+      parsedAmount, 
+      reason.trim(), 
       req.user.userId
     );
 
     return res.status(200).json({
       success: true,
       message: 'Fee item overridden.',
+      data: updatedAssessment
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Reset a specific fee amount back to default calculated price.
+ */
+const resetFeeItem = async (req, res, next) => {
+  try {
+    const { id } = req.params; // line item ID
+
+    const updatedAssessment = await assessmentService.resetLineItem(
+      id,
+      req.user.userId
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Fee item reverted to default calculated price.',
       data: updatedAssessment
     });
   } catch (err) {
@@ -240,6 +275,21 @@ const getAssessmentByApp = async (req, res, next) => {
         success: true,
         data: null
       });
+    }
+
+    try {
+      const calculatedData = await assessmentService.calculateFees(app_no);
+      if (calculatedData?.lineItems && assessment.assessment_line_items) {
+        assessment.assessment_line_items = assessment.assessment_line_items.map((item) => {
+          const matched = calculatedData.lineItems.find((c) => c.fee_type_id === item.fee_type_id);
+          return {
+            ...item,
+            default_amount: matched ? matched.amount : item.amount
+          };
+        });
+      }
+    } catch (calcErr) {
+      console.warn('[treasury.controller] Could not compute default line item amounts:', calcErr.message);
     }
 
     return res.status(200).json({
@@ -670,6 +720,7 @@ module.exports = {
   assessApplication,
   finalizeAssessment,
   overrideFeeItem,
+  resetFeeItem,
   getAssessmentByApp,
   recordOTCPayment,
   initiateOnlinePayment,
