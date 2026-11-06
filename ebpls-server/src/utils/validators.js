@@ -18,7 +18,7 @@ const DraftPayloadSchema = z.object({
     .min(1, "Step must be at least 1")
     .max(5, "Step must be at most 5"),
   form_data: z
-    .record(z.any(), { invalid_type_error: "form_data must be a valid JSON object" })
+    .record(z.string(), z.any())
     .default({}),
 });
 
@@ -42,10 +42,14 @@ const UAFSubmissionPayloadSchema = z.object({
   franchisor_name: z.string().optional(),
 
   // Barangay Clearance — Phase 3C
-  request_barangay_clearance: z.boolean().default(false),
+  request_barangay_clearance: z.literal(false).default(false),
   
   // Rental Status - Phase 3
   is_renting: z.boolean().default(false),
+  tenancy_type: z.enum(['Rented', 'Owned Commercial', 'Owned Residential']),
+  stall_unit_numbers: z.array(z.string().trim().min(1).max(64)).max(50).default([])
+    .refine(values => new Set(values.map(value => value.toLowerCase())).size === values.length, 'Unit / stall numbers must be unique.'),
+  attestation_agreed: z.literal(true),
 
   // Uploaded documents — array of { requirement_id, file_path, file_name }
   documents: z.array(
@@ -54,28 +58,29 @@ const UAFSubmissionPayloadSchema = z.object({
       file_path: z.string().min(1),
       file_name: z.string().optional().default(''),
     })
-  ).optional().default([]),
+  ).max(100).optional().default([]),
 
   // Line of Business activities
   activities: z.array(
     z.object({
       name: z.string().min(1),
-      capitalization: z.coerce.number().min(0).default(0),
+      capitalization: z.coerce.number().positive(),
       gross_sales_prev_year: z.coerce.number().min(0).default(0),
       units: z.coerce.number().int().min(1).default(1),
       metric_count: z.coerce.number().int().positive().optional().nullable(),
     })
-  ).optional().default([]),
+  ).min(1).max(50),
 
   // Address Data
-  address_line1: z.string().optional(),
-  barangay: z.string().optional(),
-  city: z.string().default('Liliw'),
-  province: z.string().default('Laguna'),
+  address_line1: z.string().trim().min(1),
+  barangay: z.string().trim().min(1),
+  city: z.literal('Liliw').default('Liliw'),
+  province: z.literal('Laguna').default('Laguna'),
 
   // Geolocation Data
-  latitude: z.coerce.number({ required_error: 'Latitude is required' }).min(-90).max(90),
-  longitude: z.coerce.number({ required_error: 'Longitude is required' }).min(-180).max(180),
+  // These are overwritten with the selected barangay's trusted centroid.
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
 }).refine((data) => {
   // Enforce franchisor name requirement if it is a franchise
   if (data.is_franchise && (!data.franchisor_name || data.franchisor_name.trim() === '')) {
@@ -101,6 +106,19 @@ const UploadRequestPayloadSchema = z.object({
   }),
 });
 
+const ApplicantRequirementsQuerySchema = z.object({
+  type_id: z.coerce.number().int().min(1).max(3),
+  org_type_id: z.coerce.number().int().positive().optional(),
+  tenancy_type: z.enum(['Rented', 'Owned Commercial', 'Owned Residential']).optional(),
+  is_renting: z.enum(['true', 'false']).optional(),
+  activity_names: z.preprocess(value => {
+    if (value === undefined) return [];
+    if (typeof value !== 'string') return value;
+    if (value.startsWith('[')) { try { return JSON.parse(value); } catch { return value; } }
+    return value.split(',').map(name => name.trim()).filter(Boolean);
+  }, z.array(z.string()).max(50)),
+});
+
 // -----------------------------------------------------------------
 // 4. Correction Request Payload Schemas
 // -----------------------------------------------------------------
@@ -119,6 +137,7 @@ module.exports = {
   DraftPayloadSchema,
   UAFSubmissionPayloadSchema,
   UploadRequestPayloadSchema,
+  ApplicantRequirementsQuerySchema,
   CorrectionRequestSchema,
   CorrectionRejectSchema,
 };

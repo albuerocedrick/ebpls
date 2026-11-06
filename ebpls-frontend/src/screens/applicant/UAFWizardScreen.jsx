@@ -13,6 +13,8 @@ import { ROUTES, API_ENDPOINTS } from '../../utils/constants';
 import apiClient from '../../utils/apiClient';
 import Button from '../../components/ui/Button';
 import useApplicableRequirements from '../../hooks/useApplicableRequirements';
+import useBarangayLookup from '../../hooks/useBarangayLookup';
+import { validateWizardStep, buildSubmissionPayload } from '../../utils/uafForm';
 
 import Step1_BasicInfo from './uaf-steps/Step1_BasicInfo';
 import Step2_Location from './uaf-steps/Step2_Location';
@@ -28,93 +30,6 @@ const WIZARD_STEPS = [
   { id: 5, label: 'Review',        icon: CheckSquare },
 ];
 
-// -----------------------------------------------------------------
-// Per-step validation rules
-// Returns an array of human-readable error strings (empty = valid).
-// -----------------------------------------------------------------
-const validateStep = (step, formData, requirements = [], activityMetrics = {}) => {
-  const errors = [];
-
-  if (step === 1) {
-    const s = formData.step1;
-    if (!s.type_id)
-      errors.push('Application Type is required.');
-    if (!s.org_type_id)
-      errors.push('Organization Type is required.');
-    if (!s.business_name?.trim())
-      errors.push('Business Name is required.');
-    if (s.is_franchise && !s.franchisor_name?.trim())
-      errors.push('Franchisor Name is required when the business is a franchise.');
-  }
-
-  if (step === 2) {
-    const s = formData.step2;
-    if (!s.address_line1?.trim())
-      errors.push('Address Line 1 (Bldg. No. / Street) is required.');
-    if (!s.barangay?.trim())
-      errors.push('Barangay is required.');
-    if (!s.latitude || !s.longitude)
-      errors.push('Please pin your business location on the map.');
-  }
-
-  if (step === 3) {
-    const lobs = formData.step3.lineOfBusinesses || [];
-    if (lobs.length === 0) {
-      errors.push('At least one Line of Business must be declared.');
-    } else {
-      lobs.forEach((lob, i) => {
-        if (!lob.name?.trim())
-          errors.push(`Line of Business #${i + 1}: please select a business activity.`);
-        if (!lob.capital_investment || Number(lob.capital_investment) <= 0)
-          errors.push(`Line of Business #${i + 1}: Capital Investment must be greater than zero.`);
-        
-        if (lob.name && activityMetrics[lob.name]) {
-          const label = activityMetrics[lob.name].metric;
-          if (!lob.metric_count || Number(lob.metric_count) <= 0) {
-            errors.push(`Line of Business #${i + 1}: "${label}" is required and must be greater than zero.`);
-          }
-        }
-      });
-    }
-  }
-
-  if (step === 4) {
-    const s = formData.step4;
-    const brgyReq = requirements.find(r => r.name === 'Barangay Business Clearance');
-
-    // PATH B: applicant uploads their own clearance — must actually upload it
-    if (!s.request_barangay_clearance && brgyReq) {
-      const hasClearance = (s.documents || []).some((d) => d.requirement_id === brgyReq.id);
-      if (!hasClearance)
-        errors.push('Please upload your Barangay Business Clearance, or choose "Request via Municipality" instead.');
-    }
-
-    // Validate all other requirements
-    requirements.forEach(req => {
-      if (req.name === 'Barangay Business Clearance') return;
-      
-      const doc = (s.documents || []).find(d => d.requirement_id === req.id);
-      const files = doc?.files ? doc.files : (doc ? [doc] : []);
-
-      if (req.name === 'Valid Government ID') {
-        if (files.length !== 2) {
-          errors.push('Please upload both the front and back of your Government ID.');
-        }
-      } else if (req.name === 'Audited Financial Statement / VAT Returns / Gross Sales') {
-        if (files.length === 0) {
-          errors.push('Please upload at least one financial document (Audited Financial Statement, VAT Returns, or Gross Sales).');
-        }
-      } else {
-        if (files.length === 0) {
-          errors.push(`Please upload: ${req.name}.`);
-        }
-      }
-    });
-  }
-
-  return errors;
-};
-
 const UAFWizardScreen = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -128,12 +43,14 @@ const UAFWizardScreen = () => {
   const setStep      = useApplicationStore((state) => state.setStep);
   const formData     = useApplicationStore((state) => state.formData);
   const resetForm    = useApplicationStore((state) => state.resetForm);
-  const setFormField = useApplicationStore((state) => state.setFormField);
+  const loadDraft = useApplicationStore((state) => state.loadDraft);
+  const barangays = useApplicationStore((state) => state.barangays);
   const isAttestationAgreed = useApplicationStore((state) => state.formData.step5.attestation_agreed);
   const activityMetrics = useApplicationStore((state) => state.activityMetrics);
 
   const { isSaving, lastSavedAt } = useAutosave();
-  const { requirements } = useApplicableRequirements();
+  const { requirements, loading: requirementsLoading, error: requirementsError } = useApplicableRequirements();
+  useBarangayLookup();
 
   // ─── Load existing application data when editing a returned app ──
   useEffect(() => {
@@ -145,33 +62,7 @@ const UAFWizardScreen = () => {
         const data = response.data || response;
 
         if (data) {
-          // Pre-fill Step 1
-          if (data.step1) {
-            Object.entries(data.step1).forEach(([key, value]) => {
-              if (value !== null && value !== undefined) {
-                setFormField('step1', key, value);
-              }
-            });
-          }
-          // Pre-fill Step 2
-          if (data.step2) {
-            Object.entries(data.step2).forEach(([key, value]) => {
-              if (value !== null && value !== undefined) {
-                setFormField('step2', key, value);
-              }
-            });
-          }
-          // Pre-fill Step 3
-          if (data.step3?.lineOfBusinesses?.length > 0) {
-            setFormField('step3', 'lineOfBusinesses', data.step3.lineOfBusinesses);
-          }
-          // Pre-fill Step 4 (Documents)
-          if (data.step4) {
-            setFormField('step4', 'request_barangay_clearance', data.step4.request_barangay_clearance);
-            if (data.step4.documents?.length > 0) {
-              setFormField('step4', 'documents', data.step4.documents);
-            }
-          }
+          loadDraft(null, 1, data);
           // Store BPLO feedback
           if (data.feedback) {
             setFeedback(data.feedback);
@@ -188,10 +79,14 @@ const UAFWizardScreen = () => {
     };
 
     loadForEdit();
-  }, [editAppNo, setFormField]);
+  }, [editAppNo, loadDraft]);
 
   const handleNext = () => {
-    const errors = validateStep(current_step, formData, requirements, activityMetrics);
+    if (current_step === 4 && (requirementsLoading || requirementsError)) {
+      setStepErrors([requirementsError || 'Wait for document requirements to load.']);
+      return;
+    }
+    const errors = validateWizardStep(current_step, formData, requirements, activityMetrics, barangays);
     if (errors.length > 0) {
       setStepErrors(errors);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -210,47 +105,11 @@ const UAFWizardScreen = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const payload = {
-        application_no: editAppNo || undefined,
-        type_id: Number(formData.step1.type_id),
-        // payment_mode_id removed — payment is always annual (migration 033)
-        business_name: formData.step1.business_name,
-        trade_name: formData.step1.trade_name || undefined,
-        org_type_id: Number(formData.step1.org_type_id),
-        dti_sec_cda_reg_no: formData.step1.dti_sec_cda_reg_no || undefined,
-        is_franchise: formData.step1.is_franchise,
-        franchisor_name: formData.step1.franchisor_name || undefined,
-        // Phase 3C — tells the backend which clearance path to create
-        request_barangay_clearance: formData.step4.request_barangay_clearance ?? false,
-        // Uploaded documents — only include docs that have a valid file_path
-        documents: (formData.step4.documents || []).flatMap((doc) => {
-          const files = doc.files ? doc.files : [doc];
-          return files
-            .filter((f) => f.file_path)
-            .map((f) => ({
-              requirement_id: doc.requirement_id,
-              file_path: f.file_path,
-              file_name: f.file_name || '',
-            }));
-        }),
-        // Line of Business activities from Step 3
-        activities: (formData.step3.lineOfBusinesses || [])
-          .filter((lob) => lob.name)
-          .map((lob) => ({
-            name: lob.name,
-            capitalization: parseFloat(lob.capital_investment) || 0,
-            gross_sales_prev_year: 0,
-            units: parseInt(lob.units) || 1,
-            metric_count: lob.metric_count ? parseInt(lob.metric_count) : null,
-          })),
-        address_line1: formData.step2.address_line1,
-        barangay: formData.step2.barangay,
-        city: formData.step2.city,
-        province: formData.step2.province,
-        latitude: formData.step2.latitude,
-        longitude: formData.step2.longitude,
-        is_renting: formData.step2.is_renting ?? false,
-      };
+      const errors = [1, 2, 3, 4].flatMap(step => validateWizardStep(step, formData, requirements, activityMetrics, barangays));
+      if (requirementsLoading || requirementsError) errors.push(requirementsError || 'Wait for document requirements to load.');
+      if (!formData.step5.attestation_agreed) errors.push('Please agree to the applicant attestation.');
+      if (errors.length) { setStepErrors(errors); return; }
+      const payload = buildSubmissionPayload(formData, requirements, editAppNo);
 
       const response = await apiClient.post(API_ENDPOINTS.APPLICATIONS_SUBMIT, payload);
 

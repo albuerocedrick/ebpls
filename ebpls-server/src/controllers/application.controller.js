@@ -105,7 +105,7 @@ const submitUAF = async (req, res, next) => {
     // Strict validation of the decomposed payload
     const validatedData = validators.UAFSubmissionPayloadSchema.parse(req.body);
 
-    // Core business logic (pseudo-atomic insert sequence)
+    // Validate requirements, then commit the complete submission atomically.
     const applicationNo = await applicationService.submitApplication(taxpayerId, validatedData);
 
     // Return the response immediately — email is non-blocking (fire-and-forget below)
@@ -304,7 +304,9 @@ const getApplicationForEdit = async (req, res, next) => {
           province,
           latitude,
           longitude,
-          is_renting
+          is_renting,
+          tenancy_type,
+          stall_unit_numbers
         )
       `)
       .eq('application_no', app_no)
@@ -349,13 +351,6 @@ const getApplicationForEdit = async (req, res, next) => {
       `)
       .eq('application_no', app_no);
 
-    // 5. Determine Barangay Clearance request status
-    // If 'Barangay Business Clearance' exists but has no file_path, it means it was requested via municipality.
-    const brgyReq = (docRows || []).find(d => d.requirement_types?.name === 'Barangay Business Clearance');
-    const isBrgyRequested = brgyReq ? !brgyReq.file_path : false;
-
-    // 6. Map requirement names back to doc_types for the wizard is removed (Phase 3)
-
     const biz = app.businesses;
 
     return res.status(200).json({
@@ -382,8 +377,10 @@ const getApplicationForEdit = async (req, res, next) => {
           latitude: biz.latitude,
           longitude: biz.longitude,
           is_renting: biz.is_renting,
+          tenancy_type: biz.tenancy_type,
         },
         step3: {
+          stall_unit_numbers: biz.stall_unit_numbers || [],
           lineOfBusinesses: (activities || []).map((a) => ({
             name: a.business_activities?.name || '',
             capital_investment: String(a.capitalization || 0),
@@ -392,7 +389,7 @@ const getApplicationForEdit = async (req, res, next) => {
           })),
         },
         step4: {
-          request_barangay_clearance: isBrgyRequested,
+          request_barangay_clearance: false,
           documents: (docRows || [])
             .filter(d => d.file_path)
             .flatMap(d => d.file_path.split(',').map(path => ({
@@ -502,22 +499,15 @@ const getUafLookups = async (req, res, next) => {
  */
 const getApplicableRequirements = async (req, res, next) => {
   try {
-    const { type_id, org_type_id, activity_names, is_renting } = req.query;
-
-    if (!type_id) {
-      throw createError('type_id is required', 400, ERROR_CODES.VALIDATION_ERROR);
-    }
-
-    const typeIdInt = parseInt(type_id, 10);
-    const orgTypeIdInt = org_type_id ? parseInt(org_type_id, 10) : null;
-    const activityNamesArr = activity_names ? activity_names.split(',').map(a => a.trim()).filter(Boolean) : [];
-    const isRentingBool = is_renting === 'true';
+    const { type_id, org_type_id, activity_names, tenancy_type, is_renting } = validators.ApplicantRequirementsQuerySchema.parse(req.query);
+    const tenancyType = tenancy_type || (is_renting === 'true' ? 'Rented' : 'Owned Commercial');
 
     const requirements = await requirementService.resolveApplicableRequirements({
-      application_type_id: typeIdInt,
-      org_type_id: orgTypeIdInt,
-      activity_names: activityNamesArr,
-      is_renting: isRentingBool,
+      application_type_id: type_id,
+      org_type_id,
+      activity_names,
+      tenancy_type: tenancyType,
+      is_renting: tenancyType === 'Rented',
     });
 
     return res.status(200).json({

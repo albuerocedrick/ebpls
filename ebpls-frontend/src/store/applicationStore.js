@@ -1,51 +1,7 @@
 // src/store/applicationStore.js
 import { create } from 'zustand';
 
-/**
- * Empty schema perfectly aligned with DB migrations (businesses, applications).
- * Segmented by steps to make UI mapping and validation easier.
- */
-const initialFormState = {
-  step1: {
-    // Reference: applications table & lookups
-    type_id: '',               // New, Renewal, Additional
-    // payment_mode_id removed — payment is always annual (migration 033)
-    // Reference: businesses table
-    business_name: '',
-    trade_name: '',
-    org_type_id: '',           // Sole Prop, Corp, etc.
-    dti_sec_cda_reg_no: '',
-    is_franchise: false,
-    franchisor_name: '',
-  },
-  step2: {
-    // Reference: businesses table physical address
-    address_line1: '',
-    barangay: '',
-    city: 'Liliw',             // Enforced default based on DB schema
-    province: 'Laguna',        // Enforced default based on DB schema
-    latitude: null,            // Decimal (from Leaflet)
-    longitude: null,           // Decimal (from Leaflet)
-    is_renting: false,
-    location_mismatch: false,
-  },
-  step3: {
-    // Array to hold multiple Line of Business activities
-    lineOfBusinesses: [],      // Expected: { id/name, capital_investment, etc. }
-  },
-  step4: {
-    // Phase 3C — Barangay Clearance mode selection
-    // true  = applicant requests the municipality to forward clearance to barangay
-    // false = applicant will upload their own existing barangay clearance document
-    request_barangay_clearance: false,
-    // Array to hold uploaded document pre-signed URLs or path references
-    documents: [],             // Expected: { requirement_id, file_path, file_name }
-  },
-  step5: {
-    // Attestation and final review confirmation
-    attestation_agreed: false,
-  }
-};
+import { initialFormState, normalizeDraftFormData } from '../utils/uafForm';
 
 /**
  * STATUS_METADATA: Centralized UI config for application statuses.
@@ -69,7 +25,7 @@ export const STATUS_METADATA = {
   'Completed': { label: 'Completed', color: 'emerald' }
 };
 
-const useApplicationStore = create((set, get) => ({
+const useApplicationStore = create((set) => ({
   // Draft Metadata
   draft_id: null,
   current_step: 1,
@@ -78,12 +34,21 @@ const useApplicationStore = create((set, get) => ({
 
   // Dynamic reference data from lookups (not persisted in drafts)
   activityMetrics: {},
+  barangays: [],
+  barangaysLoading: false,
+  barangaysError: null,
 
   // UAF Form Payload
   formData: JSON.parse(JSON.stringify(initialFormState)),
 
   // Actions
   setActivityMetrics: (map) => set({ activityMetrics: map }),
+  setBarangayLookup: (barangays, barangaysLoading, barangaysError) => set({ barangays, barangaysLoading, barangaysError }),
+  setLocation: (barangay) => set(state => ({ formData: {
+    ...state.formData,
+    step2: { ...state.formData.step2, barangay: barangay.name, city: 'Liliw', province: 'Laguna',
+      latitude: Number(barangay.latitude), longitude: Number(barangay.longitude), location_mismatch: false }
+  } })),
   setStep: (stepNumber) => set({ current_step: stepNumber }),
 
   /**
@@ -107,8 +72,8 @@ const useApplicationStore = create((set, get) => ({
    */
   loadDraft: (draft_id, current_step, formData) => set({
     draft_id,
-    current_step,
-    formData: { ...initialFormState, ...formData }
+    current_step: Math.max(1, Math.min(5, Number(current_step) || 1)),
+    formData: normalizeDraftFormData(formData)
   }),
 
   /**

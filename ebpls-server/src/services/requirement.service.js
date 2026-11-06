@@ -17,7 +17,7 @@ const { ERROR_CODES } = require('../utils/constants');
  * @param {boolean} [params.is_renting=false] - Whether the applicant is renting the location.
  * @returns {Promise<Array>} Sorted array of applicable requirements.
  */
-async function resolveApplicableRequirements({ application_type_id, org_type_id, activity_names = [], is_renting = false }) {
+async function resolveApplicableRequirements({ application_type_id, org_type_id, activity_names = [], tenancy_type = 'Owned Commercial', is_renting = false }) {
   try {
     // Step 1: Fetch all active requirement types that apply to the given application type
     let query = supabaseAdmin
@@ -92,9 +92,11 @@ async function resolveApplicableRequirements({ application_type_id, org_type_id,
            applicableRequirements.push(req);
          }
       } else if (req.condition_type === 'rental_status') {
-         if (is_renting === true) {
+         if (tenancy_type === 'Rented' || is_renting === true) {
            applicableRequirements.push(req);
          }
+      } else if (req.condition_type === 'tenancy_type') {
+         if (matchValues.includes(tenancy_type)) applicableRequirements.push(req);
       }
     }
 
@@ -108,7 +110,7 @@ async function resolveApplicableRequirements({ application_type_id, org_type_id,
     });
 
   } catch (err) {
-    if (err.status) {
+    if (err.statusCode) {
        throw err;
     }
     throw createError('Error resolving applicable requirements: ' + err.message, 500, ERROR_CODES.INTERNAL_ERROR);

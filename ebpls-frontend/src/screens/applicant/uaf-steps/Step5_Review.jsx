@@ -9,7 +9,6 @@ const Step5_Review = () => {
   const setFormField = useApplicationStore((state) => state.setFormField);
 
   const { step1, step2, step3, step4, step5 } = formData;
-  const requestClearance = step4.request_barangay_clearance ?? false;
 
   const { requirements, loading: reqLoading } = useApplicableRequirements();
 
@@ -20,15 +19,6 @@ const Step5_Review = () => {
     if (doc.files && Array.isArray(doc.files)) return doc.files;
     return [doc];
   };
-
-  const getBarangayClearanceDoc = () => {
-    const brgyReq = requirements.find(r => r.name === 'Barangay Business Clearance');
-    if (!brgyReq) return null;
-    const files = getUploadedFiles(brgyReq.id);
-    return files.length > 0 ? files[0] : null;
-  };
-
-  const barangayClearanceDoc = getBarangayClearanceDoc();
 
   const handleAttestation = (e) => {
     setFormField('step5', 'attestation_agreed', e.target.checked);
@@ -108,10 +98,15 @@ const Step5_Review = () => {
             <div className="border-t border-zinc-200 pt-3">
               <p className="font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">Ownership status</p>
               <p className="mt-0.5 flex items-center gap-1.5 text-sm font-medium text-zinc-900">
-                {step2.is_renting ? 'Renting' : 'Own property'}
+                {step2.tenancy_type}
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="rounded-lg border border-zinc-200 bg-white p-4 md:col-span-2">
+          <h3 className="text-sm font-medium text-zinc-900">Covered units / stalls</h3>
+          <p className="mt-2 text-sm text-zinc-700">{step3.stall_unit_numbers?.length ? step3.stall_unit_numbers.join(', ') : 'No separate unit / stall numbers declared'}</p>
         </div>
 
         {/* Lines of Business Summary (Uses step3) */}
@@ -153,47 +148,19 @@ const Step5_Review = () => {
             <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">Uploaded documents</h3>
           </div>
           <span className="rounded-md border border-zinc-200 bg-white px-2 py-0.5 font-mono text-[10px] text-zinc-700 tabular-nums">
-            {step4.documents?.length || 0} files
+            {requirements.reduce((count, requirement) => count + getUploadedFiles(requirement.id).filter(file => file.file_path).length, 0)} files
           </span>
         </div>
         <div className="space-y-3 p-4">
-
-          {/* Barangay Clearance — Phase 3C row */}
-          <div className="flex items-start gap-3 border-b border-zinc-100 py-2">
-            <div className="mt-0.5 shrink-0 rounded-md border border-zinc-200 bg-white p-1.5 text-zinc-500">
-              <Building2 size={14} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-zinc-900">
-                Barangay Business Clearance
-              </p>
-              {requestClearance ? (
-                <span className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-zinc-900 px-2 py-0.5 font-mono text-[10px] tracking-[0.08em] text-white uppercase">
-                  <CheckCircle2 size={10} />
-                  Requested via municipality
-                </span>
-              ) : barangayClearanceDoc ? (
-                <span className="mt-1.5 inline-flex max-w-full items-center gap-1 truncate rounded-md border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-700">
-                  <Upload size={10} className="shrink-0" />
-                  <span className="truncate">{barangayClearanceDoc.file_name}</span>
-                </span>
-              ) : (
-                <span className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-zinc-300 bg-white px-2 py-0.5 font-mono text-[10px] tracking-[0.08em] text-zinc-700 uppercase">
-                  Not uploaded — go back to step 4
-                </span>
-              )}
-            </div>
-          </div>
 
           {/* Other uploaded documents */}
           {reqLoading ? (
              <div className="flex items-center gap-2 py-2 text-sm text-zinc-500">
                <Loader2 size={14} className="animate-spin" /> Loading requirements…
              </div>
-          ) : requirements.filter(r => r.name !== 'Barangay Business Clearance').length > 0 ? (
+          ) : requirements.length > 0 ? (
             <ul className="space-y-3">
               {requirements
-                .filter(r => r.name !== 'Barangay Business Clearance')
                 .map((req, i) => {
                   const files = getUploadedFiles(req.id);
                   const isUploaded = files.length > 0;

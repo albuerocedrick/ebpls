@@ -21,6 +21,10 @@ const Step3_Activities = () => {
   const setFormField = useApplicationStore((state) => state.setFormField);
   const activityMetrics = useApplicationStore((state) => state.activityMetrics);
   const setActivityMetrics = useApplicationStore((state) => state.setActivityMetrics);
+  const barangays = useApplicationStore(state => state.barangays);
+  const barangayName = useApplicationStore(state => state.formData.step2.barangay);
+  const zone = barangays.find(b => b.name === barangayName)?.zone;
+  const stalls = data.stall_unit_numbers || [];
 
   const [businessActivities, setBusinessActivities] = useState(FALLBACK_ACTIVITIES);
 
@@ -92,6 +96,23 @@ const Step3_Activities = () => {
           </p>
         </div>
       </div>
+
+      {zone && <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+        <p className="font-medium">{zone.name} · {zone.foot_traffic_level} foot traffic</p>
+        <p className="mt-1">Recommended minimum capital: {Number(zone.min_capital_floor).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}.</p>
+      </div>}
+
+      <section className="rounded-lg border border-zinc-200 bg-white p-5">
+        <h3 className="text-sm font-medium text-zinc-900">Covered units / stalls</h3>
+        <p className="mt-1 text-xs text-zinc-500">Declare each unit covered by this application. Leave this section empty if no unit / stall numbers apply.</p>
+        <div className="mt-3 space-y-3">
+          {stalls.map((stall, index) => <div key={index} className="flex items-center gap-2">
+            <input aria-label={`Unit / stall number ${index + 1}`} maxLength={64} value={stall} className={inputClasses} onChange={e => setFormField('step3', 'stall_unit_numbers', stalls.map((s, i) => i === index ? e.target.value : s))} />
+            <button type="button" aria-label={`Remove unit / stall ${index + 1}`} onClick={() => setFormField('step3', 'stall_unit_numbers', stalls.filter((_, i) => i !== index))} className="rounded-md border border-zinc-200 p-2"><Trash2 size={16} /></button>
+          </div>)}
+        </div>
+        <button type="button" disabled={stalls.length >= 50} onClick={() => setFormField('step3', 'stall_unit_numbers', [...stalls, ''])} className="mt-3 flex items-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm disabled:opacity-50"><Plus size={15} />Add Unit / Stall Number</button>
+      </section>
 
       {/* Dynamic LOB List */}
       <div className="flex flex-col gap-4">

@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { UploadCloud, FileText, CheckCircle2, Trash2, Loader2, AlertCircle, Plus } from 'lucide-react';
 import apiClient from '../../utils/apiClient';
 import { API_ENDPOINTS } from '../../utils/constants';
+import { validateDocumentFile } from '../../utils/uploadValidation';
 
 const formatFileSize = (bytes) => {
   if (bytes === undefined || bytes === null || isNaN(bytes)) return '';
@@ -19,6 +20,7 @@ const SingleDropzone = ({ value, onChange, onRemove, disabled, onUploadStart, on
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [fileError, setFileError] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleDragOver = useCallback((e) => {
@@ -34,6 +36,9 @@ const SingleDropzone = ({ value, onChange, onRemove, disabled, onUploadStart, on
 
   const processFile = async (file) => {
     if (!file || disabled) return;
+    const error = validateDocumentFile(file);
+    setFileError(error);
+    if (error) return;
 
     setIsUploading(true);
     setUploadProgress(10);
@@ -83,7 +88,7 @@ const SingleDropzone = ({ value, onChange, onRemove, disabled, onUploadStart, on
     }
   };
 
-  const handleDrop = useCallback((e) => {
+  const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
     if (disabled) return;
@@ -91,7 +96,7 @@ const SingleDropzone = ({ value, onChange, onRemove, disabled, onUploadStart, on
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processFile(e.dataTransfer.files[0]);
     }
-  }, [onChange, disabled]);
+  };
 
   const handleFileSelect = (e) => {
     if (disabled) return;
@@ -115,6 +120,7 @@ const SingleDropzone = ({ value, onChange, onRemove, disabled, onUploadStart, on
 
   return (
     <div className="flex h-full flex-col gap-2">
+      {fileError && <p role="alert" className="text-xs text-red-700">{fileError}</p>}
       {label && (
         <span className="font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
           {label}
@@ -322,7 +328,7 @@ const DocumentUploadPanel = ({ title, description, value, onChange, onRemove, di
     return (
       <div className="p-4">
         <SingleDropzone
-          value={value}
+          value={Array.isArray(value) ? value[0] || null : value}
           onChange={handleSingleChange}
           onRemove={handleSingleRemove}
           disabled={disabled}
