@@ -13,7 +13,14 @@ Owner: Developer 1. Scope: approved revisions plan v2.0, Phase 1 only.
 - [x] Local PostgreSQL migration/constraint/RLS checks and API tests pass (15 tests).
 - [x] Frontend production build and focused Admin page lint pass.
 - [x] Browser smoke check with isolated sample data: all 33 barangays render, a capital-floor edit saves, and a barangay zone dropdown saves its new assignment.
-- [ ] Apply migration 044 to the shared Supabase database and verify the live Admin workflow. Sign-in with the correct account succeeded and the account can see linked project `qdnljtlaopxuhwzhytve`. The project status is `INACTIVE`; temporary database login creation times out (HTTP 544) and the project's REST hostname does not resolve. Resume/restore the project before retrying. No remote database changes have been made.
+- [x] Applied migration 044 to the shared Supabase database on November 6, 2026. The project was resumed and is `ACTIVE_HEALTHY`. The dry run listed only migration 044, and the remote migration history now records 001–044.
+- [x] Read-only live SQL verification: all three expected rate bands, 33 active barangays with complete coordinates/zone IDs, and zone RLS enabled. Starter distribution: Zone 1 = 5, Zone 2 = 0, Zone 3 = 28.
+- [x] Implementation committed and pushed to `origin/main` as `9a47c3d`.
+- [x] Live Admin controller write/persistence verification passed after the user explicitly approved the temporary production test. A temporary zone was created, its floor/multiplier changed and independently read back, Bayate was reassigned and independently read back, and the before/after values were confirmed in the live audit log. Bayate's original zone was restored and the temporary zone deleted. Audit entries remain as approved, attributed to the system rather than an impersonated Admin.
+- [x] Live Admin read controller and joined barangay lookup passed using the backend's configured Supabase client after DNS propagation completed.
+- [x] Browser verification against the live API: the user signed into the real Admin application (backend port 5000, frontend port 5173). Location Zones displayed all three specified rates; Barangays & Zoning displayed 33 entries with live coordinates and assignments. Bayate was visibly restored to Zone 3 after the approved test. The live Admin page is left open for review.
+
+Technical implementation, deployment, live persistence, audit verification, and browser verification are complete. Authoritative confirmation of the provisional starter data remains a separate sign-off item before fee assessment rollout.
 
 ## Starter data decision
 
@@ -38,6 +45,12 @@ npm run db:push
 ```
 
 Review the dry-run migration list first. The Phase 1 migration is `044_location_zones_and_centroids.sql`; earlier unapplied migrations must be reviewed separately. Alternatively, execute that file in the linked Supabase project's SQL Editor. Use the project's existing migration deployment convention to keep migration history consistent.
+
+Migration 044 is already applied to the current linked project; do not execute it again manually. For a repeatable read-only verification summary, run:
+
+```powershell
+npx supabase db query --linked --file ..\scripts\verify-phase1.sql
+```
 
 If the CLI returns HTTP 403, the project owner must grant this account appropriate database-management access or apply the migration from an authorized account. Do not relink this repository to an unrelated project to bypass that error.
 
