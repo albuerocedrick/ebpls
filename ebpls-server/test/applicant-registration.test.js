@@ -102,6 +102,36 @@ test('failed document or activity writes roll back business/application changes 
   }
 });
 
+test('returned-app resubmission persists the gross sales retained by the wizard', async () => {
+  const original = await payload('Owned Commercial');
+  original.type_id = 2;
+  original.activities[0].gross_sales_prev_year = 500000;
+  const appNo = await submit(original);
+  await db.query("UPDATE applications SET status='Returned' WHERE application_no=$1", [appNo]);
+  const { rows: [saved] } = await db.query('SELECT capitalization,gross_sales_prev_year FROM application_activities WHERE application_no=$1', [appNo]);
+  const form = formUtils.normalizeDraftFormData({
+    step3: { lineOfBusinesses: [{ name: 'Retail', capital_investment: String(saved.capitalization), gross_sales_prev_year: String(saved.gross_sales_prev_year) }] },
+  });
+  const next = formUtils.buildSubmissionPayload(form, [], appNo);
+  await submit({ ...original, application_no: appNo, activities: [{ ...next.activities[0], activity_id: original.activities[0].activity_id }] });
+  const { rows: activities } = await db.query('SELECT capitalization,gross_sales_prev_year FROM application_activities WHERE application_no=$1', [appNo]);
+  assert.equal(activities.length, 1);
+  assert.equal(Number(activities[0].gross_sales_prev_year), 500000);
+  assert.equal(Number(activities[0].capitalization), 20000);
+});
+
+test('gross sales validation allows zero and positive amounts and rejects invalid declarations', () => {
+  const form = formUtils.normalizeDraftFormData({ step3: { lineOfBusinesses: [{ name: 'Retail', capital_investment: '20000' }] } });
+  for (const amount of ['', '0', '500000.25']) {
+    form.step3.lineOfBusinesses[0].gross_sales_prev_year = amount;
+    assert.deepEqual(formUtils.validateWizardStep(3, form), []);
+  }
+  for (const amount of ['-1', 'invalid', 'Infinity']) {
+    form.step3.lineOfBusinesses[0].gross_sales_prev_year = amount;
+    assert.ok(formUtils.validateWizardStep(3, form).some(message => message.includes('gross sales')));
+  }
+});
+
 test('resubmission enforces ownership and locks submitted applications', async () => {
   const p=await payload(); const appNo=await submit(p); p.application_no=appNo;
   await assert.rejects(submit(p,other),{code:'P0002'});

@@ -2,6 +2,8 @@
 
 Owner: Developer 1. Date: November 6, 2026.
 
+The subsequent [Phase 1–3 regression review](phase_1_to_3_regression_review.md) records the returned-application gross-sales fix, barangay rename protection, and 47 passing tests.
+
 ## Implemented behavior
 
 - BPLO's existing verify endpoint calculates the bill automatically and commits the assessment header, fee items, application status **Assessed**, and mandatory audit entries together. Treasury no longer initiates assessment.

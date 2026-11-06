@@ -38,7 +38,7 @@ for (const service of ['application', 'requirement', 'storage', 'email']) stub(`
 stub('../src/middlewares/auth.middleware', {
   authenticate(req, res, next) {
     if (!req.headers['x-test-role']) return res.status(401).json({ success: false });
-    req.user = { userId: 'admin-id', roleName: req.headers['x-test-role'] };
+    req.user = { userId: 'admin-id', taxpayerId: 'applicant-id', roleName: req.headers['x-test-role'] };
     next();
   },
 });
@@ -126,6 +126,62 @@ test('barangay reassignment to an active zone saves and audits', async () => {
   assert.equal(res.body.data.zone_id, 2);
   assert.deepEqual(audit[0].oldValue, old);
   assert.deepEqual(audit[0].newValue, { zone_id: 2 });
+});
+
+test('barangay renames are rejected before any write, including combined zoning changes', async () => {
+  for (const body of [{ name: 'Bayate renamed' }, { name: 'Bayate renamed', zone_id: 2 }]) {
+    pending.push({ table: 'barangays', data: { id: 1, name: 'Bayate', zone_id: 1 } });
+    const res = await request('/api/admin/master-data/barangays/1', { method: 'PUT', body });
+    assert.equal(res.status, 400);
+    assert.match(res.body.message, /Barangay names cannot be changed/);
+  }
+  assert.ok(queries.every(query => !query.steps.some(([method]) => method === 'update')));
+  assert.equal(audit.length, 0);
+});
+
+test('saving an unchanged barangay name still permits coordinate and zone edits', async () => {
+  const old = { id: 1, name: 'Bayate', zone_id: 1, latitude: 14.1, longitude: 121.4, is_active: true };
+  const body = { name: 'Bayate', zone_id: 2, latitude: 14.2, longitude: 121.5, is_active: true };
+  pending.push({ table: 'barangays', data: old }, { table: 'location_zones', data: { id: 2, is_active: true } }, { table: 'barangays', data: { ...old, ...body } });
+  const res = await request('/api/admin/master-data/barangays/1', { method: 'PUT', body });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.name, 'Bayate');
+  assert.deepEqual(audit[0].newValue, body);
+});
+
+test('returned-app edit response preserves gross sales through the wizard and tax calculation', async () => {
+  const { pathToFileURL } = require('node:url');
+  const path = require('node:path');
+  const { normalizeDraftFormData, buildSubmissionPayload } = await import(pathToFileURL(path.join(__dirname, '../../ebpls-frontend/src/utils/uafForm.js')));
+  const { computeAssessment } = require('../src/utils/assessment-engine');
+  for (const grossSales of [500000, 0]) {
+    pending.push(
+      { table: 'applications', data: { application_no: 'APP-RETURNED', status: 'Returned', type_id: 2, businesses: { business_name: 'Returned business', org_type_id: 1, tenancy_type: 'Owned Commercial', stall_unit_numbers: ['12'] } } },
+      { table: 'application_activities', data: [{ capitalization: 20000, gross_sales_prev_year: grossSales, metric_count: 12, business_activities: { name: 'Retail' } }] },
+      { table: 'application_data_reviews', data: [] },
+      { table: 'doc_verifications', data: [] },
+    );
+    const res = await request('/api/applications/APP-RETURNED/edit', { role: 'Applicant' });
+    assert.equal(res.status, 200);
+    const payload = buildSubmissionPayload(normalizeDraftFormData(res.body.data), [], 'APP-RETURNED');
+    assert.equal(payload.activities[0].gross_sales_prev_year, grossSales);
+    assert.equal(payload.activities[0].capitalization, 20000);
+    assert.deepEqual(payload.stall_unit_numbers, ['12']);
+    const result = computeAssessment({ application: { type_id: 2 }, barangay_active: true,
+      zone: { is_active: true, fee_multiplier: 0.8, min_capital_floor: 10000 }, activities: payload.activities,
+      fee_types: [{ id: 1, name: 'Business Tax', computation_basis: 'Gross_Sales', percentage_value: 0.02 }],
+    });
+    assert.equal(result.totalAmount, grossSales ? 10000 : 400);
+  }
+  assert.ok(queries[0].steps.some(step => step[0] === 'eq' && step[1] === 'businesses.taxpayer_id' && step[2] === 'applicant-id'));
+});
+
+test('failed activity loading cannot return an incomplete edit form', async () => {
+  pending.push(
+    { table: 'applications', data: { application_no: 'APP-RETURNED', status: 'Returned', businesses: {} } },
+    { table: 'application_activities', error: { message: 'Database unavailable' } },
+  );
+  assert.equal((await request('/api/applications/APP-RETURNED/edit', { role: 'Applicant' })).status, 500);
 });
 
 test('duplicate names, missing records, and referenced-zone deletion return useful errors', async () => {

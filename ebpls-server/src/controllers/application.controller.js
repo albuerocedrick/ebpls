@@ -322,7 +322,7 @@ const getApplicationForEdit = async (req, res, next) => {
     }
 
     // 2. Fetch activities
-    const { data: activities } = await supabaseAdmin
+    const { data: activities, error: activitiesError } = await supabaseAdmin
       .from('application_activities')
       .select(`
         activity_id,
@@ -332,6 +332,10 @@ const getApplicationForEdit = async (req, res, next) => {
         business_activities ( name )
       `)
       .eq('application_no', app_no);
+
+    if (activitiesError) {
+      throw createError('Unable to load the saved business activities. Please try again.', 500, ERROR_CODES.INTERNAL_ERROR);
+    }
 
     // 3. Fetch data review discrepancies (remarks from BPLO)
     const { data: dataReviews } = await supabaseAdmin
@@ -384,6 +388,7 @@ const getApplicationForEdit = async (req, res, next) => {
           lineOfBusinesses: (activities || []).map((a) => ({
             name: a.business_activities?.name || '',
             capital_investment: String(a.capitalization || 0),
+            gross_sales_prev_year: String(a.gross_sales_prev_year ?? 0),
             units: 1,
             metric_count: a.metric_count ? String(a.metric_count) : '',
           })),

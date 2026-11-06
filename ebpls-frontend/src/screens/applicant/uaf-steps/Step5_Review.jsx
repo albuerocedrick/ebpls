@@ -128,6 +128,7 @@ const Step5_Review = () => {
                     <span className="font-medium">{lob.name || 'Unnamed activity'}</span>
                     <span className="font-mono text-zinc-500 tabular-nums">
                       {' '}— cap. inv. ₱{parseFloat(lob.capital_investment || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                      {' '}· previous year gross sales ₱{Number(lob.gross_sales_prev_year || 0).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                     </span>
                   </li>
                 ))}

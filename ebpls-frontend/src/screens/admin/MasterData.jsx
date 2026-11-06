@@ -154,6 +154,7 @@ const MasterData = () => {
 
   const renderInput = (col, value, onChange, isProtected = false, currentForm = {}) => {
     let disabled = isProtected && (col === 'name' || col === 'key');
+    if (activeTable.id === 'barangays' && col === 'name' && currentForm.id !== undefined) disabled = true;
 
     // Conditional disabling for Fee Types based on computation basis
     if (activeTable.id === 'fee_types') {
@@ -334,7 +335,7 @@ const MasterData = () => {
         <div className="flex-1 min-w-0">
           {['barangays', 'location_zones'].includes(activeTable.id) && (
             <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              Review starter zoning before using it for assessments: Poblacion barangays start in Zone 1; all others start in Zone 3. Assign confirmed highway/main-road barangays to Zone 2. Coordinates are derived from barangay boundaries and can be replaced with approved reference points.
+              Review starter zoning before using it for assessments: Poblacion barangays start in Zone 1; all others start in Zone 3. Assign confirmed highway/main-road barangays to Zone 2. Coordinates are derived from barangay boundaries and can be replaced with approved reference points. Existing barangay names are locked to preserve application links.
             </p>
           )}
           {loadError && (

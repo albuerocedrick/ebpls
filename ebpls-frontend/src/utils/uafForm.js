@@ -56,6 +56,8 @@ export function validateWizardStep(step, form, requirements = [], metrics = {}, 
       if (names.has(activity.name)) errors.push('Declare each business activity only once.');
       names.add(activity.name);
       if (!(Number(activity.capital_investment) > 0)) errors.push(`Line of Business #${i + 1}: Capital Investment must be greater than zero.`);
+      const grossSales = Number(activity.gross_sales_prev_year || 0);
+      if (!Number.isFinite(grossSales) || grossSales < 0) errors.push(`Line of Business #${i + 1}: Previous year gross sales must be zero or greater.`);
       if (metrics[activity.name] && !(Number(activity.metric_count) > 0)) errors.push(`Line of Business #${i + 1}: ${metrics[activity.name].metric} is required.`);
     });
     const stalls = form.step3.stall_unit_numbers || [];

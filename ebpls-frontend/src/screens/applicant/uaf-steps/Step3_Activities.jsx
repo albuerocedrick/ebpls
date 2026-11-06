@@ -139,7 +139,7 @@ const Step3_Activities = () => {
                   </Select>
                 </div>
 
-                {/* Capital Investment / Gross Sales */}
+                {/* Capital Investment */}
                 <div className="md:col-span-4">
                   <label className={labelClasses}>Capital investment (₱) <span className="text-zinc-900">*</span></label>
                   <div className="relative">
@@ -168,6 +168,21 @@ const Step3_Activities = () => {
                     onChange={(e) => handleChange(index, 'units', e.target.value)} 
                     className={`${inputClasses} tabular-nums`} 
                   />
+                </div>
+
+                <div className="md:col-span-6">
+                  <label htmlFor={`lob-gross-sales-${index}`} className={labelClasses}>Previous year gross sales (₱)</label>
+                  <input
+                    id={`lob-gross-sales-${index}`}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={lob.gross_sales_prev_year ?? ''}
+                    onChange={(e) => handleChange(index, 'gross_sales_prev_year', e.target.value)}
+                    placeholder="0.00"
+                    className={`${inputClasses} tabular-nums`}
+                  />
+                  <p className="mt-1 text-xs text-zinc-500">Enter the previous year's gross sales for this activity. Use zero if there were none.</p>
                 </div>
 
                 {/* Conditional Metric Count */}

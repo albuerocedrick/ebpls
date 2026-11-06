@@ -525,6 +525,10 @@ const updateMasterData = async (req, res, next) => {
     const { data: existing, error: existingError } = await supabaseAdmin.from(table).select('*').eq('id', id).maybeSingle();
     if (existingError) throw createError('Failed to fetch the existing record.', 500);
     if (!existing) throw createError('Record not found.', 404);
+    // Businesses and assessment inputs use the barangay name as their key.
+    if (table === 'barangays' && payload.name !== undefined && payload.name !== existing.name) {
+      throw createError('Barangay names cannot be changed because existing applications use them. You can edit the zone, coordinates, or active status.', 400);
+    }
     // Existing assignments may be retained when a zone has been deactivated.
     if (payload.zone_id !== existing.zone_id) await validateBarangayZone(table, payload);
     
