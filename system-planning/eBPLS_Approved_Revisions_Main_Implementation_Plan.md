@@ -55,7 +55,7 @@ flowchart TD
 | **2** | Applicant Registration Experience | Modernize UAF wizard: hardcoded Liliw/Laguna, auto-pin centroid, 3-way tenancy, multi-stalls, and pure upload. | Phase 1 schema | UAF Steps 2, 3, 4, 5 & Dynamic Requirement Service | **Developer 1** (100%) |
 | **3** | Automated Assessment Engine & Read-Only Grid | Calculate fees with zone multipliers, auto-trigger assessment on BPLO approval, and lock Treasury grid as read-only. | Phase 1 & 2 | Updated `assessment.service.js`, `AssessmentGrid.jsx` | **Developer 1** (100%) |
 | **4** | BPLO Workflow Overhaul & Clearances | Remove Leaflet map, build Address & Zoning card, add Regulatory checklist, and retire Barangay Module. | Phase 1, 2 & 3 | Modernized `SplitScreenVerifier.jsx`, unblocked approval logic | **Developer 2** (100%) |
-| **5** | Payment Modernization & Proof Upload | Completely remove PayMongo, add Bank/GCash proof upload in StatusTracker, and create payment proof schema. | Phase 4 | Next unused migration (currently 047), `StatusTracker.jsx` proof upload, PayMongo cleanup | **Developer 2** (100%) |
+| **5** | Payment Modernization & Proof Upload | Completely remove PayMongo, add Bank/GCash proof upload in StatusTracker, and create payment proof schema. | Phase 4 | Next unused migration (currently 048), `StatusTracker.jsx` proof upload, PayMongo cleanup | **Developer 2** (100%) |
 | **6** | Treasury POS Verification & System Hardening | Build Deposit Slip verification queue in Cashier POS, instant permit release, JIL export, and full QA regression. | Phase 4 & 5 | `CashierPOS.jsx` verification tab, JIL export, full QA sign-off | **Developer 2** (100%) |
 
 ---
@@ -101,7 +101,7 @@ flowchart TD
   * Backend: Update `application.controller.js`, `validators.js`, and `requirement.service.js` to process `tenancy_type`, `stall_unit_numbers`, and conditional uploads.
 * **Architecture Components:**
   * Database: Migration `045_applicant_fields_and_tenancy.sql`.
-  * Database permissions: Migration `046_applicant_submission_permissions.sql` restricts the atomic submission RPC to the backend service role. Phase 5 must use the next unused migration number (currently 047).
+  * Database permissions: Migration `046_applicant_submission_permissions.sql` restricts the atomic submission RPC to the backend service role. Phase 5 must use the next unused migration number (currently 048; Phase 3 consumed 047).
   * Backend: `application.controller.js`, `requirement.service.js`, `validators.js`.
   * Frontend: `Step2_Location.jsx`, `Step3_Activities.jsx`, `Step4_Documents.jsx`, `Step5_Review.jsx`.
 * **Dependencies:** Phase 1 (Centroids and Zoning schema).
@@ -129,6 +129,7 @@ flowchart TD
   * Statutory Exemptions: Implement formal BMBE tax exemption switch requiring uploaded DTI certificate with mandatory audit logging.
 * **Architecture Components:**
   * Backend: `assessment.service.js`, `bplo.controller.js`, `treasury.controller.js`.
+  * Database: `047_automatic_assessment.sql` — atomic approval, saved calculation context, audited BMBE changes, and service-only financial writes.
   * Frontend: `AssessmentGrid.jsx`.
 * **Dependencies:** Phase 1 (Zoning Matrix) and Phase 2 (Applicant Activities & Capital).
 * **Major Deliverables:**
@@ -178,7 +179,7 @@ flowchart TD
 * **Objective:** Completely decouple PayMongo from both backend and frontend, and implement a robust proof-of-payment upload pipeline for bank and GCash transfers alongside Cashier OTC.
 * **Scope:**
   * PayMongo Extraction: Safely remove `paymongo.service.js`, `webhook.routes.js`, and `treasury.online.routes.js`. Remove webhook mounting from `app.js`.
-  * Database: Migration `047_payment_proof_schema.sql` adding `proof_file_path`, `payment_reference_no`, `payment_date`, and `verification_status` (`'Pending'`, `'Verified'`, `'Rejected'`) to `transactions` table. Update `tendered_type` check constraint to: `('Cash', 'Manager Check', 'Bank Transfer', 'GCash')`.
+  * Database: Migration `048_payment_proof_schema.sql` adding `proof_file_path`, `payment_reference_no`, `payment_date`, and `verification_status` (`'Pending'`, `'Verified'`, `'Rejected'`) to `transactions` table. Update `tendered_type` check constraint to: `('Cash', 'Manager Check', 'Bank Transfer', 'GCash')`.
   * Status Tracker UI (`StatusTracker.jsx`): Completely remove PayMongo checkout button, polling hooks, and payment gateway error alerts.
   * Proof-of-Payment Upload Form: Inside `StatusTracker.jsx`, add payment selection:
     * Channel 1: "Pay Over-The-Counter (Cashier POS) at Municipal Hall".
@@ -186,7 +187,7 @@ flowchart TD
     * Form fields: Transaction Reference Number, Payment Date, and Deposit Slip / Receipt photo upload dropzone.
   * Backend Proof Endpoint: Build `POST /api/treasury/payments/proof` to receive and store deposit slip in Supabase Storage bucket `proof-of-payments` and transition status to `PaymentVerificationPending`.
 * **Architecture Components:**
-  * Database: Migration `047_payment_proof_schema.sql`.
+  * Database: Migration `048_payment_proof_schema.sql`.
   * Backend: `treasury.controller.js`, `app.js`.
   * Frontend: `StatusTracker.jsx`.
 * **Dependencies:** Phase 3 (Assessed applications in For Payment status).
@@ -286,7 +287,7 @@ TRACK B: DEVELOPER 2 (50% of Scope — Staff Workflows, Payments & Hardening)
 ├─ Week 2 (Days 6–7): Phase 4 — BPLO Workflow Overhaul & Clearances
 │  └─ Remove Leaflet from BPLO, Address Card, Regulatory Checklist, Retire Barangay Module
 ├─ Week 2 (Days 8–9): Phase 5 — Payment Modernization & Proof Upload
-│  └─ PayMongo Extraction, Migration 047, StatusTracker Proof Upload UI & Endpoint
+│  └─ PayMongo Extraction, Migration 048, StatusTracker Proof Upload UI & Endpoint
 └─ Week 2 (Day 10): Phase 6 — Treasury POS Verification, Release & Hardening
    └─ Cashier POS Proof Verification Queue, Instant Permit Release, JIL Export, E2E QA
 ```

@@ -38,6 +38,9 @@ router.post('/assess', treasuryController.assessApplication);
  * @desc    Get assessment and line items for an application
  */
 router.get('/assess/:app_no', treasuryController.getAssessmentByApp);
+router.put('/assess/:app_no/bmbe', treasuryController.updateBmbeExemption);
+router.post('/assess/:app_no/bmbe-certificate', treasuryController.uploadBmbeCertificate);
+router.get('/assess/:app_no/bmbe-certificate', treasuryController.getBmbeCertificate);
 
 /**
  * @route   PUT /api/treasury/assess/:app_no/finalize

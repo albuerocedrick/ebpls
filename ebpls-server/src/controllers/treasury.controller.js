@@ -13,73 +13,14 @@ const { createError } = require('../middlewares/error.middleware');
 const { ERROR_CODES, STATUSES } = require('../utils/constants');
 const { dispatchEmail, EMAIL_TRIGGERS } = require('../services/email.service');
 const pdfService = require('../services/pdf.service');
+const { z } = require('zod');
+const { UploadRequestPayloadSchema } = require('../utils/validators');
+const storageService = require('../services/storage.service');
 
 /**
  * Generates the initial fee assessment for a verified application.
  */
-const assessApplication = async (req, res, next) => {
-  try {
-    const { application_no } = req.body;
-
-    if (!application_no) {
-      throw createError('Application number is required.', 400, ERROR_CODES.VALIDATION_ERROR);
-    }
-
-    // 1. Verify application status
-    const { data: app, error: appErr } = await supabaseAdmin
-      .from('applications')
-      .select('status')
-      .eq('application_no', application_no)
-      .single();
-
-    if (appErr || !app) throw createError('Application not found.', 404, ERROR_CODES.NOT_FOUND);
-
-    const validStatuses = [STATUSES.VERIFIED, STATUSES.FOR_ASSESSMENT, STATUSES.ASSESSED];
-    if (!validStatuses.includes(app.status)) {
-      throw createError(`Application is in ${app.status} status and cannot be assessed.`, 409, ERROR_CODES.CONFLICT);
-    }
-
-    // 2. Calculate fees using the calculation engine
-    const calculatedData = await assessmentService.calculateFees(application_no);
-
-    // 3. Persist the assessment to DB
-    const assessment = await assessmentService.createAssessment(
-      application_no, 
-      req.user.userId, 
-      calculatedData
-    );
-
-    // 4. Transition State Machine
-    // If it's still in Verified, move it to For Assessment first.
-    if (app.status === STATUSES.VERIFIED) {
-      await applicationService.updateApplicationStatus(application_no, STATUSES.FOR_ASSESSMENT, req.user.userId);
-    }
-    
-    // Move to Assessed only. We wait for the officer to "Finalize" before moving to For Payment.
-    await applicationService.updateApplicationStatus(application_no, STATUSES.ASSESSED, req.user.userId);
-
-    // 5. Audit Log
-    await logAction({
-      userId: req.user.userId,
-      action: AUDIT_ACTIONS.FEE_ASSESSED,
-      entityType: 'assessments',
-      entityId: assessment.id,
-      newValue: { total_amount: assessment.total_amount }
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: 'Assessment generated. Please review and finalize to post to billing.',
-      data: {
-        assessment_id: assessment.id,
-        total_amount: assessment.total_amount,
-        line_items: calculatedData.lineItems
-      }
-    });
-  } catch (err) {
-    next(err);
-  }
-};
+const assessApplication = (req, res) => res.status(410).json({ success: false, message: 'Assessment is generated automatically on BPLO approval.' });
 
 /**
  * Finalizes an assessment and moves it to the For Payment stage.
@@ -89,23 +30,14 @@ const finalizeAssessment = async (req, res, next) => {
   try {
     const { app_no } = req.params;
 
-    // 1. Transition: Assessed -> For Payment
-    await applicationService.updateApplicationStatus(app_no, STATUSES.FOR_PAYMENT, req.user.userId);
-
-    // 2. Audit
-    await logAction({
-      userId: req.user.userId,
-      action: AUDIT_ACTIONS.APPLICATION_STATUS_UPDATED,
-      entityType: 'applications',
-      entityId: app_no,
-      newValue: { status: STATUSES.FOR_PAYMENT, note: 'Assessment finalized and posted to billing.' }
-    });
+    const finalized = await assessmentService.finalizeAssessment(app_no, req.user.userId);
 
     // Return response immediately — TOP email generation is fire-and-forget below.
     res.status(200).json({
       success: true,
       message: 'Assessment finalized. Applicant can now view and pay.'
     });
+    if (finalized.already_finalized) return;
 
     // Phase 9: Send TOP_GENERATED email with PDF attached.
     // Generate the TOP PDF in-memory here so the email is sent exactly once
@@ -183,72 +115,11 @@ const finalizeAssessment = async (req, res, next) => {
 };
 
 /**
- * Manually override a specific fee amount.
+ * Compatibility responses for retired manual fee mutation endpoints.
  */
-const overrideFeeItem = async (req, res, next) => {
-  try {
-    const { id } = req.params; // line item ID
-    const { new_amount, reason } = req.body;
+const overrideFeeItem = (req, res) => res.status(410).json({ success: false, message: 'Fee amounts are read-only. Arbitrary overrides are disabled.' });
+const resetFeeItem = overrideFeeItem;
 
-    const parsedAmount = Number(new_amount);
-    if (
-      new_amount === undefined ||
-      new_amount === null ||
-      String(new_amount).trim() === '' ||
-      isNaN(parsedAmount) ||
-      parsedAmount < 0 ||
-      !reason ||
-      !reason.trim()
-    ) {
-      throw createError(
-        'Valid price amount and override remarks/reason are required. Blank remarks or amount cannot be submitted.',
-        400,
-        ERROR_CODES.VALIDATION_ERROR
-      );
-    }
-
-    const updatedAssessment = await assessmentService.overrideLineItem(
-      id, 
-      parsedAmount, 
-      reason.trim(), 
-      req.user.userId
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: 'Fee item overridden.',
-      data: updatedAssessment
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * Reset a specific fee amount back to default calculated price.
- */
-const resetFeeItem = async (req, res, next) => {
-  try {
-    const { id } = req.params; // line item ID
-
-    const updatedAssessment = await assessmentService.resetLineItem(
-      id,
-      req.user.userId
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: 'Fee item reverted to default calculated price.',
-      data: updatedAssessment
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * Fetch assessment and line items for a specific application.
- */
 const getAssessmentByApp = async (req, res, next) => {
   try {
     const { app_no } = req.params;
@@ -262,6 +133,9 @@ const getAssessmentByApp = async (req, res, next) => {
           id,
           fee_type_id,
           amount,
+          base_amount,
+          is_business_tax,
+          computation,
           is_override,
           override_reason,
           fee_types (name)
@@ -270,26 +144,12 @@ const getAssessmentByApp = async (req, res, next) => {
       .eq('application_no', app_no)
       .single();
 
-    if (assError || !assessment) {
+    if (assError && assError.code !== 'PGRST116') throw createError('Unable to load assessment.', 500);
+    if (!assessment) {
       return res.status(200).json({
         success: true,
         data: null
       });
-    }
-
-    try {
-      const calculatedData = await assessmentService.calculateFees(app_no);
-      if (calculatedData?.lineItems && assessment.assessment_line_items) {
-        assessment.assessment_line_items = assessment.assessment_line_items.map((item) => {
-          const matched = calculatedData.lineItems.find((c) => c.fee_type_id === item.fee_type_id);
-          return {
-            ...item,
-            default_amount: matched ? matched.amount : item.amount
-          };
-        });
-      }
-    } catch (calcErr) {
-      console.warn('[treasury.controller] Could not compute default line item amounts:', calcErr.message);
     }
 
     return res.status(200).json({
@@ -716,7 +576,43 @@ const lookupFeeSchedule = async (req, res, next) => {
   }
 };
 
+const BmbeSchema = z.object({
+  enabled: z.boolean(), certificate_path: z.string().min(1).optional(),
+  authority_reference: z.string().trim().min(3).max(200).optional(),
+  remarks: z.string().trim().min(3).max(500), certificate_verified: z.boolean().optional(),
+}).strict().refine(value => !value.enabled || (value.certificate_path && value.authority_reference && value.certificate_verified === true),
+  { message: 'Upload and verify the DTI certificate and supply the approved LGU authority reference.' });
+
+const updateBmbeExemption = async (req, res, next) => {
+  try {
+    const input = BmbeSchema.parse(req.body);
+    const data = await assessmentService.updateBmbeExemption(req.params.app_no, req.user.userId, input);
+    res.status(200).json({ success: true, data });
+  } catch (error) { next(error); }
+};
+const uploadBmbeCertificate = async (req, res, next) => {
+  try {
+    const input = UploadRequestPayloadSchema.parse(req.body);
+    const { data, error } = await supabaseAdmin.from('assessments').select('id,calculation_context,applications(status)').eq('application_no', req.params.app_no).maybeSingle();
+    if (error) throw createError('Unable to load assessment.', 500);
+    if (!data || !data.calculation_context || data.applications?.status !== STATUSES.ASSESSED) throw createError('Certificate upload is available before finalizing a new automatic assessment.', 409);
+    const upload = await storageService.generatePresignedUploadUrl(req.user.userId, input.fileName);
+    res.status(200).json({ success: true, data: { uploadUrl: upload.signedUrl, filePath: upload.path } });
+  } catch (error) { next(error); }
+};
+const getBmbeCertificate = async (req, res, next) => {
+  try {
+    const { data, error } = await supabaseAdmin.from('assessments').select('bmbe_certificate_path').eq('application_no', req.params.app_no).maybeSingle();
+    if (error) throw createError('Unable to load certificate.', 500);
+    if (!data?.bmbe_certificate_path) throw createError('Certificate not found.', 404);
+    res.status(200).json({ success: true, data: { url: await storageService.generatePresignedDownloadUrl(data.bmbe_certificate_path, 900) } });
+  } catch (error) { next(error); }
+};
+
 module.exports = {
+  updateBmbeExemption,
+  uploadBmbeCertificate,
+  getBmbeCertificate,
   assessApplication,
   finalizeAssessment,
   overrideFeeItem,

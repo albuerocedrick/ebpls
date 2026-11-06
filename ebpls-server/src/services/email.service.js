@@ -137,7 +137,7 @@ const templates = {
         <h2 style="color: #16a34a;">Application Verified</h2>
         <p>Hello <strong>${name}</strong>,</p>
         <p>We are pleased to inform you that your business permit application for <strong>${businessName}</strong> (${applicationNo}) has been successfully verified by the BPLO office.</p>
-        <p>Your application has been forwarded to the <strong>Treasury Office</strong> for fee assessment. You will receive another notification once your Tax Order of Payment (TOP) is ready.</p>
+          <p>Your fees have been assessed automatically and forwarded to the <strong>Treasury Office</strong> for review. You will receive another notification once your Tax Order of Payment (TOP) is finalized.</p>
         ${getTimestampHtml()}
         <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS</p>

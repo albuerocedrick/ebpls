@@ -10,6 +10,7 @@ const { createError } = require('../middlewares/error.middleware');
 const { successResponse, getClientIp } = require('../utils/helpers');
 const { ERROR_CODES, STATUSES, DOC_VERIFICATION_STATUS } = require('../utils/constants');
 const { logAction, AUDIT_ACTIONS } = require('../services/audit.service');
+const assessmentService = require('../services/assessment.service');
 const { generatePresignedDownloadUrl } = require('../services/storage.service');
 const { dispatchEmail, EMAIL_TRIGGERS } = require('../services/email.service');
 
@@ -597,63 +598,10 @@ const verifyApplication = async (req, res, next) => {
       ));
     }
 
-    // Fetch current application state before transition.
-    const { data: existing, error: existingError } = await supabaseAdmin
-      .from('applications')
-      .select('application_no, status')
-      .eq('application_no', applicationNo)
-      .single();
-
-    if (existingError || !existing) {
-      return next(createError(
-        'Application not found.',
-        404,
-        ERROR_CODES.NOT_FOUND
-      ));
-    }
-
-    if (![STATUSES.PENDING, STATUSES.UNDER_REVIEW].includes(existing.status)) {
-      return next(createError(
-        `Application cannot be verified from status "${existing.status}".`,
-        409,
-        ERROR_CODES.INVALID_TRANSITION
-      ));
-    }
-
-    const { data: updated, error: updateError } = await supabaseAdmin
-      .from('applications')
-      .update({
-        status: STATUSES.VERIFIED,
-        last_updated_by: req.user.userId,
-        return_remarks: null,
-      })
-      .eq('application_no', applicationNo)
-      .select('application_no, status, updated_at')
-      .single();
-
-    if (updateError) {
-      console.error('[bplo.controller] Failed to transition application to Verified:', updateError.message);
-      return next(createError(
-        'Failed to verify application.',
-        500,
-        ERROR_CODES.INTERNAL_ERROR
-      ));
-    }
-
-    logAction({
-      userId: req.user.userId,
-      action: AUDIT_ACTIONS.APPLICATION_VERIFIED,
-      entityType: 'applications',
-      entityId: applicationNo,
-      oldValue: { status: existing.status },
-      newValue: { status: STATUSES.VERIFIED },
-      ipAddress: getClientIp(req),
-    });
-
-    // Return response immediately — email is fire-and-forget below.
-    res.status(200).json(
-      successResponse('Application verified successfully.', updated)
-    );
+    const calculatedData = await assessmentService.calculateFees(applicationNo);
+    const updated = await assessmentService.createAssessment(applicationNo, req.user.userId, calculatedData, getClientIp(req));
+    res.status(200).json(successResponse('Application approved and assessed automatically.', updated));
+    if (updated.already_assessed) return;
 
     // Phase 9: Wire APPLICATION_VERIFIED email trigger.
     const applicant = await _resolveApplicantForEmail(applicationNo);
@@ -676,7 +624,7 @@ const verifyApplication = async (req, res, next) => {
           application_no: applicationNo,
           type:           'APPLICATION_VERIFIED',
           title:          'Application Verified',
-          message:        'Your documents have been verified and forwarded to Treasury for assessment.',
+          message:        'Your documents have been approved and fees assessed automatically. Treasury will review the bill.',
           action_url:     `/applicant/status?id=${applicationNo}`,
         }).then(({ error }) => {
           if (error) console.error('[bplo.controller] Failed to insert verified notification:', error.message);

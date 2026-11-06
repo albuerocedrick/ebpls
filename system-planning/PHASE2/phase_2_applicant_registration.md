@@ -18,7 +18,7 @@ Owner: Developer 1. Date: November 6, 2026.
 
 Migrations **045 and 046 are applied** to the linked eBPLS Supabase project. Migration 046 explicitly removes Supabase's inherited function grants from anon/authenticated roles; only the backend service role can execute the submission RPC. This was verified against the live database.
 
-**Migration coordination:** 046 is consumed by `046_applicant_submission_permissions.sql`. The planned Phase 5 payment-proof migration must use the next unused number, currently **047**, rather than reusing 046. Check remote history before creating future migrations.
+**Migration coordination:** 046 is consumed by `046_applicant_submission_permissions.sql`. The planned Phase 5 payment-proof migration must use the next unused number, currently **048** after Phase 3 consumed 047, rather than reusing 046. Check remote history before creating future migrations.
 
 The applicant submission path no longer calls the municipal clearance hook or creates a `barangay_clearances` row. Existing staff routes and older clearance records remain for Developer 2's Phase 4 retirement work.
 
