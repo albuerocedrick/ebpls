@@ -426,7 +426,7 @@ const getActiveBarangays = async (req, res, next) => {
     const { supabaseAdmin } = require('../config/supabase');
     const { data, error } = await supabaseAdmin
       .from('barangays')
-      .select('name')
+      .select('id, name, latitude, longitude, zone_id, zone:location_zones(id, name, foot_traffic_level, min_capital_floor, fee_multiplier, is_active)')
       .eq('is_active', true)
       .order('name', { ascending: true });
 
@@ -437,7 +437,7 @@ const getActiveBarangays = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      data: data.map(b => b.name),
+      data,
     });
   } catch (error) {
     next(error);

@@ -8,6 +8,7 @@ const { supabaseAdmin } = require('../config/supabase');
 const { createError } = require('../middlewares/error.middleware');
 const { ERROR_CODES } = require('../utils/constants');
 const { logAction, AUDIT_ACTIONS } = require('../services/audit.service');
+const { parseZoningMasterData } = require('../utils/zoning.schemas');
 
 let cachedHealthData = null;
 let lastFetchTime = 0;
@@ -415,7 +416,23 @@ const updateUserRole = async (req, res, next) => {
   }
 };
 
-const ALLOWED_MASTER_TABLES = ['fee_types', 'requirement_types', 'requirement_conditions', 'clearance_types', 'barangays', 'business_activities', 'organization_types', 'system_settings'];
+const ALLOWED_MASTER_TABLES = ['fee_types', 'requirement_types', 'requirement_conditions', 'clearance_types', 'barangays', 'location_zones', 'business_activities', 'organization_types', 'system_settings'];
+
+const masterDataError = (table, error) => {
+  if (['barangays', 'location_zones'].includes(table)) {
+    if (error.code === '23505') return createError('A record with that name already exists.', 409);
+    if (['23503', '23001'].includes(error.code)) return createError('Select an existing zone. Referenced zones cannot be deleted.', 400);
+    if (error.code === '23514' || error.code === '23502') return createError('Invalid zoning or barangay values.', 400);
+  }
+  return createError(`Failed to save ${table}.`, 500);
+};
+
+const validateBarangayZone = async (table, payload) => {
+  if (table !== 'barangays' || payload.zone_id === undefined) return;
+  const { data, error } = await supabaseAdmin.from('location_zones').select('id, is_active').eq('id', payload.zone_id).maybeSingle();
+  if (error) throw createError('Failed to validate the selected zone.', 500);
+  if (!data || !data.is_active) throw createError('Select an active location zone.', 400);
+};
 const PROTECTED_NAMES = [
   'Business Clearance',
   'DTI / SEC / CDA Registration',
@@ -469,8 +486,10 @@ const createMasterData = async (req, res, next) => {
     if (!ALLOWED_MASTER_TABLES.includes(table)) {
       return next(createError(`Invalid master data table: ${table}`, 400));
     }
-    const { data, error } = await supabaseAdmin.from(table).insert([req.body]).select().single();
-    if (error) throw createError(`Failed to insert into ${table}: ${error.message}`, 500);
+    const payload = parseZoningMasterData(table, req.body);
+    await validateBarangayZone(table, payload);
+    const { data, error } = await supabaseAdmin.from(table).insert([payload]).select().single();
+    if (error) throw masterDataError(table, error);
 
     // Audit Log
     await logAction({
@@ -478,7 +497,7 @@ const createMasterData = async (req, res, next) => {
       action: AUDIT_ACTIONS.MASTER_DATA_UPDATED,
       entityType: table,
       entityId: String(data.id || data.key || 'new_record'),
-      newValue: req.body
+      newValue: payload
     });
 
     res.status(201).json({ success: true, message: 'Record created successfully.', data });
@@ -499,25 +518,31 @@ const updateMasterData = async (req, res, next) => {
       return next(createError(`Invalid master data table: ${table}`, 400));
     }
 
+    const payload = parseZoningMasterData(table, req.body, true);
+
     // Protection check for core lookup values
     const idColumn = table === 'system_settings' ? 'key' : 'name';
-    const { data: existing } = await supabaseAdmin.from(table).select(idColumn).eq('id', id).single();
+    const { data: existing, error: existingError } = await supabaseAdmin.from(table).select('*').eq('id', id).maybeSingle();
+    if (existingError) throw createError('Failed to fetch the existing record.', 500);
+    if (!existing) throw createError('Record not found.', 404);
+    // Existing assignments may be retained when a zone has been deactivated.
+    if (payload.zone_id !== existing.zone_id) await validateBarangayZone(table, payload);
     
     if (existing && existing[idColumn] && PROTECTED_NAMES.includes(existing[idColumn])) {
-      const incomingIdentifier = req.body[idColumn];
+      const incomingIdentifier = payload[idColumn];
       // Only prevent modification if they are trying to change the identifier name/key
       if (incomingIdentifier !== undefined && incomingIdentifier !== existing[idColumn]) {
         return next(createError('This lookup record is a core system dependency and its identifier cannot be modified.', 400));
       }
     }
     
-    const incomingName = req.body.name || req.body.key;
+    const incomingName = payload.name || payload.key;
     if (incomingName && incomingName !== existing?.[idColumn] && PROTECTED_NAMES.includes(incomingName)) {
       return next(createError('You cannot rename a lookup record to a protected system name.', 400));
     }
 
-    const { data, error } = await supabaseAdmin.from(table).update(req.body).eq('id', id).select().single();
-    if (error) throw createError(`Failed to update ${table}: ${error.message}`, 500);
+    const { data, error } = await supabaseAdmin.from(table).update(payload).eq('id', id).select().single();
+    if (error) throw masterDataError(table, error);
 
     // Audit Log
     await logAction({
@@ -526,7 +551,7 @@ const updateMasterData = async (req, res, next) => {
       entityType: table,
       entityId: String(id),
       oldValue: existing,
-      newValue: req.body
+      newValue: payload
     });
 
     res.status(200).json({ success: true, message: 'Record updated successfully.', data });
@@ -557,7 +582,7 @@ const deleteMasterData = async (req, res, next) => {
 
     const { error } = await supabaseAdmin.from(table).delete().eq('id', id);
     if (error) {
-      if (error.code === '23503') {
+      if (['23503', '23001'].includes(error.code)) {
         return next(createError('This record cannot be deleted because it is already linked to active business permit profiles or logs. Please deactivate it instead.', 400));
       }
       throw createError(`Failed to delete record: ${error.message}`, 500);

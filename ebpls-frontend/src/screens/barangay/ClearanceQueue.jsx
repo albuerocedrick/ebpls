@@ -165,7 +165,7 @@ const ClearanceQueue = () => {
       try {
         const res = await apiClient.get(API_ENDPOINTS.APPLICATIONS_BARANGAYS);
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-          setBarangayList(res.data);
+          setBarangayList(res.data.map(barangay => typeof barangay === 'string' ? barangay : barangay.name));
         }
       } catch (err) {
         console.warn('Failed to fetch dynamic barangay list, falling back to static constants.', err);

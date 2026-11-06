@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Database, Plus, Edit2, Save, X, Loader2, CheckCircle2, Trash2, Lock } from 'lucide-react';
 import apiClient from '../../utils/apiClient';
 import toast from 'react-hot-toast';
@@ -10,7 +10,8 @@ const TABLES = [
   { id: 'requirement_types', name: 'Requirement Types', columns: ['name', 'description', 'applies_to_new', 'applies_to_renewal', 'is_conditional', 'condition_type', 'condition_description', 'sort_order', 'max_files', 'is_active'] },
   { id: 'requirement_conditions', name: 'Requirement Conditions', columns: ['requirement_id', 'match_value'] },
   { id: 'clearance_types', name: 'Clearance Types', columns: ['name'] },
-  { id: 'barangays', name: 'Barangays', columns: ['name', 'is_active'] },
+  { id: 'location_zones', name: 'Location Zones', columns: ['name', 'foot_traffic_level', 'min_capital_floor', 'fee_multiplier', 'is_active'] },
+  { id: 'barangays', name: 'Barangays & Zoning', columns: ['name', 'zone_id', 'latitude', 'longitude', 'is_active'] },
   { id: 'business_activities', name: 'Business Activities', columns: ['name', 'description', 'is_active'] },
   { id: 'organization_types', name: 'Organization Types', columns: ['name'] },
   { id: 'system_settings', name: 'System Settings', columns: ['key', 'value', 'description'] }
@@ -43,6 +44,9 @@ const MasterData = () => {
   const [activeTable, setActiveTable] = useState(TABLES[0]);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [zones, setZones] = useState([]);
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Edit State
   const [editingId, setEditingId] = useState(null);
@@ -54,24 +58,38 @@ const MasterData = () => {
   const [createForm, setCreateForm] = useState({});
 
   useEffect(() => {
-    fetchData();
-  }, [activeTable]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    setEditingId(null);
-    setIsCreating(false);
-    try {
-      const res = await apiClient.get(`/api/admin/master-data/${activeTable.id}`);
-      if (res.success) {
-        setData(res.data);
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setLoadError('');
+      setData([]);
+      setEditingId(null);
+      setEditForm({});
+      setIsCreating(false);
+      setCreateForm({});
+      try {
+        const [res, zonesRes] = await Promise.all([
+          apiClient.get(`/api/admin/master-data/${activeTable.id}`),
+          activeTable.id === 'barangays' ? apiClient.get('/api/admin/master-data/location_zones') : Promise.resolve(null),
+        ]);
+        if (!cancelled) {
+          setData(res.data || []);
+          setZones(zonesRes?.data || []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err.message || `Failed to load ${activeTable.name}`);
+          toast.error(`Failed to load ${activeTable.name}`);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch (err) {
-      toast.error(`Failed to load ${activeTable.name}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [activeTable, reloadKey]);
+
+  const fetchData = () => setReloadKey(key => key + 1);
 
   const handleEdit = (row) => {
     setEditingId(row.id);
@@ -81,8 +99,7 @@ const MasterData = () => {
   const handleSave = async (id) => {
     setIsSaving(true);
     try {
-      const payload = { ...editForm };
-      delete payload.id; // Remove ID from payload
+      const payload = Object.fromEntries(activeTable.columns.map(col => [col, editForm[col]]));
       
       const res = await apiClient.put(`/api/admin/master-data/${activeTable.id}/${id}`, payload);
       if (res.success) {
@@ -151,6 +168,31 @@ const MasterData = () => {
         disabled = true;
       }
     }
+    if (col === 'zone_id') {
+      return (
+        <select
+          aria-label="Location zone"
+          value={value ?? ''}
+          onChange={(e) => onChange(col, e.target.value === '' ? undefined : Number(e.target.value))}
+          className="min-w-52 w-full border border-gray-200 rounded-xl px-3 py-2 text-xs"
+        >
+          <option value="">Select zone</option>
+          {zones.map(zone => (
+            <option key={zone.id} value={zone.id} disabled={!zone.is_active && zone.id !== value}>
+              {zone.name}{zone.is_active ? '' : ' (Inactive)'}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    if (col === 'foot_traffic_level') {
+      return (
+        <select aria-label="Foot traffic level" value={value ?? ''} onChange={(e) => onChange(col, e.target.value)} className="min-w-32 w-full border border-gray-200 rounded-xl px-3 py-2 text-xs">
+          <option value="">Select traffic level</option>
+          {['High', 'Medium', 'Low'].map(level => <option key={level} value={level}>{level}</option>)}
+        </select>
+      );
+    }
     if (col === 'is_active' || col === 'applies_to_new' || col === 'applies_to_renewal' || col === 'is_conditional') {
       const boolVal = value === undefined ? (col === 'is_conditional' ? false : true) : value; // default true for all except is_conditional
       return (
@@ -196,11 +238,14 @@ const MasterData = () => {
         </Select>
       );
     }
-    if (col === 'fixed_amount' || col === 'percentage_value' || col === 'sort_order' || col === 'max_files' || col === 'requirement_id') {
+    if (['fixed_amount', 'percentage_value', 'sort_order', 'max_files', 'requirement_id', 'min_capital_floor', 'fee_multiplier', 'latitude', 'longitude'].includes(col)) {
       return (
         <input
           type="number"
-          step={col === 'sort_order' || col === 'max_files' || col === 'requirement_id' ? "1" : "0.01"}
+          aria-label={col.replace(/_/g, ' ')}
+          step={['latitude', 'longitude'].includes(col) ? '0.0000001' : col === 'fee_multiplier' ? '0.0001' : ['sort_order', 'max_files', 'requirement_id'].includes(col) ? '1' : '0.01'}
+          min={col === 'latitude' ? -90 : col === 'longitude' ? -180 : col === 'fee_multiplier' ? 0.0001 : undefined}
+          max={col === 'latitude' ? 90 : col === 'longitude' ? 180 : undefined}
           placeholder={`Enter ${col.replace(/_/g, ' ')}`}
           value={value === undefined || value === null ? '' : value}
           onChange={(e) => onChange(col, e.target.value === '' ? null : Number(e.target.value))}
@@ -222,6 +267,16 @@ const MasterData = () => {
   };
 
   const displayValue = (col, value) => {
+    if (col === 'zone_id') {
+      const zone = zones.find(item => item.id === value);
+      return <span className="text-sm text-gray-800">{zone ? `${zone.name}${zone.is_active ? '' : ' (Inactive)'}` : '—'}</span>;
+    }
+    if (col === 'min_capital_floor') {
+      return <span className="text-sm text-gray-800 whitespace-nowrap">{new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value)}</span>;
+    }
+    if (col === 'fee_multiplier') {
+      return <span className="text-sm text-gray-800">{Number(value).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}×</span>;
+    }
     if (col === 'is_active') {
       return value ? (
         <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-700">Active</span>
@@ -243,7 +298,7 @@ const MasterData = () => {
       const referencedFee = data.find(item => item.id === value);
       return <span className="text-sm font-medium text-gray-700">{referencedFee ? referencedFee.name : '—'}</span>;
     }
-    return <span className="text-sm text-gray-800">{value || '—'}</span>;
+    return <span className="text-sm text-gray-800">{value ?? '—'}</span>;
   };
 
   return (
@@ -262,6 +317,7 @@ const MasterData = () => {
             <button
               key={table.id}
               onClick={() => setActiveTable(table)}
+              disabled={isSaving}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all text-left ${
                 activeTable.id === table.id
                   ? 'bg-gray-900 text-white shadow-sm'
@@ -276,6 +332,16 @@ const MasterData = () => {
 
         {/* Main Content: Data Grid */}
         <div className="flex-1 min-w-0">
+          {['barangays', 'location_zones'].includes(activeTable.id) && (
+            <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              Review starter zoning before using it for assessments: Poblacion barangays start in Zone 1; all others start in Zone 3. Assign confirmed highway/main-road barangays to Zone 2. Coordinates are derived from barangay boundaries and can be replaced with approved reference points.
+            </p>
+          )}
+          {loadError && (
+            <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {loadError} <button onClick={fetchData} className="font-semibold underline">Retry</button>
+            </div>
+          )}
           <Card padding="none" className="overflow-hidden">
             <div className="p-5 border-b border-gray-100 flex justify-between items-center">
               <h2 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
@@ -284,7 +350,7 @@ const MasterData = () => {
               </h2>
               <button
                 onClick={() => setIsCreating(true)}
-                disabled={isCreating || isSaving || editingId !== null}
+                disabled={loading || !!loadError || isCreating || isSaving || editingId !== null}
                 className="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-2xl text-xs font-medium transition-all disabled:opacity-50"
               >
                 <Plus size={14} /> Add New
