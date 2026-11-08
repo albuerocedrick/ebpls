@@ -18,12 +18,6 @@ const envSchema = z
     // Auth
     JWT_SECRET: z.string().min(32),
 
-    // PayMongo (Added in Phase 5)
-    PAYMONGO_SECRET_KEY: z.string().min(1),
-    PAYMONGO_WEBHOOK_SECRET: z.string().min(1),
-    PAYMONGO_SUCCESS_URL: z.string().url(),
-    PAYMONGO_CANCEL_URL: z.string().url(),
-
     // SMTP Config — optional in development, REQUIRED in production.
     // In dev: fallback to Ethereal Email preview (see src/config/mailer.js).
     // In production: must point to Brevo SMTP credentials.

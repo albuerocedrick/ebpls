@@ -21,7 +21,7 @@ const database={
 };
 function stub(name,exports){const id=require.resolve(name);require.cache[id]={id,filename:id,loaded:true,exports};}
 stub('../src/config/supabase',{supabaseAdmin:database});
-stub('../src/services/application.service',{});stub('../src/services/paymongo.service',{});stub('../src/services/pdf.service',{});
+stub('../src/services/application.service',{});stub('../src/services/pdf.service',{});
 stub('../src/services/email.service',{dispatchEmail(){},EMAIL_TRIGGERS:{}});
 stub('../src/services/audit.service',{logAction:async()=>{},AUDIT_ACTIONS:require('../src/utils/constants').AUDIT_ACTIONS});
 stub('../src/services/storage.service',{generatePresignedDownloadUrl:async()=> 'https://example.test/private',generatePresignedUploadUrl:async()=>({signedUrl:'https://example.test/upload',path:`${officer}/certificate.pdf`})});

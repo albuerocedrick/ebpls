@@ -82,7 +82,8 @@ export const STATUSES = Object.freeze({
   VERIFIED:           'Verified',
   FOR_ASSESSMENT:     'For Assessment',
   ASSESSED:           'Assessed',
-  FOR_PAYMENT:        'For Payment',
+  FOR_PAYMENT:                  'For Payment',
+  PAYMENT_VERIFICATION_PENDING: 'PaymentVerificationPending',
   PAYMENT_PROCESSING: 'PaymentProcessing',
   PAID:               'Paid',
   COMPLETED:          'Completed',
@@ -149,7 +150,6 @@ export const ROLE_DASHBOARDS = Object.freeze({
   [ROLES.BPLO_OFFICER]:     ROUTES.BPLO_DASHBOARD,
   [ROLES.TREASURY_OFFICER]: ROUTES.TREASURY_QUEUE,
   [ROLES.TREASURY]:         ROUTES.TREASURY_QUEUE,
-  [ROLES.BARANGAY_OFFICER]: ROUTES.BARANGAY_QUEUE,
   [ROLES.ADMIN]:            ROUTES.ADMIN_DASHBOARD,
 });
 
@@ -179,6 +179,7 @@ export const API_ENDPOINTS = Object.freeze({
   BPLO_DOCUMENT_URL: (appNo, requirementId) => `/api/bplo/applications/${appNo}/document/${requirementId}`,
   BPLO_COMPLETED: '/api/bplo/applications/completed',
   BPLO_NOTIFY_READY: (appNo) => `/api/bplo/applications/${appNo}/notify-ready`,
+  BPLO_REPORT_JIL: '/api/bplo/reports/joint-inspection-list',
   // Treasury
   TREASURY_ASSESS: '/api/treasury/assess',
   TREASURY_OTC_PAYMENT: '/api/treasury/payments/otc',
@@ -205,6 +206,7 @@ export const API_ENDPOINTS = Object.freeze({
   ADMIN_APPLICATIONS: '/api/admin/applications',
   ADMIN_EMAIL_LOGS: '/api/admin/email-logs',
   ADMIN_AUDIT_LOGS: '/api/admin/audit-logs',
+  ADMIN_REPORT_JIL: '/api/admin/reports/joint-inspection-list',
   // Notifications (Phase 3)
   NOTIFICATIONS_UNREAD: '/api/notifications/unread',
   NOTIFICATIONS_MARK_READ: (id) => `/api/notifications/${id}/read`,

@@ -13,6 +13,7 @@ const STATUS_CONFIG = {
   'Under Review': 'bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200',
   'For Assessment': 'bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200',
   'PaymentProcessing': 'bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200',
+  'PaymentVerificationPending': 'bg-zinc-200 text-zinc-700 ring-1 ring-zinc-300',
   'Verified': 'bg-zinc-200 text-zinc-700 ring-1 ring-zinc-300',
   'Assessed': 'bg-zinc-200 text-zinc-700 ring-1 ring-zinc-300',
   'For Payment': 'bg-zinc-200 text-zinc-700 ring-1 ring-zinc-300',
@@ -43,7 +44,11 @@ const StatusBadge = ({ status, size = 'sm', className = '' }) => {
         className,
       ].join(' ')}
     >
-      {status === 'PaymentProcessing' ? 'Processing' : status || 'Unknown'}
+      {status === 'PaymentVerificationPending'
+        ? 'Verification Pending'
+        : status === 'PaymentProcessing'
+        ? 'Processing'
+        : status || 'Unknown'}
     </span>
   );
 };

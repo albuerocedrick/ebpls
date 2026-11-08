@@ -6,7 +6,8 @@
 const { z } = require('zod');
 const { supabaseAdmin } = require('../config/supabase');
 const { createError } = require('../middlewares/error.middleware');
-const { ERROR_CODES } = require('../utils/constants');
+const { ERROR_CODES, STATUSES } = require('../utils/constants');
+const pdfService = require('../services/pdf.service');
 const { logAction, AUDIT_ACTIONS } = require('../services/audit.service');
 const { parseZoningMasterData } = require('../utils/zoning.schemas');
 
@@ -162,6 +163,7 @@ const getAllApplications = async (req, res, next) => {
       'For Assessment',
       'Assessed',
       'For Payment',
+      'PaymentVerificationPending',
       'PaymentProcessing',
       'Paid',
       'Completed'
@@ -706,6 +708,99 @@ const uploadDocumentTemplate = async (req, res, next) => {
   }
 };
 
+
+/**
+ * GET /api/admin/reports/joint-inspection-list
+ * @desc Generate weekly Joint Inspection List (JIL) PDF for MHO & BFP
+ * @access Admin, BPLO_Officer
+ */
+const getJointInspectionListReport = async (req, res, next) => {
+  try {
+    const { status, limit = 100 } = req.query;
+
+    let query = supabaseAdmin
+      .from('applications')
+      .select(`
+        application_no,
+        status,
+        submitted_at,
+        created_at,
+        businesses (
+          business_name,
+          trade_name,
+          address_line1,
+          barangay,
+          contact_no,
+          taxpayers (
+            first_name,
+            middle_name,
+            last_name
+          )
+        ),
+        doc_verifications (
+          requirement_id,
+          status,
+          remarks
+        )
+      `)
+      .order('submitted_at', { ascending: false })
+      .limit(Number(limit));
+
+    if (status) {
+      query = query.eq('status', status);
+    } else {
+      query = query.in('status', [
+        STATUSES.VERIFIED,
+        STATUSES.ASSESSED,
+        STATUSES.FOR_PAYMENT,
+        STATUSES.PAYMENT_VERIFICATION_PENDING,
+        STATUSES.PAID,
+        STATUSES.COMPLETED
+      ]);
+    }
+
+    const { data: apps, error } = await query;
+    if (error) {
+      console.error('[admin.controller] Failed to fetch JIL apps:', error.message);
+      throw createError('Failed to fetch inspection records.', 500, ERROR_CODES.INTERNAL_ERROR);
+    }
+
+    const establishments = (apps || []).map((app) => {
+      const biz = app.businesses || {};
+      const tp = biz.taxpayers || {};
+      const ownerName = `${tp.first_name || ''} ${tp.last_name || ''}`.trim() || 'Owner';
+
+      const verifs = app.doc_verifications || [];
+      const sanitaryVerif = verifs.some(v => v.status === 'Verified');
+      const fireVerif = verifs.some(v => v.status === 'Verified');
+
+      return {
+        application_no: app.application_no,
+        business_name: biz.business_name || 'Business',
+        address: `${biz.address_line1 ? biz.address_line1 + ', ' : ''}${biz.barangay || ''}`,
+        barangay: biz.barangay,
+        owner_name: ownerName,
+        contact_no: biz.contact_no || '',
+        sanitary_verified: sanitaryVerif,
+        fire_verified: fireVerif,
+        status: app.status
+      };
+    });
+
+    const pdfBuffer = await pdfService.generateJointInspectionListPDF({
+      dateGenerated: new Date(),
+      establishments,
+      generatedBy: req.user?.userId || 'Admin'
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="Joint_Inspection_List_Liliw.pdf"');
+    return res.status(200).send(pdfBuffer);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getEmailLogs,
   getHealth,
@@ -719,4 +814,6 @@ module.exports = {
   deleteMasterData,
   getAuditLogs,
   uploadDocumentTemplate,
+  getJointInspectionListReport,
 };
+

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, Database, Server, RefreshCw, ArrowUpRight, ArrowDown, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Activity, Database, Server, RefreshCw, ArrowUpRight, AlertTriangle, CheckCircle, Clock, Printer } from 'lucide-react';
 import apiClient from '../../utils/apiClient';
-import { API_ENDPOINTS } from '../../utils/constants';
+import { API_ENDPOINTS, API_BASE_URL } from '../../utils/constants';
+import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
@@ -16,7 +17,7 @@ const AdminDashboard = () => {
         setHealthData(res.data);
         if (force) toast.success('Dashboard refreshed');
       }
-    } catch (err) {
+    } catch {
       if (!bgSync) toast.error('Failed to load system health');
     } finally {
       if (!bgSync) setLoading(false);
@@ -24,9 +25,25 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchHealth();
+    let cancelled = false;
+    const init = async () => {
+      try {
+        const res = await apiClient.get(API_ENDPOINTS.ADMIN_HEALTH);
+        if (!cancelled && res?.success) {
+          setHealthData(res.data);
+        }
+      } catch {
+        if (!cancelled) toast.error('Failed to load system health');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    init();
     const interval = setInterval(() => fetchHealth(false, true), 60000);
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   const formatBytes = (bytes) => {
@@ -39,6 +56,15 @@ const AdminDashboard = () => {
 
   const dbPct = healthData ? Math.round((healthData.activeConnections / (healthData.maxConnections || 100)) * 100) : 0;
   const storagePct = healthData ? ((healthData.storageSize / (1024 * 1024 * 1024)) * 100) : 0;
+
+  const handleExportJIL = () => {
+    const token = useAuthStore.getState().token;
+    if (!token) {
+      toast.error('Authentication session not found.');
+      return;
+    }
+    window.open(`${API_BASE_URL}/api/admin/reports/joint-inspection-list?token=${token}`, '_blank');
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -53,6 +79,15 @@ const AdminDashboard = () => {
             <Clock size={13} />
             <span>Auto-refresh: 60s</span>
           </div>
+          <button
+            type="button"
+            onClick={handleExportJIL}
+            className="flex items-center gap-2 bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-2xl text-sm font-medium hover:bg-gray-50 transition-all shadow-sm"
+            title="Download weekly Joint Inspection List PDF for MHO Sanitary and BFP Fire Safety physical inspections"
+          >
+            <Printer size={15} className="text-gray-500" />
+            <span>Export JIL</span>
+          </button>
           <button
             onClick={() => fetchHealth(true)}
             disabled={loading}

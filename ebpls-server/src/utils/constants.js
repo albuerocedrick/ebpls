@@ -21,20 +21,21 @@ const ROLES = Object.freeze({
 
 // -----------------------------------------------------------------
 // APPLICATION STATE MACHINE
-// Source: supabase/migrations/005_applications.sql + 018_paymongo_payment.sql
+// Source: supabase/migrations/005_applications.sql + 048_payment_proof_schema.sql
 // -----------------------------------------------------------------
 const STATUSES = Object.freeze({
-  DRAFT:              'Draft',
-  PENDING:            'Pending',
-  UNDER_REVIEW:       'Under Review',
-  VERIFIED:           'Verified',
-  FOR_ASSESSMENT:     'For Assessment',
-  ASSESSED:           'Assessed',
-  FOR_PAYMENT:        'For Payment',
-  PAYMENT_PROCESSING: 'PaymentProcessing', // Added for Phase 5 Online Payments
-  PAID:               'Paid',
-  COMPLETED:          'Completed',
-  RETURNED:           'Returned',
+  DRAFT:                        'Draft',
+  PENDING:                      'Pending',
+  UNDER_REVIEW:                 'Under Review',
+  VERIFIED:                     'Verified',
+  FOR_ASSESSMENT:               'For Assessment',
+  ASSESSED:                     'Assessed',
+  FOR_PAYMENT:                  'For Payment',
+  PAYMENT_VERIFICATION_PENDING: 'PaymentVerificationPending',
+  PAYMENT_PROCESSING:           'PaymentProcessing', // Legacy Online Payments
+  PAID:                         'Paid',
+  COMPLETED:                    'Completed',
+  RETURNED:                     'Returned',
 });
 
 // -----------------------------------------------------------------
@@ -42,21 +43,24 @@ const STATUSES = Object.freeze({
 // Updated: Uses arrays to support multiple valid next states (branching).
 // -----------------------------------------------------------------
 const VALID_TRANSITIONS = Object.freeze({
-  [STATUSES.DRAFT]:          [STATUSES.PENDING],
-  [STATUSES.PENDING]:        [STATUSES.UNDER_REVIEW, STATUSES.ASSESSED],
-  [STATUSES.UNDER_REVIEW]:   [STATUSES.VERIFIED, STATUSES.ASSESSED, STATUSES.RETURNED],
-  [STATUSES.VERIFIED]:       [STATUSES.FOR_ASSESSMENT],
-  [STATUSES.FOR_ASSESSMENT]: [STATUSES.ASSESSED],
-  [STATUSES.ASSESSED]:       [STATUSES.FOR_PAYMENT],
+  [STATUSES.DRAFT]:                        [STATUSES.PENDING],
+  [STATUSES.PENDING]:                      [STATUSES.UNDER_REVIEW, STATUSES.ASSESSED],
+  [STATUSES.UNDER_REVIEW]:                 [STATUSES.VERIFIED, STATUSES.ASSESSED, STATUSES.RETURNED],
+  [STATUSES.VERIFIED]:                     [STATUSES.FOR_ASSESSMENT],
+  [STATUSES.FOR_ASSESSMENT]:               [STATUSES.ASSESSED],
+  [STATUSES.ASSESSED]:                     [STATUSES.FOR_PAYMENT, STATUSES.PAYMENT_VERIFICATION_PENDING],
   
-  // From "For Payment", user can pay OTC (Paid) or Online (PaymentProcessing)
-  [STATUSES.FOR_PAYMENT]:    [STATUSES.PAID, STATUSES.PAYMENT_PROCESSING],
+  // From "For Payment", user can pay OTC (Paid) or submit Proof (PaymentVerificationPending)
+  [STATUSES.FOR_PAYMENT]:                  [STATUSES.PAID, STATUSES.PAYMENT_VERIFICATION_PENDING, STATUSES.PAYMENT_PROCESSING],
+  
+  // From "PaymentVerificationPending", Treasury can verify (Paid/Completed) or reject (back to For Payment)
+  [STATUSES.PAYMENT_VERIFICATION_PENDING]: [STATUSES.PAID, STATUSES.FOR_PAYMENT, STATUSES.COMPLETED],
   
   // From "PaymentProcessing", can succeed (Paid) or fail/expire (back to For Payment)
-  [STATUSES.PAYMENT_PROCESSING]: [STATUSES.PAID, STATUSES.FOR_PAYMENT],
+  [STATUSES.PAYMENT_PROCESSING]:           [STATUSES.PAID, STATUSES.FOR_PAYMENT],
   
-  [STATUSES.PAID]:           [STATUSES.COMPLETED],
-  [STATUSES.RETURNED]:       [STATUSES.PENDING],
+  [STATUSES.PAID]:                         [STATUSES.COMPLETED],
+  [STATUSES.RETURNED]:                     [STATUSES.PENDING],
 });
 
 // -----------------------------------------------------------------
@@ -109,6 +113,11 @@ const AUDIT_ACTIONS = Object.freeze({
   ONLINE_PAYMENT_INITIATED:   'ONLINE_PAYMENT_INITIATED',
   ONLINE_PAYMENT_CONFIRMED:   'ONLINE_PAYMENT_CONFIRMED',
   ONLINE_PAYMENT_FAILED:      'ONLINE_PAYMENT_FAILED',
+
+  // Payment Proof Actions (Phase 5)
+  PAYMENT_PROOF_SUBMITTED:    'PAYMENT_PROOF_SUBMITTED',
+  PAYMENT_PROOF_VERIFIED:     'PAYMENT_PROOF_VERIFIED',
+  PAYMENT_PROOF_REJECTED:     'PAYMENT_PROOF_REJECTED',
 
   // Documents
   PERMIT_GENERATED:           'PERMIT_GENERATED',

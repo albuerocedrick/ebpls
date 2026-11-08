@@ -8,7 +8,7 @@
  *   - Aligned ROLES with constants.js
  */
 
-import React, { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
 import {
@@ -16,7 +16,6 @@ import {
   ApplicantLayout,
   BPLOLayout,
   TreasuryLayout,
-  BarangayLayout,
   AdminLayout,
 } from './layouts';
 
@@ -63,8 +62,6 @@ const RetirementAssess = lazy(() => import('./screens/treasury/RetirementAssess'
 const RetirementForm  = lazy(() => import('./screens/applicant/RetirementForm'));
 const RetirementQueue = lazy(() => import('./screens/bplo/RetirementQueue'));
 
-// Barangay
-const ClearanceQueue  = lazy(() => import('./screens/barangay/ClearanceQueue'));
 
 // Admin
 const AdminDashboard      = lazy(() => import('./screens/admin/AdminDashboard'));
@@ -75,9 +72,6 @@ const DocumentBuilder   = lazy(() => import('./screens/admin/DocumentBuilder'));
 const AuditLogs         = lazy(() => import('./screens/admin/AuditLogs'));
 const EmailLogs         = lazy(() => import('./screens/admin/EmailLogs'));
 
-// Payment
-const PaymentSuccess    = lazy(() => import('./screens/payment/PaymentSuccess'));
-const PaymentCancel     = lazy(() => import('./screens/payment/PaymentCancel'));
 
 // =========================================
 // Suspense Fallback
@@ -262,22 +256,7 @@ function App() {
             </Route>
           </Route>
 
-          {/* ── BARANGAY PORTAL ─────────────────── */}
-          <Route
-            element={
-              <ProtectedRoute
-                allowedRoles={[ROLES.BARANGAY_OFFICER, ROLES.ADMIN]}
-              />
-            }
-          >
-            <Route path="/barangay" element={<BarangayLayout />}>
-              <Route
-                index
-                element={<Navigate to={ROUTES.BARANGAY_QUEUE} replace />}
-              />
-              <Route path="queue" element={<ClearanceQueue />} />
-            </Route>
-          </Route>
+          
 
           {/* ── ADMIN PORTAL ────────────────────── */}
           <Route

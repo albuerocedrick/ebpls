@@ -246,7 +246,7 @@ const getEResiboPDF = async (req, res, next) => {
 
     // 4. Generate PDF
     const pdfBuffer = await pdfService.generateEResiboPDF({
-      orNumber: transaction?.or_number || transaction?.paymongo_payment_id || 'N/A',
+      orNumber: transaction?.or_number || transaction?.payment_reference_no || 'N/A',
       businessName: app.businesses?.business_name || 'Business',
       ownerName,
       applicationNo: app_no,

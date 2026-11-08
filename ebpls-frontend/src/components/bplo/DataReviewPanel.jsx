@@ -1,32 +1,17 @@
 /**
- * DataReviewPanel.jsx — BPLO Module (Phase 4, Task 4.8)
+ * DataReviewPanel.jsx — BPLO Module (Phase 4)
  *
  * Shows the actual declared application data organized into four sections.
- * BPLO officer can see the values and mark each section as Verified or Discrepancy.
+ * BPLO officer can inspect the values and mark each section as Verified or Discrepancy.
  * Calls PUT /api/bplo/applications/review/:app_no on submit.
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Save, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, GeoJSON } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { geojsonData } from '../../utils/geoValidation';
+import { CheckCircle, XCircle, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import useUIStore, { TOAST_TYPE } from '../../store/UIStore';
 import { apiClient } from '../../utils/apiClient';
-
-// Fix leaflet default marker icon
-const defaultIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
 
 // =========================================
 // Section Definitions
@@ -68,6 +53,7 @@ const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onC
   const addToast = useUIStore((s) => s.addToast);
   const [reviews, setReviews] = useState({});
   const [remarks, setRemarks] = useState({});
+  const [prevInitialData, setPrevInitialData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [expandedSection, setExpandedSection] = useState(null);
@@ -79,8 +65,17 @@ const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onC
   const activities = applicationData?.activities || [];
   const appType = applicationData?.application_types?.name || '—';
 
-  // ─── Initialize from API data ─────────────────────────────────
-  useEffect(() => {
+  const checkAllVerified = useCallback(
+    (currentReviews) => {
+      const allVerified = SECTIONS.every((sec) => currentReviews[sec.id] === 'Verified');
+      if (onChange) onChange(allVerified);
+    },
+    [onChange]
+  );
+
+  // Synchronize state with initialData without triggering cascading effect renders
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
     if (initialData && initialData.length > 0) {
       const initialReviews = {};
       const initialRemarks = {};
@@ -90,17 +85,12 @@ const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onC
       });
       setReviews(initialReviews);
       setRemarks(initialRemarks);
-      checkAllVerified(initialReviews);
     }
-  }, [initialData]);
+  }
 
-  const checkAllVerified = useCallback(
-    (currentReviews) => {
-      const allVerified = SECTIONS.every((sec) => currentReviews[sec.id] === 'Verified');
-      if (onChange) onChange(allVerified);
-    },
-    [onChange]
-  );
+  useEffect(() => {
+    checkAllVerified(reviews);
+  }, [reviews, checkAllVerified]);
 
   const handleStatusChange = (sectionId, status) => {
     const newReviews = { ...reviews, [sectionId]: status };
@@ -111,7 +101,6 @@ const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onC
       delete newRemarks[sectionId];
       setRemarks(newRemarks);
     }
-    checkAllVerified(newReviews);
   };
 
   const handleRemarksChange = (sectionId, value) => {
@@ -169,54 +158,13 @@ const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onC
           <div className="divide-y divide-border/50">
             <DataRow label="Address" value={business?.address_line1} />
             <DataRow label="Barangay" value={business?.barangay} />
-            <DataRow label="City" value={business?.city} />
-            <DataRow label="Province" value={business?.province} />
-            <DataRow label="Coordinates" value={
+            <DataRow label="City / Municipality" value={business?.city || 'Liliw'} />
+            <DataRow label="Province" value={business?.province || 'Laguna'} />
+            <DataRow label="Reference Centroid" value={
               business?.latitude && business?.longitude
                 ? `${business.latitude}, ${business.longitude}`
-                : 'Not pinned'
+                : 'Assigned automatically'
             } />
-            {applicationData?.location_mismatch && (
-              <div className="my-3 p-3 rounded-md bg-red-50 border border-red-200 flex items-start gap-2">
-                <AlertTriangle size={16} className="text-red-600 mt-0.5 shrink-0" />
-                <p className="text-xs text-red-800">
-                  <strong className="font-semibold text-red-900">System Flag:</strong> The pinned location falls outside the boundary of {business?.barangay || 'the selected barangay'}. Please verify manually.
-                </p>
-              </div>
-            )}
-            {business?.latitude && business?.longitude ? (
-              <div className="pt-2 pb-1">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--color-text-muted))] mb-1.5">Map Pin</p>
-                <div className="h-48 rounded-md overflow-hidden border border-border">
-                  <MapContainer
-                    center={[business.latitude, business.longitude]}
-                    zoom={17}
-                    scrollWheelZoom={false}
-                    style={{ height: '100%', width: '100%' }}
-                    zoomControl={false}
-                    dragging={false}
-                    attributionControl={false}
-                  >
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <GeoJSON 
-                      data={geojsonData} 
-                      style={{ color: '#3b82f6', weight: 2, fillOpacity: 0.1 }} 
-                      onEachFeature={(feature, layer) => {
-                        const name = feature.properties?.name || feature.properties?.ADM4_EN;
-                        if (name) {
-                          layer.bindTooltip(name, {
-                            permanent: true,
-                            direction: 'center',
-                            className: '!bg-transparent !border-none !shadow-none text-[10px] font-bold text-blue-900 drop-shadow-md'
-                          });
-                        }
-                      }}
-                    />
-                    <Marker position={[business.latitude, business.longitude]} icon={defaultIcon} />
-                  </MapContainer>
-                </div>
-              </div>
-            ) : null}
           </div>
         );
       case 'business_activities':
@@ -239,7 +187,7 @@ const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onC
         ) : (
           <p className="text-xs text-[hsl(var(--color-text-muted))] italic">No activities declared.</p>
         );
-      case 'financial_declaration':
+      case 'financial_declaration': {
         if (activities.length === 0) {
           return <p className="text-xs text-[hsl(var(--color-text-muted))] italic">No financial data declared.</p>;
         }
@@ -252,152 +200,147 @@ const DataReviewPanel = ({ applicationNo, applicationData, initialData = [], onC
             <DataRow label="Number of LOBs" value={`${activities.length}`} />
           </div>
         );
+      }
       default:
         return null;
     }
   };
 
   const reviewedCount = SECTIONS.filter((sec) => reviews[sec.id]).length;
+  const allReviewed = reviewedCount === SECTIONS.length;
+  const allVerified = SECTIONS.every((sec) => reviews[sec.id] === 'Verified');
 
   return (
-    <Card className="flex flex-col overflow-hidden" padding="none">
+    <Card padding="none">
       <Card.Header>
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-[hsl(var(--color-text))]">Data Review Panel</h3>
-            <p className="text-xs text-[hsl(var(--color-text-muted))] mt-0.5">
-              Verify declared data against submitted documents ({reviewedCount}/{SECTIONS.length} reviewed)
-            </p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-[hsl(var(--color-text))]">Application Data Review</p>
+            <span className="text-xs text-[hsl(var(--color-text-muted))]">
+              ({reviewedCount}/{SECTIONS.length} reviewed)
+            </span>
           </div>
-          {isSaved && <span className="text-xs text-green-600 font-medium">Saved ✓</span>}
+          {allVerified && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+              <CheckCircle size={12} /> All Verified
+            </span>
+          )}
         </div>
       </Card.Header>
 
-      <Card.Body className="flex-1 overflow-y-auto !p-0">
-        {SECTIONS.map((section) => {
-          const status = reviews[section.id];
-          const isVerified = status === 'Verified';
-          const isDiscrepancy = status === 'Discrepancy';
-          const isExpanded = expandedSection === section.id;
+      <Card.Body className="!p-0">
+        <div className="divide-y divide-border">
+          {SECTIONS.map((sec) => {
+            const status = reviews[sec.id];
+            const isExpanded = expandedSection === sec.id;
+            const hasRemarks = status === 'Discrepancy';
 
-          return (
-            <div
-              key={section.id}
-              className={[
-                'border-b border-border last:border-b-0',
-                isDiscrepancy ? 'bg-red-50/50' : isVerified ? 'bg-green-50/30' : '',
-              ].join(' ')}
-            >
-              {/* Section Header — clickable to expand */}
-              <button
-                type="button"
-                onClick={() => toggleSection(section.id)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-tint transition-colors text-left"
-              >
-                <div className="flex items-center gap-2">
-                  {isVerified && <CheckCircle size={14} className="text-green-600" />}
-                  {isDiscrepancy && <XCircle size={14} className="text-red-500" />}
-                  {!status && <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-300" />}
-                  <span className="text-sm font-medium text-[hsl(var(--color-text))]">{section.label}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {status && (
-                    <span className={`text-[10px] font-semibold uppercase tracking-wide ${isVerified ? 'text-green-600' : 'text-red-500'}`}>
-                      {status}
-                    </span>
-                  )}
-                  {isExpanded ? <ChevronUp size={14} className="text-[hsl(var(--color-text-muted))]" /> : <ChevronDown size={14} className="text-[hsl(var(--color-text-muted))]" />}
-                </div>
-              </button>
-
-              {/* Expanded Content */}
-              {isExpanded && (
-                <div className="px-4 pb-4 space-y-3">
-                  {/* Declared Data */}
-                  <div className="bg-white rounded-md border border-border p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--color-text-muted))] mb-2">
-                      Declared Values
-                    </p>
-                    {applicationData ? renderSectionData(section.id) : (
-                      <p className="text-xs text-[hsl(var(--color-text-muted))] italic">Loading data...</p>
+            return (
+              <div key={sec.id} className="p-3 transition-colors">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(sec.id)}
+                    className="flex items-center gap-2 text-left flex-1 hover:opacity-80 transition-opacity"
+                  >
+                    {status === 'Verified' ? (
+                      <CheckCircle size={16} className="text-green-600 shrink-0" />
+                    ) : status === 'Discrepancy' ? (
+                      <XCircle size={16} className="text-red-500 shrink-0" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border-2 border-dashed border-gray-300 shrink-0" />
                     )}
-                  </div>
+                    <span className="text-xs font-medium text-[hsl(var(--color-text))]">{sec.label}</span>
+                    {isExpanded ? (
+                      <ChevronUp size={14} className="text-[hsl(var(--color-text-muted))]" />
+                    ) : (
+                      <ChevronDown size={14} className="text-[hsl(var(--color-text-muted))]" />
+                    )}
+                  </button>
 
-                  {/* Action Buttons */}
                   {!disabled && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleStatusChange(section.id, 'Verified')}
+                        onClick={() => handleStatusChange(sec.id, 'Verified')}
                         className={[
-                          'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                          isVerified
+                          'px-2 py-1 text-xs font-medium rounded transition-all',
+                          status === 'Verified'
                             ? 'bg-green-600 text-white shadow-sm'
-                            : 'bg-white text-gray-600 border border-gray-300 hover:border-green-400 hover:text-green-600',
+                            : 'bg-surface-tint text-[hsl(var(--color-text-muted))] hover:bg-green-50 hover:text-green-700',
                         ].join(' ')}
                       >
-                        <CheckCircle size={13} />
-                        Verified
+                        Verify
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleStatusChange(section.id, 'Discrepancy')}
+                        onClick={() => handleStatusChange(sec.id, 'Discrepancy')}
                         className={[
-                          'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                          isDiscrepancy
-                            ? 'bg-red-500 text-white shadow-sm'
-                            : 'bg-white text-gray-600 border border-gray-300 hover:border-red-400 hover:text-red-500',
+                          'px-2 py-1 text-xs font-medium rounded transition-all',
+                          status === 'Discrepancy'
+                            ? 'bg-red-600 text-white shadow-sm'
+                            : 'bg-surface-tint text-[hsl(var(--color-text-muted))] hover:bg-red-50 hover:text-red-700',
                         ].join(' ')}
                       >
-                        <XCircle size={13} />
                         Discrepancy
                       </button>
                     </div>
                   )}
 
-                  {/* Discrepancy Remarks */}
-                  {isDiscrepancy && (
-                    disabled ? (
-                      <div className="p-2.5 rounded-md border border-red-200 bg-red-50 text-xs text-red-700">
-                        <span className="font-semibold text-red-800">Discrepancy remarks:</span> {remarks[section.id] || 'No remarks provided.'}
-                      </div>
-                    ) : (
-                      <textarea
-                        className="w-full text-sm p-2.5 rounded-md border border-red-300 bg-white text-[hsl(var(--color-text))] outline-none focus:ring-1 focus:ring-red-400 resize-none"
-                        placeholder="Describe the discrepancy (required)..."
-                        rows={2}
-                        value={remarks[section.id] || ''}
-                        onChange={(e) => handleRemarksChange(section.id, e.target.value)}
-                      />
-                    )
+                  {disabled && status && (
+                    <span
+                      className={[
+                        'px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded',
+                        status === 'Verified' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800',
+                      ].join(' ')}
+                    >
+                      {status}
+                    </span>
                   )}
                 </div>
-              )}
-            </div>
-          );
-        })}
+
+                {isExpanded && (
+                  <div className="mt-2.5 pt-2.5 border-t border-border/50 text-xs">
+                    {renderSectionData(sec.id)}
+                  </div>
+                )}
+
+                {hasRemarks && (
+                  <div className="mt-2 pl-6">
+                    <input
+                      type="text"
+                      disabled={disabled}
+                      value={remarks[sec.id] || ''}
+                      onChange={(e) => handleRemarksChange(sec.id, e.target.value)}
+                      placeholder={`Explain discrepancy in ${sec.label}...`}
+                      className="w-full text-xs px-2.5 py-1.5 rounded border border-red-200 bg-red-50/50 text-red-900 placeholder:text-red-300 outline-none focus:ring-1 focus:ring-red-400"
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </Card.Body>
 
-      {/* Footer */}
       {!disabled && (
-        <div className="px-4 py-3 border-t border-border bg-surface-tint flex items-center justify-between">
-          <span className="text-xs text-[hsl(var(--color-text-muted))]">
-            {reviewedCount === SECTIONS.length
-              ? SECTIONS.every((s) => reviews[s.id] === 'Verified')
-                ? '✓ All sections verified'
-                : 'Review complete — has discrepancies'
-              : `${SECTIONS.length - reviewedCount} section(s) remaining`}
-          </span>
-          <Button
-            onClick={handleSave}
-            isLoading={isSubmitting}
-            size="sm"
-            leftIcon={<Save size={14} />}
-            disabled={reviewedCount < SECTIONS.length}
-          >
-            Save Review
-          </Button>
-        </div>
+        <Card.Footer className="bg-[hsl(var(--color-surface-tint))]">
+          <div className="flex items-center justify-between w-full">
+            <span className="text-xs text-[hsl(var(--color-text-muted))]">
+              {isSaved ? 'Changes saved' : 'Unsaved changes'}
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              leftIcon={<Save size={14} />}
+              onClick={handleSave}
+              isLoading={isSubmitting}
+              disabled={!allReviewed || isSubmitting}
+            >
+              Save Review
+            </Button>
+          </div>
+        </Card.Footer>
       )}
     </Card>
   );

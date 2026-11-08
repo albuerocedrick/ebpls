@@ -553,7 +553,7 @@ const generatePermitAndReceiptAttachments = async (applicationNo) => {
     let receiptBuffer = null;
     if (assessment && transaction) {
       receiptBuffer = await pdfService.generateEResiboPDF({
-        orNumber: transaction.or_number || transaction.paymongo_payment_id || 'N/A',
+        orNumber: transaction.or_number || transaction.payment_reference_no || 'N/A',
         businessName: biz?.business_name || 'Business',
         ownerName,
         applicationNo: applicationNo,

@@ -318,7 +318,9 @@ const getApplicationDetails = async (req, res, next) => {
           city,
           province,
           latitude,
-          longitude
+          longitude,
+          tenancy_type,
+          stall_unit_numbers
         )
       `)
       .eq('application_no', applicationNo)
@@ -440,9 +442,23 @@ const getApplicationDetails = async (req, res, next) => {
       })
     );
 
+    const businessData = Array.isArray(application.businesses) ? application.businesses[0] : application.businesses;
+    let zoneData = null;
+    if (businessData?.barangay) {
+      const { data: brgy } = await supabaseAdmin
+        .from('barangays')
+        .select('zone_id, location_zones ( id, name, foot_traffic_level, min_capital_floor, fee_multiplier )')
+        .eq('name', businessData.barangay)
+        .maybeSingle();
+      if (brgy?.location_zones) {
+        zoneData = brgy.location_zones;
+      }
+    }
+
     return res.status(200).json(
       successResponse('Application details fetched successfully.', {
         ...application,
+        zone: zoneData,
         activities: (activities || []).map((a) => ({
           name: a.business_activities?.name || `Activity ${a.activity_id}`,
           capitalization: a.capitalization,
@@ -574,30 +590,6 @@ const verifyApplication = async (req, res, next) => {
       ));
     }
     
-    // Guard: if a barangay_clearances record exists, its status must be 'Issued'
-    const { data: brgyRow, error: brgyFetchError } = await supabaseAdmin
-      .from('barangay_clearances')
-      .select('status')
-      .eq('application_no', applicationNo)
-      .maybeSingle();
-      
-    if (brgyFetchError) {
-      console.error('[bplo.controller] Failed to load barangay_clearances row:', brgyFetchError.message);
-      return next(createError(
-        'Failed to validate barangay clearance.',
-        500,
-        ERROR_CODES.INTERNAL_ERROR
-      ));
-    }
-    
-    if (brgyRow && brgyRow.status !== 'Issued') {
-       return next(createError(
-        'Barangay clearance must be Issued before final verification.',
-        400,
-        ERROR_CODES.INVALID_TRANSITION
-      ));
-    }
-
     const calculatedData = await assessmentService.calculateFees(applicationNo);
     const updated = await assessmentService.createAssessment(applicationNo, req.user.userId, calculatedData, getClientIp(req));
     res.status(200).json(successResponse('Application approved and assessed automatically.', updated));

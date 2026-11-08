@@ -315,6 +315,10 @@ const targets = [
   {
     md: path.join(__dirname, '../system-planning/eBPLS_Approved_Revisions_Main_Implementation_Plan.md'),
     docx: path.join(__dirname, '../system-planning/eBPLS_Approved_Revisions_Main_Implementation_Plan.docx')
+  },
+  {
+    md: path.join(__dirname, '../system-planning/eBPLS_Client_Frontend_Test_Document.md'),
+    docx: path.join(__dirname, '../system-planning/eBPLS_Client_Frontend_Test_Document.docx')
   }
 ];
 

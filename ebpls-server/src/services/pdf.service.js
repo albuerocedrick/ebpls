@@ -368,9 +368,181 @@ const generateBarangayClearancePDF = async (data) => {
   return Buffer.from(pdfBytes);
 };
 
+
+/**
+ * Generates the Joint Inspection List (JIL) PDF report for MHO and BFP.
+ * @param {object} data - { dateGenerated, establishments, generatedBy }
+ * @returns {Promise<Buffer>}
+ */
+const generateJointInspectionListPDF = async (data) => {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  const pageWidth = 792;
+  const pageHeight = 612;
+  const margin = 35;
+  let page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+  let y = pageHeight - 35;
+
+  page.drawText('Republic of the Philippines • Province of Laguna', {
+    x: margin,
+    y,
+    size: 8,
+    font,
+    color: COLORS.gray,
+  });
+  y -= 12;
+
+  page.drawText('MUNICIPALITY OF LILIW — JOINT INSPECTION TEAM', {
+    x: margin,
+    y,
+    size: 14,
+    font: boldFont,
+    color: COLORS.black,
+  });
+  y -= 14;
+
+  page.drawText('WEEKLY JOINT INSPECTION LIST (JIL) — BPLO • MHO (SANITARY) • BFP (FIRE SAFETY)', {
+    x: margin,
+    y,
+    size: 9,
+    font: boldFont,
+    color: COLORS.accent,
+  });
+  y -= 14;
+
+  const dateStr = formatDate(data.dateGenerated || new Date());
+  page.drawText(`Generated on: ${dateStr} | Total Establishments: ${(data.establishments || []).length}`, {
+    x: margin,
+    y,
+    size: 8,
+    font,
+    color: COLORS.darkGray,
+  });
+  y -= 20;
+
+  const colDef = [
+    { label: '#', width: 25, x: margin },
+    { label: 'App No', width: 95, x: margin + 25 },
+    { label: 'Business Name', width: 165, x: margin + 120 },
+    { label: 'Address / Barangay', width: 145, x: margin + 285 },
+    { label: 'Contact / Owner', width: 110, x: margin + 430 },
+    { label: 'MHO Sanitary', width: 75, x: margin + 540 },
+    { label: 'BFP Fire', width: 75, x: margin + 615 },
+    { label: 'Status', width: 35, x: margin + 690 },
+  ];
+
+  page.drawRectangle({
+    x: margin,
+    y: y - 5,
+    width: pageWidth - (margin * 2),
+    height: 18,
+    color: rgb(0.92, 0.94, 0.92),
+  });
+
+  colDef.forEach((col) => {
+    page.drawText(col.label, {
+      x: col.x + 3,
+      y,
+      size: 8,
+      font: boldFont,
+      color: COLORS.black,
+    });
+  });
+  y -= 20;
+
+  const establishments = data.establishments || [];
+
+  if (establishments.length === 0) {
+    page.drawText('No establishments scheduled for inspection this week.', {
+      x: margin + 10,
+      y,
+      size: 9,
+      font,
+      color: COLORS.gray,
+    });
+    y -= 25;
+  } else {
+    establishments.forEach((est, index) => {
+      if (y < 85) {
+        page = pdfDoc.addPage([pageWidth, pageHeight]);
+        y = pageHeight - 40;
+
+        page.drawRectangle({
+          x: margin,
+          y: y - 5,
+          width: pageWidth - (margin * 2),
+          height: 18,
+          color: rgb(0.92, 0.94, 0.92),
+        });
+
+        colDef.forEach((col) => {
+          page.drawText(col.label, {
+            x: col.x + 3,
+            y,
+            size: 8,
+            font: boldFont,
+            color: COLORS.black,
+          });
+        });
+        y -= 20;
+      }
+
+      if (index % 2 === 1) {
+        page.drawRectangle({
+          x: margin,
+          y: y - 4,
+          width: pageWidth - (margin * 2),
+          height: 16,
+          color: rgb(0.97, 0.97, 0.97),
+        });
+      }
+
+      const rowY = y;
+      const truncate = (str, max) => (!str ? '—' : str.length > max ? `${str.slice(0, max - 1)}…` : str);
+
+      page.drawText(String(index + 1), { x: colDef[0].x + 3, y: rowY, size: 7.5, font, color: COLORS.darkGray });
+      page.drawText(est.application_no || '—', { x: colDef[1].x + 3, y: rowY, size: 7.5, font: boldFont, color: COLORS.black });
+      page.drawText(truncate(est.business_name, 30), { x: colDef[2].x + 3, y: rowY, size: 7.5, font: boldFont, color: COLORS.black });
+      page.drawText(truncate(est.address || est.barangay, 28), { x: colDef[3].x + 3, y: rowY, size: 7.5, font, color: COLORS.darkGray });
+      page.drawText(truncate(`${est.owner_name || ''} ${est.contact_no ? '• ' + est.contact_no : ''}`, 20), { x: colDef[4].x + 3, y: rowY, size: 7, font, color: COLORS.darkGray });
+
+      const mhoText = est.sanitary_verified ? '[X] Passed' : '[  ] Pending';
+      const bfpText = est.fire_verified ? '[X] Passed' : '[  ] Pending';
+      page.drawText(mhoText, { x: colDef[5].x + 3, y: rowY, size: 7.5, font, color: est.sanitary_verified ? COLORS.accent : COLORS.gray });
+      page.drawText(bfpText, { x: colDef[6].x + 3, y: rowY, size: 7.5, font, color: est.fire_verified ? COLORS.accent : COLORS.gray });
+      page.drawText(truncate(est.status, 8), { x: colDef[7].x + 3, y: rowY, size: 7, font: boldFont, color: COLORS.darkGray });
+
+      y -= 17;
+    });
+  }
+
+  y = Math.min(y - 15, 65);
+  const sigColWidth = (pageWidth - (margin * 2)) / 3;
+
+  page.drawText('Prepared by:', { x: margin, y: y + 25, size: 7, font, color: COLORS.gray });
+  page.drawText('BPLO INSPECTION OFFICER', { x: margin, y: y + 12, size: 8, font: boldFont, color: COLORS.black });
+  page.drawText('Business Permit & Licensing Office', { x: margin, y: y + 2, size: 7, font, color: COLORS.gray });
+
+  page.drawText('Inspected by:', { x: margin + sigColWidth, y: y + 25, size: 7, font, color: COLORS.gray });
+  page.drawText('SANITARY INSPECTOR', { x: margin + sigColWidth, y: y + 12, size: 8, font: boldFont, color: COLORS.black });
+  page.drawText('Municipal Health Office (MHO)', { x: margin + sigColWidth, y: y + 2, size: 7, font, color: COLORS.gray });
+
+  page.drawText('Inspected by:', { x: margin + (sigColWidth * 2), y: y + 25, size: 7, font, color: COLORS.gray });
+  page.drawText('FIRE SAFETY INSPECTOR', { x: margin + (sigColWidth * 2), y: y + 12, size: 8, font: boldFont, color: COLORS.black });
+  page.drawText('Bureau of Fire Protection (BFP)', { x: margin + (sigColWidth * 2), y: y + 2, size: 7, font, color: COLORS.gray });
+
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
+};
+
 module.exports = {
   generatePermitPDF,
   generateEResiboPDF,
   generateTOPPDF,
   generateBarangayClearancePDF,
+  generateJointInspectionListPDF,
 };
+

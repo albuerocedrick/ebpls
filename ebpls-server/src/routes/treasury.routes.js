@@ -1,7 +1,7 @@
 // =================================================================
 // File: src/routes/treasury.routes.js
-// Purpose: Internal treasury operations (Assessment & OTC Payments).
-// Policy:  Restricted to Treasury Officers and Admins.
+// Purpose: Internal treasury operations (Assessment, OTC, and Proof of Payments).
+// Policy:  Restricted to Treasury Officers, Admins, and Applicants (for own proofs).
 // =================================================================
 
 const express = require('express');
@@ -24,7 +24,32 @@ router.get('/fee-schedule', authenticate, treasuryController.getFeeSchedule);
  */
 router.get('/fee-schedule/lookup', authenticate, treasuryController.lookupFeeSchedule);
 
-// All other treasury routes require Treasury_Officer or Admin role
+/**
+ * Proof of Payment Routes (Phase 5)
+ * Accessible by Applicant (for own application), Treasury Officer, and Admin
+ */
+router.post(
+  '/payments/proof-upload-url',
+  authenticate,
+  authorize(ROLES.APPLICANT, ROLES.TREASURY_OFFICER, ROLES.ADMIN),
+  treasuryController.getProofUploadUrl
+);
+
+router.post(
+  '/payments/proof',
+  authenticate,
+  authorize(ROLES.APPLICANT, ROLES.TREASURY_OFFICER, ROLES.ADMIN),
+  treasuryController.submitPaymentProof
+);
+
+router.get(
+  '/payments/:app_no/proof',
+  authenticate,
+  authorize(ROLES.APPLICANT, ROLES.TREASURY_OFFICER, ROLES.ADMIN),
+  treasuryController.getPaymentProofUrl
+);
+
+// All subsequent treasury routes require Treasury_Officer or Admin role
 router.use(authenticate, authorize(ROLES.TREASURY_OFFICER, ROLES.ADMIN));
 
 /**
@@ -60,7 +85,6 @@ router.put('/assess/:id/override', treasuryController.overrideFeeItem);
  */
 router.put('/assess/:id/reset', treasuryController.resetFeeItem);
 
-
 /**
  * @route   GET /api/treasury/queue
  * @desc    Get applications ready for assessment or payment
@@ -72,5 +96,17 @@ router.get('/queue', treasuryController.getTreasuryQueue);
  * @desc    Record a physical Cash/Manager Check payment
  */
 router.post('/payments/otc', treasuryController.recordOTCPayment);
+
+/**
+ * @route   GET /api/treasury/payments/pending-proofs
+ * @desc    Fetch pending deposit slips awaiting cashier verification
+ */
+router.get('/payments/pending-proofs', treasuryController.getPendingPaymentProofs);
+
+/**
+ * @route   PUT /api/treasury/payments/:id/verify-proof
+ * @desc    Confirm and verify, or reject a submitted payment proof
+ */
+router.put('/payments/:id/verify-proof', treasuryController.verifyPaymentProof);
 
 module.exports = router;

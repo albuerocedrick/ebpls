@@ -50,7 +50,7 @@ router.get(
 // Accessible by: Applicant (owner), Barangay, BPLO, Admin
 router.get(
   '/barangay-clearance/:id',
-  authorize(ROLES.APPLICANT, ROLES.BARANGAY_OFFICER, ROLES.BPLO_OFFICER, ROLES.ADMIN),
+  authorize(ROLES.APPLICANT, ROLES.BPLO_OFFICER, ROLES.ADMIN),
   getBarangayClearancePDF
 );
 

@@ -16,6 +16,11 @@ export const STATUS_METADATA = {
   'For Assessment': { label: 'For Assessment', color: 'cyan' },
   'Assessed': { label: 'Assessed', color: 'indigo' },
   'For Payment': { label: 'For Payment', color: 'orange' },
+  'PaymentVerificationPending': {
+    label: 'Payment Verification Pending',
+    color: 'amber',
+    isAnimated: true
+  },
   'PaymentProcessing': { 
     label: 'Payment Processing', 
     color: 'purple',

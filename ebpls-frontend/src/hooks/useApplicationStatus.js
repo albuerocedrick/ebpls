@@ -1,7 +1,7 @@
 /**
  * useApplicationStatus.js — Custom Hook
  * Handles real-time status tracking for a specific application.
- * Phase 5: Implements polling logic for the 'PaymentProcessing' state.
+ * Phase 5: Automatically tracks payment verification transitions.
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -57,9 +57,12 @@ export const useApplicationStatus = (appId) => {
     return () => stopPolling();
   }, [appId]);
 
-  // Handle Polling Logic for Online Payments
+  // Handle Polling Logic for Payment Verification
   useEffect(() => {
-    if (status === STATUSES.PAYMENT_PROCESSING) {
+    if (
+      status === STATUSES.PAYMENT_PROCESSING ||
+      status === STATUSES.PAYMENT_VERIFICATION_PENDING
+    ) {
       startPolling();
     } else {
       stopPolling();

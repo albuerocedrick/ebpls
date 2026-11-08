@@ -14,7 +14,14 @@ const { ROLES } = require('../utils/constants');
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Middleware handled in app.js
+// Access control: Require authentication, then route by role
+router.use(authenticate);
+router.use((req, res, next) => {
+  if (req.path.startsWith('/reports/')) {
+    return authorize(ROLES.ADMIN, ROLES.BPLO_OFFICER)(req, res, next);
+  }
+  return authorize(ROLES.ADMIN)(req, res, next);
+});
 
 /**
  * @route   POST /api/admin/document-templates/:type
@@ -99,5 +106,12 @@ router.delete('/master-data/:table/:id', adminController.deleteMasterData);
  * @access  Admin
  */
 router.get('/audit-logs', adminController.getAuditLogs);
+
+/**
+ * @route   GET /api/admin/reports/joint-inspection-list
+ * @desc    Generate weekly Joint Inspection List (JIL) PDF for MHO & BFP
+ * @access  Admin, BPLO_Officer
+ */
+router.get('/reports/joint-inspection-list', adminController.getJointInspectionListReport);
 
 module.exports = router;

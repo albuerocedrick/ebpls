@@ -4,13 +4,14 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Inbox, AlertTriangle, ArrowUpDown, RefreshCcw, FileSearch, Users } from 'lucide-react';
+import { Inbox, AlertTriangle, ArrowUpDown, RefreshCcw, FileSearch, Users, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
 import { apiClient } from '../../utils/apiClient';
-import { API_ENDPOINTS, APP_STATUS, ROUTES } from '../../utils/constants';
+import { API_ENDPOINTS, APP_STATUS, ROUTES, API_BASE_URL } from '../../utils/constants';
+import useAuthStore from '../../store/authStore';
 import useUIStore, { TOAST_TYPE } from '../../store/UIStore';
 
 
@@ -57,6 +58,18 @@ const BPLODashboard = () => {
   const loadQueue = () => {
     setIsLoading(true);
     setRefreshKey((k) => k + 1);
+  };
+
+  const handleExportJIL = () => {
+    const token = useAuthStore.getState().token;
+    if (!token) {
+      addToast({
+        message: 'Authentication session not found.',
+        type: TOAST_TYPE.ERROR,
+      });
+      return;
+    }
+    window.open(`${API_BASE_URL}/api/bplo/reports/joint-inspection-list?token=${token}`, '_blank');
   };
 
   // The fetch is inlined so no state is written before the first await, which
@@ -125,6 +138,15 @@ const BPLODashboard = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={<Printer size={16} />}
+            onClick={handleExportJIL}
+            title="Download weekly Joint Inspection List PDF for physical inspections"
+          >
+            Export JIL
+          </Button>
           <Button
             variant="secondary"
             size="md"

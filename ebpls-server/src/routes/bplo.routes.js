@@ -7,6 +7,7 @@
 const express = require('express');
 
 const bploController = require('../controllers/bplo.controller');
+const adminController = require('../controllers/admin.controller');
 const correctionController = require('../controllers/correction.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
 const { authorize } = require('../middlewares/rbac.middleware');
@@ -117,5 +118,12 @@ router.put('/corrections/:id/approve', correctionController.approveCorrectionReq
  * @access  BPLO_Officer, Admin
  */
 router.put('/corrections/:id/reject', correctionController.rejectCorrectionRequest);
+
+/**
+ * @route   GET /api/bplo/reports/joint-inspection-list
+ * @desc    Generate weekly Joint Inspection List (JIL) PDF for MHO & BFP
+ * @access  BPLO_Officer, Admin
+ */
+router.get('/reports/joint-inspection-list', adminController.getJointInspectionListReport);
 
 module.exports = router;

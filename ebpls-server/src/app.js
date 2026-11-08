@@ -1,8 +1,6 @@
 // =================================================================
 // File: src/app.js
 // Purpose: Main application entry point and middleware pipeline.
-// Policy:  Mount webhooks BEFORE JSON parsers to preserve raw body
-//          required for HMAC signature verification.
 // =================================================================
 
 const dns = require('dns');
@@ -16,7 +14,6 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 
 // Route Imports
-const barangayRoutes = require('./routes/barangay.routes.js');
 const authRoutes = require("./routes/auth.routes");
 const applicationRoutes = require("./routes/application.routes");
 const bploRoutes = require("./routes/bplo.routes");
@@ -27,10 +24,8 @@ const notificationRoutes = require('./routes/notification.routes');
 // Phase 1 Route Import (Corrections)
 const correctionRoutes = require('./routes/correction.routes');
 
-// Phase 5 Route Imports
+// Phase 5 Route Import
 const treasuryRoutes = require('./routes/treasury.routes');
-const treasuryOnlineRoutes = require('./routes/treasury.online.routes');
-const webhookRoutes = require('./routes/webhook.routes');
 
 // Phase 7 Route Import
 const retirementRoutes = require('./routes/retirement.routes');
@@ -59,17 +54,7 @@ app.use(cors());
 app.use(morgan("dev"));
 
 // -----------------------------------------------------------------
-// 2. WEBHOOK ROUTES (CRITICAL: MUST BE BEFORE express.json())
-// -----------------------------------------------------------------
-// We use express.raw to keep the body as a Buffer for signature verification.
-app.use(
-  '/api/webhooks', 
-  express.raw({ type: '*/*' }), 
-  webhookRoutes
-);
-
-// -----------------------------------------------------------------
-// 3. GLOBAL BODY PARSERS (For all other routes)
+// 2. GLOBAL BODY PARSERS
 // -----------------------------------------------------------------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -78,12 +63,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(metricsTracker);
 
 // -----------------------------------------------------------------
-// 4. API ROUTES
+// 3. API ROUTES
 // -----------------------------------------------------------------
 app.use("/api/auth", authRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/bplo", bploRoutes);
-app.use("/api/barangay", barangayRoutes);
 
 // Phase 3: Notifications
 app.use("/api/notifications", notificationRoutes);
@@ -91,8 +75,7 @@ app.use("/api/notifications", notificationRoutes);
 // Phase 1: Corrections
 app.use("/api/corrections", correctionRoutes);
 
-// Phase 5: Treasury & Online Payments
-app.use("/api/treasury", treasuryOnlineRoutes);
+// Phase 5: Treasury & Payments
 app.use("/api/treasury", treasuryRoutes);
 
 // Phase 7: Business Retirement
@@ -102,7 +85,7 @@ app.use("/api/retirement", retirementRoutes);
 app.use("/api/documents", documentRoutes);
 
 // Admin / Dashboard APIs
-app.use("/api/admin", authenticate, authorize(ROLES.ADMIN), adminRoutes);
+app.use("/api/admin", authenticate, authorize(ROLES.ADMIN, ROLES.BPLO_OFFICER), adminRoutes);
 
 // Health check route
 app.get("/health", (req, res) => {
@@ -110,7 +93,7 @@ app.get("/health", (req, res) => {
 });
 
 // -----------------------------------------------------------------
-// 5. GLOBAL ERROR HANDLER
+// 4. GLOBAL ERROR HANDLER
 // Must be the very last middleware mounted.
 // -----------------------------------------------------------------
 app.use(errorHandler);

@@ -9,7 +9,7 @@ const emailService = require('./email.service');
 // Locked post-review statuses where corrections are allowed
 const CORRECTION_ELIGIBLE_STATUSES = [
   'Verified', 'For Assessment', 'Assessed', 'For Payment', 
-  'PaymentProcessing', 'Paid', 'Completed'
+  'PaymentVerificationPending', 'PaymentProcessing', 'Paid', 'Completed'
 ];
 
 /**
