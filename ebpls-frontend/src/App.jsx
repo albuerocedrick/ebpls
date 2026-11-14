@@ -282,20 +282,6 @@ function App() {
             </Route>
           </Route>
 
-          {/* ── PAYMENT CALLBACKS ───────────────── */}
-          <Route
-            element={
-              <ProtectedRoute
-                allowedRoles={[ROLES.APPLICANT, ROLES.ADMIN]}
-              />
-            }
-          >
-            <Route path="/payment">
-              <Route path="success" element={<PaymentSuccess />} />
-              <Route path="cancel" element={<PaymentCancel />} />
-            </Route>
-          </Route>
-
           {/* ── 404 ─────────────────────────────── */}
           <Route path="*" element={<NotFound />} />
 

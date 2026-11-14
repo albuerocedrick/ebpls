@@ -137,9 +137,6 @@ export const ROUTES = Object.freeze({
   ADMIN_DOCUMENT_BUILDER: '/admin/document-builder',
   ADMIN_AUDIT_LOGS: '/admin/audit-logs',
   ADMIN_EMAIL_LOGS: '/admin/email-logs',
-  // Payment Callbacks
-  PAYMENT_SUCCESS: '/payment/success',
-  PAYMENT_CANCEL: '/payment/cancel',
 });
 
 // =========================================
