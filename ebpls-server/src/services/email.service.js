@@ -46,6 +46,9 @@ const getTimestampHtml = () => {
   }
   return `<p style="font-size: 12px; color: #6b7280; font-style: italic;">Status updated on: ${formattedDate}</p>`;
 
+};
+
+const templates = {
   [EMAIL_TRIGGERS.PERMIT_EXPIRY_WARNING_60]: ({ name, businessName, permitNo, bin, expiryDate, actionUrl }) => ({
     subject: `eBPLS — Annual Business Permit Renewal Advisory: ${businessName} (60 Days Remaining)`,
     html: `
@@ -108,9 +111,6 @@ const getTimestampHtml = () => {
       </div>`,
   }),
 
-};
-
-const templates = {
 
   [EMAIL_TRIGGERS.ACCOUNT_CREATED]: ({ name, actionLink }) => ({
     subject: `eBPLS — Verify your Account`,
