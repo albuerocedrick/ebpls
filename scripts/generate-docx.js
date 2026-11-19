@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { execSync } = require('child_process');
 
 function escapeXml(unsafe) {
@@ -45,6 +46,59 @@ function renderFormattedRuns(text) {
   }).join('');
 }
 
+function getImageSize(buffer) {
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8) {
+    let offset = 2;
+    while (offset < buffer.length) {
+      if (buffer[offset] !== 0xFF) break;
+      const marker = buffer[offset + 1];
+      if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
+        return {
+          height: buffer.readUInt16BE(offset + 5),
+          width: buffer.readUInt16BE(offset + 7),
+          type: 'jpeg'
+        };
+      }
+      const len = buffer.readUInt16BE(offset + 2);
+      offset += 2 + len;
+    }
+  }
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+    return {
+      width: buffer.readUInt32BE(16),
+      height: buffer.readUInt32BE(20),
+      type: 'png'
+    };
+  }
+  return { width: 800, height: 600, type: 'jpeg' };
+}
+
+function calculateEmu(width, height) {
+  const maxW = 5400000; // ~5.9 inches
+  const maxH = 7200000; // ~7.8 inches (fits letter page)
+  const aspect = width / height;
+
+  let cx, cy;
+  if (aspect >= 1) {
+    cx = Math.min(maxW, Math.round(width * 3400));
+    if (cx > maxW) cx = maxW;
+    cy = Math.round(cx / aspect);
+    if (cy > maxH) {
+      cy = maxH;
+      cx = Math.round(cy * aspect);
+    }
+  } else {
+    cy = Math.min(maxH, Math.round(height * 3000));
+    if (cy > maxH) cy = maxH;
+    cx = Math.round(cy * aspect);
+    if (cx > maxW) {
+      cx = maxW;
+      cy = Math.round(cx / aspect);
+    }
+  }
+  return { cx, cy };
+}
+
 function convertMdToDocx(mdPath, outDocx) {
   const tempDir = path.join(__dirname, `../temp_docx_${Date.now()}`);
 
@@ -54,31 +108,14 @@ function convertMdToDocx(mdPath, outDocx) {
   fs.mkdirSync(path.join(tempDir, '_rels'), { recursive: true });
   fs.mkdirSync(path.join(tempDir, 'word/_rels'), { recursive: true });
 
-  // 1. [Content_Types].xml
-  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-</Types>`;
-  fs.writeFileSync(path.join(tempDir, '[Content_Types].xml'), contentTypesXml, 'utf8');
-
-  // 2. _rels/.rels
+  // 1. _rels/.rels
   const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>`;
   fs.writeFileSync(path.join(tempDir, '_rels/.rels'), relsXml, 'utf8');
 
-  // 3. word/_rels/document.xml.rels
-  const docRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>`;
-  fs.writeFileSync(path.join(tempDir, 'word/_rels/document.xml.rels'), docRelsXml, 'utf8');
-
-  // 4. word/styles.xml
+  // 2. word/styles.xml
   const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:docDefaults>
@@ -149,7 +186,7 @@ function convertMdToDocx(mdPath, outDocx) {
 </w:styles>`;
   fs.writeFileSync(path.join(tempDir, 'word/styles.xml'), stylesXml, 'utf8');
 
-  // 5. Parse Markdown
+  // 3. Parse Markdown
   const md = fs.readFileSync(mdPath, 'utf8');
   const lines = md.split(/\r?\n/);
 
@@ -157,7 +194,10 @@ function convertMdToDocx(mdPath, outDocx) {
   let inTable = false;
   let tableRows = [];
   let inCodeBlock = false;
+  let inMermaid = false;
   let codeBuffer = '';
+  let mermaidCount = 0;
+  const images = [];
 
   function flushTable() {
     if (!tableRows.length) return;
@@ -202,10 +242,83 @@ function convertMdToDocx(mdPath, outDocx) {
     const rawLine = lines[i];
     const line = rawLine.trim();
 
+    if (line.startsWith('```mermaid')) {
+      inMermaid = true;
+      inCodeBlock = true;
+      codeBuffer = '';
+      continue;
+    }
+
     if (line.startsWith('```')) {
       if (inCodeBlock) {
-        // Close code block
-        bodyXml += `<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F8FAFC"/><w:pBdr><w:left w:val="single" w:sz="12" w:space="8" w:color="94A3B8"/></w:pBdr><w:ind w:left="240"/><w:spacing w:before="80" w:after="120"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:sz w:val="18"/><w:color w:val="334155"/></w:rPr><w:t xml:space="preserve">${escapeXml(codeBuffer)}</w:t></w:r></w:p>`;
+        if (inMermaid) {
+          mermaidCount++;
+          const hash = crypto.createHash('md5').update(codeBuffer.trim()).digest('hex');
+          let imgFile = path.join(__dirname, `diagram_cache/${hash}.jpeg`);
+          if (!fs.existsSync(imgFile)) {
+            imgFile = path.join(__dirname, `diagram_cache/diag_${mermaidCount}.jpeg`);
+          }
+
+          if (fs.existsSync(imgFile)) {
+            const buf = fs.readFileSync(imgFile);
+            const size = getImageSize(buf);
+            const emu = calculateEmu(size.width, size.height);
+            const imgIdNum = images.length + 1;
+            const rId = `rIdImg${imgIdNum}`;
+            const filename = `image${imgIdNum}.jpeg`;
+            images.push({ rId, filename, buffer: buf });
+
+            bodyXml += `<w:p>
+  <w:pPr>
+    <w:jc w:val="center"/>
+    <w:spacing w:before="240" w:after="80"/>
+  </w:pPr>
+  <w:r>
+    <w:drawing>
+      <wp:inline distT="0" distB="0" distL="0" distR="0">
+        <wp:extent cx="${emu.cx}" cy="${emu.cy}"/>
+        <wp:effectExtent l="0" t="0" r="0" b="0"/>
+        <wp:docPr id="${imgIdNum + 10}" name="Figure ${imgIdNum}"/>
+        <wp:cNvGraphicFramePr>
+          <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+        </wp:cNvGraphicFramePr>
+        <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+            <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+              <pic:nvPicPr>
+                <pic:cNvPr id="${imgIdNum + 10}" name="Figure ${imgIdNum}"/>
+                <pic:cNvPicPr/>
+              </pic:nvPicPr>
+              <pic:blipFill>
+                <a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
+                <a:stretch><a:fillRect/></a:stretch>
+              </pic:blipFill>
+              <pic:spPr>
+                <a:xfrm>
+                  <a:off x="0" y="0"/>
+                  <a:ext cx="${emu.cx}" cy="${emu.cy}"/>
+                </a:xfrm>
+                <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+              </pic:spPr>
+            </pic:pic>
+          </a:graphicData>
+        </a:graphic>
+      </wp:inline>
+    </w:drawing>
+  </w:r>
+</w:p>`;
+            bodyXml += `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="240"/></w:pPr><w:r><w:rPr><w:i/><w:sz w:val="18"/><w:color w:val="64748B"/></w:rPr><w:t>Figure ${mermaidCount}: Visual Process Diagram</w:t></w:r></w:p>`;
+          } else {
+            // Fallback: render monospace code block if no image is available
+            const codeRuns = codeBuffer.split('\n').map(l => `<w:t xml:space="preserve">${escapeXml(l)}</w:t>`).join('<w:br/>');
+            bodyXml += `<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F8FAFC"/><w:pBdr><w:left w:val="single" w:sz="12" w:space="8" w:color="94A3B8"/></w:pBdr><w:ind w:left="240"/><w:spacing w:before="80" w:after="120"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:sz w:val="18"/><w:color w:val="334155"/></w:rPr>${codeRuns}</w:r></w:p>`;
+          }
+          inMermaid = false;
+        } else {
+          // Regular code block
+          const codeRuns = codeBuffer.split('\n').map(l => `<w:t xml:space="preserve">${escapeXml(l)}</w:t>`).join('<w:br/>');
+          bodyXml += `<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F8FAFC"/><w:pBdr><w:left w:val="single" w:sz="12" w:space="8" w:color="94A3B8"/></w:pBdr><w:ind w:left="240"/><w:spacing w:before="80" w:after="120"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:sz w:val="18"/><w:color w:val="334155"/></w:rPr>${codeRuns}</w:r></w:p>`;
+        }
         codeBuffer = '';
         inCodeBlock = false;
       } else {
@@ -271,8 +384,46 @@ function convertMdToDocx(mdPath, outDocx) {
     flushTable();
   }
 
+  // 4. [Content_Types].xml (including image extensions)
+  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="jpeg" ContentType="image/jpeg"/>
+  <Default Extension="jpg" ContentType="image/jpeg"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`;
+  fs.writeFileSync(path.join(tempDir, '[Content_Types].xml'), contentTypesXml, 'utf8');
+
+  // 5. word/_rels/document.xml.rels
+  let docRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`;
+  images.forEach(img => {
+    docRelsXml += `\n  <Relationship Id="${img.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${img.filename}"/>`;
+  });
+  docRelsXml += `\n</Relationships>`;
+  fs.writeFileSync(path.join(tempDir, 'word/_rels/document.xml.rels'), docRelsXml, 'utf8');
+
+  // 6. Write image files to word/media/
+  if (images.length > 0) {
+    const mediaDir = path.join(tempDir, 'word/media');
+    fs.mkdirSync(mediaDir, { recursive: true });
+    images.forEach(img => {
+      fs.writeFileSync(path.join(mediaDir, img.filename), img.buffer);
+    });
+  }
+
+  // 7. Write word/document.xml with full drawing namespaces
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:document 
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+  xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+  xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
   <w:body>
     ${bodyXml}
     <w:sectPr>
@@ -283,21 +434,36 @@ function convertMdToDocx(mdPath, outDocx) {
 </w:document>`;
   fs.writeFileSync(path.join(tempDir, 'word/document.xml'), documentXml, 'utf8');
 
-  // Zip
+  // 8. Zip
+  let finalDocxPath = outDocx;
   if (fs.existsSync(outDocx)) {
-    fs.unlinkSync(outDocx);
+    try {
+      fs.unlinkSync(outDocx);
+    } catch (e) {
+      if (e.code === 'EBUSY') {
+        const ext = path.extname(outDocx);
+        const base = path.basename(outDocx, ext);
+        finalDocxPath = path.join(path.dirname(outDocx), `${base}_with_Diagrams${ext}`);
+        console.warn(`[Warning] ${path.basename(outDocx)} is currently open in Word. Generating ${path.basename(finalDocxPath)} instead.`);
+        if (fs.existsSync(finalDocxPath)) {
+          try { fs.unlinkSync(finalDocxPath); } catch (_) {}
+        }
+      } else {
+        throw e;
+      }
+    }
   }
 
   const psScriptPath = path.join(__dirname, `zip_${Date.now()}.ps1`);
   const psScript = `
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-[System.IO.Compression.ZipFile]::CreateFromDirectory('${tempDir.replace(/\\/g, '\\\\')}', '${outDocx.replace(/\\/g, '\\\\')}')
+[System.IO.Compression.ZipFile]::CreateFromDirectory('${tempDir.replace(/\\/g, '\\\\')}', '${finalDocxPath.replace(/\\/g, '\\\\')}')
 `;
   fs.writeFileSync(psScriptPath, psScript, 'utf8');
 
   try {
     execSync(`powershell -ExecutionPolicy Bypass -File "${psScriptPath}"`, { stdio: 'inherit' });
-    console.log('DOCX created at:', outDocx);
+    console.log('DOCX created at:', finalDocxPath);
   } catch (err) {
     console.error('Failed to create docx:', err);
   } finally {
@@ -319,6 +485,14 @@ const targets = [
   {
     md: path.join(__dirname, '../system-planning/eBPLS_Client_Frontend_Test_Document.md'),
     docx: path.join(__dirname, '../system-planning/eBPLS_Client_Frontend_Test_Document.docx')
+  },
+  {
+    md: path.join(__dirname, '../system-planning/eBPLS_Client_Implementation_Plan_13_Revisions.md'),
+    docx: path.join(__dirname, '../system-planning/eBPLS_Client_Implementation_Plan_13_Revisions.docx')
+  },
+  {
+    md: path.join(__dirname, '../system-planning/eBPLS_13_Revisions_Technical_Implementation_Plan.md'),
+    docx: path.join(__dirname, '../system-planning/eBPLS_13_Revisions_Technical_Implementation_Plan.docx')
   }
 ];
 
