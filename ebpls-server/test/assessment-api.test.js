@@ -5,10 +5,11 @@ const express=require('express');
 const officer='11111111-1111-4111-8111-111111111111';
 let rpcCalls,source,storageResult,alreadyAssessed,unresolved;
 const database={
- from(table){let updating=false;const builder={select(){return this;},update(){updating=true;return this;},eq(){return this;},single(){return this;},maybeSingle(){return this;},then(resolve,reject){
+ from(table){let updating=false;const builder={select(){return this;},update(){updating=true;return this;},eq(){return this;},order(){return this;},single(){return this;},maybeSingle(){return this;},then(resolve,reject){
   let data=null;
   if(table==='doc_verifications')data=updating?null:[{status:unresolved?'Pending':'Verified'}];
   if(table==='application_data_reviews')data=Array.from({length:4},()=>({status:'Verified'}));
+  if(table==='regulatory_clearances')data=['MHO','BFB','AMILYAR'].map(agency_code=>({agency_code,status:'Verified'}));
   if(table==='assessments')data={id:'assessment',calculation_context:{version:3},applications:{status:'Assessed'},assessment_line_items:[]};
   return Promise.resolve({data,error:null}).then(resolve,reject);
  }};return builder;},

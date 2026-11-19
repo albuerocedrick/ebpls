@@ -375,9 +375,11 @@ const StatusTracker = () => {
   const currentStepIdx = getCurrentStepIndex();
 
   const business = applicationData.businesses || {};
+  const activeAssessment = Array.isArray(applicationData.assessments) ? applicationData.assessments[0] : applicationData.assessments;
+  const payment = Array.isArray(activeAssessment?.transactions) ? activeAssessment.transactions[0] : activeAssessment?.transactions;
   const totalAmount = Number(
-    applicationData.assessments?.[0]?.total_amount || 
-    assessmentBreakdown?.total_amount || 
+    activeAssessment?.total_amount ??
+    assessmentBreakdown?.total_amount ??
     0
   );
 
@@ -404,6 +406,7 @@ const StatusTracker = () => {
               {business.business_name || 'Business Permit Application'}
             </h1>
             <p className="mt-1 font-mono text-xs text-zinc-500">{applicationData.application_no}</p>
+            {business.bin && <p className="mt-1 font-mono text-xs text-zinc-500">{business.bin}</p>}
           </div>
           <div className="flex items-center gap-3">
             {isEligibleForCorrection && (
@@ -501,6 +504,11 @@ const StatusTracker = () => {
       {/* PHASE 3 & 5: DUAL PAYMENT CHANNELS CARD (WHEN STATUS IS 'For Payment') */}
       {currentStatus === STATUSES.FOR_PAYMENT && (
         <div className="rounded-lg bg-zinc-900 p-6 text-white shadow-sm animate-in slide-in-from-bottom-4">
+          {payment?.verification_status === 'Rejected' && <div role="status" className="mb-4 rounded-md bg-amber-100 px-4 py-3 text-sm text-amber-950">
+            <p className="font-semibold">Treasury returned your payment proof</p>
+            <p>{payment.rejection_reason}</p>
+            <p className="mt-1">Upload a corrected receipt below.</p>
+          </div>}
           <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <span className="block font-mono text-[10px] tracking-[0.16em] text-zinc-400 uppercase">
@@ -859,10 +867,11 @@ const StatusTracker = () => {
                   Payment Confirmed & Permit Ready
                 </h3>
                 <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
-                  Ready for Download
+                  {payment?.verification_status === 'Verified' ? 'Verified / Paid' : 'Ready for Download'}
                 </span>
               </div>
               <p className="mt-0.5 text-xs text-zinc-600">Download your official digital business documents below.</p>
+              {payment?.or_number && <p className="mt-1 font-mono text-xs text-zinc-700">{payment.or_number}</p>}
             </div>
           </div>
           <div className="flex flex-col gap-3 p-5 sm:flex-row">

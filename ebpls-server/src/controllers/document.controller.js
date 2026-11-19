@@ -11,89 +11,13 @@ const { supabaseAdmin } = require('../config/supabase');
 const { logAction, AUDIT_ACTIONS } = require('../services/audit.service');
 const pdfService = require('../services/pdf.service');
 const { createError } = require('../middlewares/error.middleware');
-const { ERROR_CODES, STATUSES } = require('../utils/constants');
+const { ERROR_CODES, ROLES, STATUSES } = require('../utils/constants');
 
 // -----------------------------------------------------------------
 // HELPERS
 // -----------------------------------------------------------------
 
-/**
- * Generates a sequential permit number: BP-{YEAR}-{NNNNN}
- */
-const generatePermitNo = async () => {
-  const year = new Date().getFullYear();
-  const prefix = `BP-${year}-`;
-
-  const { data, error } = await supabaseAdmin
-    .from('permits')
-    .select('permit_no')
-    .ilike('permit_no', `${prefix}%`)
-    .order('permit_no', { ascending: false })
-    .limit(1)
-    .single();
-
-  let nextSeq = 1;
-  if (!error && data && data.permit_no) {
-    const lastSeq = data.permit_no.split('-')[2];
-    nextSeq = parseInt(lastSeq, 10) + 1;
-  }
-
-  return `${prefix}${String(nextSeq).padStart(5, '0')}`;
-};
-
-/**
- * Fetches or creates the permit record for an application.
- * Returns the permit data needed for PDF generation.
- */
-const getOrCreatePermit = async (applicationNo, userId) => {
-  // Check if permit already exists
-  const { data: existing } = await supabaseAdmin
-    .from('permits')
-    .select('*')
-    .eq('application_no', applicationNo)
-    .single();
-
-  if (existing) return existing;
-
-  // Create new permit
-  const permitNo = await generatePermitNo();
-  const now = new Date();
-  const expiresAt = new Date(now.getFullYear(), 11, 31, 23, 59, 59); // Dec 31 of current year
-
-  const { data: permit, error } = await supabaseAdmin
-    .from('permits')
-    .insert({
-      application_no: applicationNo,
-      permit_no: permitNo,
-      issued_at: now.toISOString(),
-      expires_at: expiresAt.toISOString(),
-      issued_by: userId,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('[document.controller] Failed to create permit:', error.message);
-    throw createError('Failed to generate permit record.', 500, ERROR_CODES.INTERNAL_ERROR);
-  }
-
-  // Create permit_line_items from application_activities
-  const { data: activities } = await supabaseAdmin
-    .from('application_activities')
-    .select('activity_id')
-    .eq('application_no', applicationNo);
-
-  if (activities && activities.length > 0) {
-    const lineItems = activities.map((a) => ({
-      permit_id: permit.id,
-      activity_id: a.activity_id,
-    }));
-
-    await supabaseAdmin.from('permit_line_items').insert(lineItems);
-  }
-
-  return permit;
-};
+const { issueBusinessPermit } = require('../services/permit.service');
 
 // -----------------------------------------------------------------
 // HANDLERS
@@ -114,6 +38,7 @@ const getPermitPDF = async (req, res, next) => {
       .select(`
         application_no, status,
         businesses (
+          taxpayer_id,
           business_name, trade_name, address_line1, barangay, city, province,
           taxpayers ( first_name, middle_name, last_name )
         )
@@ -125,13 +50,17 @@ const getPermitPDF = async (req, res, next) => {
       throw createError('Application not found.', 404, ERROR_CODES.NOT_FOUND);
     }
 
+    if (req.user.roleName === ROLES.APPLICANT && app.businesses?.taxpayer_id !== req.user.taxpayerId) {
+      throw createError('You do not own this application.', 403);
+    }
+
     // Guard: must be Paid or Completed
     if (![STATUSES.PAID, STATUSES.COMPLETED].includes(app.status)) {
       throw createError('Permit is not yet available. Application must be paid first.', 403, ERROR_CODES.FORBIDDEN);
     }
 
     // 2. Get or create permit record
-    const permit = await getOrCreatePermit(app_no, userId);
+    const permit = await issueBusinessPermit(app_no, userId);
 
     // 3. Fetch activities
     const { data: activities } = await supabaseAdmin
@@ -201,6 +130,7 @@ const getEResiboPDF = async (req, res, next) => {
       .select(`
         application_no, status,
         businesses (
+          taxpayer_id,
           business_name,
           taxpayers ( first_name, middle_name, last_name )
         )
@@ -210,6 +140,10 @@ const getEResiboPDF = async (req, res, next) => {
 
     if (appErr || !app) {
       throw createError('Application not found.', 404, ERROR_CODES.NOT_FOUND);
+    }
+
+    if (req.user.roleName === ROLES.APPLICANT && app.businesses?.taxpayer_id !== req.user.taxpayerId) {
+      throw createError('You do not own this application.', 403);
     }
 
     if (![STATUSES.PAID, STATUSES.COMPLETED].includes(app.status)) {
@@ -232,6 +166,10 @@ const getEResiboPDF = async (req, res, next) => {
       .select('*, users:cashier_id ( email )')
       .eq('assessment_id', assessment?.id)
       .single();
+
+    if (!transaction || (transaction.proof_file_path && transaction.verification_status !== 'Verified')) {
+      throw createError('Receipt is only available for a confirmed payment.', 403);
+    }
 
     // Build data
     const tp = app.businesses?.taxpayers;

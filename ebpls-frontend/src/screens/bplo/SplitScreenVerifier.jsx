@@ -39,7 +39,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import { apiClient } from '../../utils/apiClient';
-import { API_ENDPOINTS, ROUTES, APP_STATUS } from '../../utils/constants';
+import { API_ENDPOINTS, ROUTES, APP_STATUS, REGULATORY_AGENCIES } from '../../utils/constants';
 import useUIStore, { TOAST_TYPE } from '../../store/UIStore';
 import DataReviewPanel from '../../components/bplo/DataReviewPanel';
 
@@ -254,6 +254,7 @@ const SplitScreenVerifier = () => {
   const [isDataReviewVerified, setIsDataReviewVerified] = useState(false);
   const [initialDataReviews, setInitialDataReviews] = useState([]);
   const [applicationData, setApplicationData] = useState(null);
+  const [regulatory, setRegulatory] = useState(null);
 
   // Derived: Business & Zone metadata
   const business = useMemo(() => {
@@ -264,6 +265,8 @@ const SplitScreenVerifier = () => {
   }, [applicationData]);
 
   const zone = applicationData?.zone || null;
+  const declaredBranches = [...new Map((applicationData?.activities || [])
+    .filter(activity => activity.branch).map(activity => [activity.branch.branch_id, activity.branch])).values()];
 
   // Derived: currently selected doc object
   const selectedDoc = useMemo(
@@ -283,8 +286,8 @@ const SplitScreenVerifier = () => {
         const response = await apiClient.get(`/api/bplo/applications/${appNo}`);
         const data = response.data || response;
 
-        if (data?.checklist && data.checklist.length > 0) {
-          setChecklist(data.checklist);
+        if (data?.checklist) {
+          setChecklist(data.checklist.filter(item => !item.agencyCode));
         }
         if (data?.data_reviews) {
           setInitialDataReviews(data.data_reviews);
@@ -300,12 +303,35 @@ const SplitScreenVerifier = () => {
     fetchApplicationDetails();
   }, [appNo, addToast, isAdminView]);
 
+  useEffect(() => {
+    if (!appNo) return;
+    let cancelled = false;
+    let pending = false;
+    const refresh = async () => {
+      if (pending) return;
+      pending = true;
+      try {
+        const result = await apiClient.get(`/api/bplo/applications/${encodeURIComponent(appNo)}/regulatory-clearances`);
+        if (!cancelled) setRegulatory({ appNo, rows: result.data });
+      } catch (error) {
+        if (!cancelled) setRegulatory({ appNo, error: error.message });
+      } finally { pending = false; }
+    };
+    refresh();
+    const interval = setInterval(refresh, 5000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [appNo]);
+
+  const currentRegulatory = regulatory?.appNo === appNo ? regulatory : null;
+  const regulatoryRows = currentRegulatory?.rows || [];
+  const agenciesVerified = Object.keys(REGULATORY_AGENCIES).every(agency => regulatoryRows.some(row => row.agency_code === agency && PASS_STATUSES.includes(row.status)));
+
   // ─── Binary Guard Logic ───────────────────────────────────────
   const canVerify = useMemo(() => {
     const isChecklistValid = checklist.every((item) => PASS_STATUSES.includes(item.status));
     const isDataValid = isDataReviewVerified;
-    return isChecklistValid && isDataValid;
-  }, [checklist, isDataReviewVerified]);
+    return isChecklistValid && isDataValid && agenciesVerified;
+  }, [checklist, isDataReviewVerified, agenciesVerified]);
 
   const canReturn = remarks.trim().length > 0;
 
@@ -406,7 +432,7 @@ const SplitScreenVerifier = () => {
       return;
     }
     if (!canVerify) {
-      addToast({ message: 'All checklist items and data review sections must be verified.', type: TOAST_TYPE.WARNING });
+      addToast({ message: 'Complete the BPLO checklist, data review, and agency clearances before approving.', type: TOAST_TYPE.WARNING });
       return;
     }
 
@@ -668,7 +694,7 @@ const SplitScreenVerifier = () => {
                           <ChevronLeft size={16} />
                         </button>
                         <span className="font-medium font-mono text-xs">
-                          File {docViewerIndex + 1} of {docViewerUrls.length}
+                          File {docViewerIndex + 1} of {docViewerUrls.length} {selectedDoc?.fileBranchNames?.[docViewerIndex] && `· ${selectedDoc.fileBranchNames[docViewerIndex]}`}
                         </span>
                         <button
                           onClick={() => setDocViewerIndex((prev) => Math.min(docViewerUrls.length - 1, prev + 1))}
@@ -701,6 +727,25 @@ const SplitScreenVerifier = () => {
         {/* RIGHT PANES: Address & Zoning Card + Checklists + Data Review */}
         <div className="lg:col-span-3 flex flex-col gap-4">
 
+          <Card padding="md" className="space-y-3">
+            <h2 className="text-sm font-semibold">Inter-agency clearance tracker</h2>
+            {currentRegulatory?.error && <p role="alert" className="text-xs text-red-700">{currentRegulatory.error}</p>}
+            <div className="grid gap-2 sm:grid-cols-3">
+              {Object.entries(REGULATORY_AGENCIES).map(([agency, config]) => {
+                const row = regulatoryRows.find(item => item.agency_code === agency);
+                const status = row?.status || (currentRegulatory ? 'Not recorded' : 'Loading…');
+                const passed = PASS_STATUSES.includes(status);
+                return <div key={agency} className={`space-y-1 rounded-md border p-3 text-xs ${passed ? 'border-emerald-200 bg-emerald-50' : 'border-zinc-200 bg-zinc-50'}`}>
+                  <h3 className="font-semibold">{config.label}</h3>
+                  <p className={status === 'Returned' ? 'font-medium text-red-700' : 'font-medium'}>{status}</p>
+                  {row?.officer_name && <p>{row.officer_name}</p>}
+                  {row?.verified_at && <time dateTime={row.verified_at}>{new Date(row.verified_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</time>}
+                  {row?.remarks && <p>{row.remarks}</p>}
+                </div>;
+              })}
+            </div>
+          </Card>
+
           {/* 1. High-Visibility Address & Zoning Jurisdiction Card */}
           <Card padding="md" className="border-l-4 border-l-zinc-900 bg-white shadow-sm">
             <div className="flex flex-col gap-3">
@@ -711,6 +756,7 @@ const SplitScreenVerifier = () => {
                     <h3 className="text-sm font-semibold text-zinc-900">
                       {business?.business_name || 'Business Location & Jurisdiction'}
                     </h3>
+                    {business?.bin && <p className="text-xs font-mono text-zinc-500">{business.bin}</p>}
                     {business?.trade_name && (
                       <p className="text-xs text-zinc-500">Trade: {business.trade_name}</p>
                     )}
@@ -736,7 +782,7 @@ const SplitScreenVerifier = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-1 border-t border-zinc-100">
                 <div>
                   <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-0.5">
-                    Declared Address
+                    {declaredBranches.length > 1 ? 'Main branch address' : 'Declared Address'}
                   </p>
                   <p className="font-medium text-zinc-900">
                     {business?.address_line1 ? `${business.address_line1}, ` : ''}
@@ -773,6 +819,13 @@ const SplitScreenVerifier = () => {
                   )}
                 </div>
               </div>
+              {declaredBranches.filter(branch => !branch.is_main).map(branch => <section key={branch.branch_id} className="space-y-1 border-t border-zinc-200 pt-2 text-xs">
+                <h4 className="font-semibold">{branch.branch_name}</h4>
+                <p>{branch.address_line1}, {branch.barangay}, Liliw, Laguna</p>
+                <p>{branch.tenancy_type}{branch.location_zones?.name ? ` · ${branch.location_zones.name}` : ''}</p>
+                {!!branch.stall_unit_numbers?.length && <p>Units / stalls {branch.stall_unit_numbers.join(', ')}</p>}
+                <p>{applicationData.activities.filter(activity => activity.branch?.branch_id === branch.branch_id).map(activity => activity.name).join(', ')}</p>
+              </section>)}
             </div>
           </Card>
 
@@ -893,7 +946,7 @@ const SplitScreenVerifier = () => {
                   leftIcon={<Save size={16} />}
                   onClick={handleSaveProgress}
                   isLoading={isSavingProgress}
-                  disabled={!appNo}
+                  disabled={!appNo || !checklist.length}
                 >
                   Save Progress
                 </Button>

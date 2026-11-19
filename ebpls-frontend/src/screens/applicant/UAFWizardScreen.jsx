@@ -300,8 +300,8 @@ const UAFWizardScreen = () => {
           {current_step === 1 && <Step1_BasicInfo />}
           {current_step === 2 && <Step2_Location />}
           {current_step === 3 && <Step3_Activities />}
-          {current_step === 4 && <Step4_Documents docFeedback={feedback?.doc_reviews} />}
-          {current_step === 5 && <Step5_Review />}
+          {current_step === 4 && <Step4_Documents docFeedback={feedback?.doc_reviews} requirements={requirements} loading={requirementsLoading} error={requirementsError} />}
+          {current_step === 5 && <Step5_Review requirements={requirements} loading={requirementsLoading} />}
         </div>
 
         <div className="flex items-center justify-between gap-4 border-t border-zinc-200 bg-zinc-50 p-5">

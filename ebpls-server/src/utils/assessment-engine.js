@@ -39,7 +39,24 @@ function computeAssessment(source) {
   const totalCapital = money(source.activities.reduce((sum, a) => sum + number(a.capitalization, 'declared capital'), 0));
   const totalGrossSales = money(source.activities.reduce((sum, a) => sum + number(a.gross_sales_prev_year, 'declared gross sales'), 0));
   const warnings = [];
-  if (totalCapital < capitalFloor) warnings.push(`Declared capital is below the zone's recommended floor of PHP ${capitalFloor.toFixed(2)}. The declaration has not been changed.`);
+  const branches = new Map((source.branches || []).map(branch => [branch.branch_id, branch]));
+  const branchTotals = new Map();
+  for (const activity of source.activities) {
+    if (!activity.branch_id) continue;
+    const branch = branches.get(activity.branch_id);
+    if (!branch?.is_active || !branch.barangay_active || !branch.zone?.is_active) {
+      throw createError('Assign every branch to an active barangay and location zone before approval.', 422);
+    }
+    branchTotals.set(activity.branch_id, (branchTotals.get(activity.branch_id) || 0) + Number(activity.capitalization));
+  }
+  const branchContext = [...branches.values()].map(branch => {
+    const declaredCapital = money(branchTotals.get(branch.branch_id) || 0);
+    const floor = number(branch.zone.min_capital_floor, 'branch capital floor');
+    if (declaredCapital < floor) warnings.push(`${branch.name}: Declared capital is below the recommended floor of PHP ${floor.toFixed(2)}.`);
+    return { ...branch, total_capital: declaredCapital, capital_below_floor: declaredCapital < floor };
+  });
+  const belowFloor = branchContext.length ? branchContext.some(branch => branch.capital_below_floor) : totalCapital < capitalFloor;
+  if (!branchContext.length && belowFloor) warnings.push(`Declared capital is below the zone's recommended floor of PHP ${capitalFloor.toFixed(2)}. The declaration has not been changed.`);
   const feeTypes = source.fee_types || [];
   if (!feeTypes.length) throw createError('Configure active fee types before assessment.', 422);
   const items = new Map();
@@ -58,14 +75,18 @@ function computeAssessment(source) {
       base = amount = money(referenceItem.amount * rate);
       computation = `${rate * 100}% of ${reference.name}; no second zone multiplier`;
     } else if (fee.name === "Mayor's Permit Fee") {
-      const scheduled = source.activities.map(activity => scheduleFee(activity, source.fee_schedule || [], source.rules || []));
+      const scheduled = source.activities.map(activity => {
+        const item = scheduleFee(activity, source.fee_schedule || [], source.rules || []);
+        const branch = branches.get(activity.branch_id);
+        return { ...item, branch, multiplier: branch ? number(branch.zone.fee_multiplier, 'branch zone multiplier', 0.0001) : multiplier };
+      });
       base = money(scheduled.reduce((sum, item) => sum + item.amount, 0));
-      amount = money(base * multiplier);
-      computation = `${scheduled.map(item => item.explanation).join('; ')}. PHP ${base.toFixed(2)} × ${multiplier}`;
+      amount = money(scheduled.reduce((sum, item) => sum + item.amount * item.multiplier, 0));
+      computation = scheduled.map(item => `${item.branch ? `${item.branch.name}: ` : ''}${item.explanation}, PHP ${item.amount.toFixed(2)} × ${item.multiplier}`).join('; ');
     } else if (fee.computation_basis === 'Fixed') {
       base = number(fee.fixed_amount, `${fee.name} fixed amount`);
       amount = money(base * (isTax ? 1 : multiplier));
-      computation = isTax ? 'Configured fixed business tax' : `Configured PHP ${base.toFixed(2)} × zone ${multiplier}`;
+      computation = isTax ? 'Configured fixed business tax' : `Configured PHP ${base.toFixed(2)} × ${branchContext.length ? 'main branch ' : ''}zone ${multiplier}`;
     } else if (fee.computation_basis === 'Gross_Sales') {
       const basis = totalGrossSales > 0 ? totalGrossSales : totalCapital;
       const rate = fee.percentage_value == null ? 0.02 : number(fee.percentage_value, `${fee.name} rate`);
@@ -81,7 +102,7 @@ function computeAssessment(source) {
   }
   const lineItems = feeTypes.map(calculate);
   return { lineItems, totalAmount: money(lineItems.reduce((sum, item) => sum + item.amount, 0)),
-    context: { zone, total_capital: totalCapital, total_gross_sales: totalGrossSales, capital_below_floor: totalCapital < capitalFloor, warnings, version: 3 }, source };
+    context: { zone, branches: branchContext, total_capital: totalCapital, total_gross_sales: totalGrossSales, capital_below_floor: belowFloor, warnings, version: 3 }, source };
 }
 
 module.exports = { computeAssessment, money };

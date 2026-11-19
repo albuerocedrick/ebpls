@@ -102,11 +102,13 @@ router.post('/payments/otc', treasuryController.recordOTCPayment);
  * @desc    Fetch pending deposit slips awaiting cashier verification
  */
 router.get('/payments/pending-proofs', treasuryController.getPendingPaymentProofs);
+router.get('/payments/pending-proofs/count', treasuryController.getPendingProofCount);
 
 /**
  * @route   PUT /api/treasury/payments/:id/verify-proof
  * @desc    Confirm and verify, or reject a submitted payment proof
  */
 router.put('/payments/:id/verify-proof', treasuryController.verifyPaymentProof);
+router.put('/payments/:id/reject-proof', treasuryController.rejectPaymentProof);
 
 module.exports = router;

@@ -9,10 +9,8 @@ const appNo = 'APP-TEST-VERIFY-001';
 const txId = '44444444-4444-4444-8444-444444444444';
 
 let rpcCalls = [];
-let auditLogs = [];
-let statusUpdates = [];
-let updatedTransactions = [];
-let currentAppStatus = 'PaymentVerificationPending';
+let sentEmails = [];
+let alreadyDecided = false;
 
 const mockTxRecord = {
   transaction_id: txId,
@@ -24,6 +22,7 @@ const mockTxRecord = {
   payment_reference_no: 'GCASH-REF-888999',
   payment_date: '2026-11-08',
   proof_file_path: `${taxpayerId}/proof.jpg`,
+  proof_revision: 1,
   verification_status: 'Pending',
   rejection_reason: null,
   or_number: null,
@@ -31,9 +30,10 @@ const mockTxRecord = {
     id: 'ass-001',
     application_no: appNo,
     total_amount: 2500.00,
+    assessment_line_items: [{ amount: 2500, fee_types: { name: 'Business Tax' } }],
     applications: {
       application_no: appNo,
-      status: currentAppStatus,
+      status: 'PaymentVerificationPending',
       submitted_at: '2026-11-08T08:00:00Z',
       businesses: {
         business_name: 'Liliw Footwear Craft',
@@ -62,6 +62,7 @@ const mockDatabase = {
       select(fields) { this._select = fields; return this; },
       eq(col, val) { this._eq[col] = val; return this; },
       not() { return this; },
+      is() { return this; },
       order() { return this; },
       limit() { return this; },
       in() { return this; },
@@ -77,28 +78,6 @@ const mockDatabase = {
         }
         return Promise.resolve({ data, error: null });
       },
-      update(values) {
-        updatedTransactions.push(values);
-        return {
-          eq(col, val) {
-            return {
-              select() {
-                return {
-                  single() {
-                    return Promise.resolve({
-                      data: { ...mockTxRecord, ...values },
-                      error: null
-                    });
-                  }
-                };
-              }
-            };
-          }
-        };
-      },
-      insert() {
-        return Promise.resolve({ error: null });
-      },
       then(resolve, reject) {
         let data = [];
         if (table === 'transactions') {
@@ -107,10 +86,20 @@ const mockDatabase = {
         if (table === 'applications') {
           data = [mockTxRecord.assessments.applications];
         }
-        return Promise.resolve({ data, error: null }).then(resolve, reject);
+        return Promise.resolve({ data, count: data.length, error: null }).then(resolve, reject);
       }
     };
     return builder;
+  },
+  async rpc(name, payload) {
+    rpcCalls.push({ name, payload });
+    const orNumber = payload.p_decision === 'Verified' ? 'OR-2026-000001' : null;
+    return { data: {
+      application_no: appNo, or_number: orNumber,
+      transaction: { ...mockTxRecord, verification_status: payload.p_decision, rejection_reason: payload.p_reason, or_number: orNumber },
+      recipient: { email: 'juan@example.test', first_name: 'Juan', last_name: 'Dela Cruz', business_name: 'Test store' },
+      already_decided: alreadyDecided,
+    }, error: null };
   },
   storage: {
     from(bucket) {
@@ -132,21 +121,8 @@ function stub(name, exports) {
 }
 
 stub('../src/config/supabase', { supabaseAdmin: mockDatabase });
-stub('../src/services/application.service', {
-  updateApplicationStatus: async (appNoParam, newStatus) => {
-    statusUpdates.push({ appNo: appNoParam, newStatus });
-    currentAppStatus = newStatus;
-    return { success: true };
-  }
-});
-stub('../src/services/email.service', { dispatchEmail() {}, EMAIL_TRIGGERS: {} });
-stub('../src/services/audit.service', {
-  logAction: async (entry) => {
-    auditLogs.push(entry);
-  },
-  AUDIT_ACTIONS: require('../src/utils/constants').AUDIT_ACTIONS
-});
-
+stub('../src/services/application.service', {});
+stub('../src/services/email.service', { dispatchEmail: email => sentEmails.push(email), EMAIL_TRIGGERS: require('../src/utils/constants').EMAIL_TRIGGERS });
 stub('../src/middlewares/auth.middleware', {
   authenticate(req, res, next) {
     if (!req.headers['x-test-role']) return res.status(401).json({ success: false });
@@ -186,10 +162,8 @@ after(async () => {
 
 beforeEach(() => {
   rpcCalls = [];
-  auditLogs = [];
-  statusUpdates = [];
-  updatedTransactions = [];
-  currentAppStatus = 'PaymentVerificationPending';
+  sentEmails = [];
+  alreadyDecided = false;
 });
 
 async function request(url, method = 'GET', body, role = 'Treasury_Officer') {
@@ -219,59 +193,38 @@ test('Cashier can fetch pending deposit slips with signed preview URLs', async (
   assert.equal(res.body.data.length, 1);
   assert.equal(res.body.data[0].payment_reference_no, 'GCASH-REF-888999');
   assert.ok(res.body.data[0].proof_url.includes('proof-of-payments'));
+  assert.deepEqual(res.body.data[0].line_items,[{ name:'Business Tax', amount:2500 }]);
+  assert.equal((await request('/api/treasury/payments/pending-proofs/count')).body.data.count,1);
 });
 
-test('Confirming payment proof verifies transaction, issues OR number, and completes application', async () => {
-  const res = await request(`/api/treasury/payments/${txId}/verify-proof`, 'PUT', {
-    action: 'VERIFY'
-  }, 'Treasury_Officer');
-
-  assert.equal(res.status, 200);
-  assert.equal(res.body.success, true);
-  assert.ok(res.body.data.or_number.startsWith('OTC-'));
-
-  // Transaction verified
-  assert.equal(updatedTransactions.length, 1);
-  assert.equal(updatedTransactions[0].verification_status, 'Verified');
-  assert.ok(updatedTransactions[0].or_number.startsWith('OTC-'));
-  assert.equal(updatedTransactions[0].cashier_id, officerUserId);
-
-  // Status progression: Paid -> Completed
-  assert.equal(statusUpdates.length, 2);
-  assert.equal(statusUpdates[0].newStatus, 'Paid');
-  assert.equal(statusUpdates[1].newStatus, 'Completed');
-
-  // Audit logged
-  const verifyAudit = auditLogs.find((l) => l.action === 'PAYMENT_PROOF_VERIFIED');
-  assert.ok(verifyAudit);
+test('Treasury verification sends one guarded decision and retry suppresses duplicate emails', async () => {
+  const path = `/api/treasury/payments/${txId}/verify-proof`;
+  assert.equal((await request(path, 'PUT', { proof_revision: 1 }, 'Applicant')).status, 403);
+  const result = await request(path, 'PUT', { proof_revision: 1 });
+  assert.equal(result.status, 200);
+  assert.match(result.body.data.or_number, /^OR-\d{4}-\d{6}$/);
+  assert.equal(result.body.data.recipient, undefined);
+  assert.deepEqual(rpcCalls, [{ name: 'decide_online_payment_proof', payload: {
+    p_transaction_id: txId, p_actor: officerUserId, p_decision: 'Verified', p_reason: null, p_revision: 1,
+  } }]);
+  assert.deepEqual(sentEmails.map(email => email.triggerEvent), ['PAYMENT_RECORDED','PERMIT_READY']);
+  alreadyDecided = true;
+  assert.equal((await request(path, 'PUT', { proof_revision: 1 })).status, 200);
+  assert.equal(sentEmails.length, 2);
 });
 
-test('Rejecting payment proof requires reason, updates transaction, and reverts application to For Payment', async () => {
-  // Missing reason
-  const badRes = await request(`/api/treasury/payments/${txId}/verify-proof`, 'PUT', {
-    action: 'REJECT'
-  }, 'Treasury_Officer');
-  assert.equal(badRes.status, 400);
-
-  // Valid rejection
-  const res = await request(`/api/treasury/payments/${txId}/verify-proof`, 'PUT', {
-    action: 'REJECT',
-    rejection_reason: 'Unreadable receipt screenshot. Please re-upload a clear image.'
-  }, 'Treasury_Officer');
-
-  assert.equal(res.status, 200);
-  assert.equal(res.body.success, true);
-
-  assert.equal(updatedTransactions.length, 1);
-  assert.equal(updatedTransactions[0].verification_status, 'Rejected');
-  assert.equal(updatedTransactions[0].rejection_reason, 'Unreadable receipt screenshot. Please re-upload a clear image.');
-
-  // Application returned to For Payment
-  assert.equal(statusUpdates.length, 1);
-  assert.equal(statusUpdates[0].newStatus, 'For Payment');
-
-  const rejectAudit = auditLogs.find((l) => l.action === 'PAYMENT_PROOF_REJECTED');
-  assert.ok(rejectAudit);
+test('the separate rejection route requires remarks and dispatches the rejection email', async () => {
+  const path = `/api/treasury/payments/${txId}/reject-proof`;
+  assert.equal((await request(path, 'PUT', {})).status, 400);
+  assert.deepEqual(rpcCalls, []);
+  const reason = 'Please upload a clearer image.';
+  const result = await request(path, 'PUT', { proof_revision: 2, rejection_reason: reason });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.data.transaction.verification_status, 'Rejected');
+  assert.equal(rpcCalls[0].payload.p_reason, reason);
+  assert.equal(rpcCalls[0].payload.p_revision, 2);
+  assert.equal(sentEmails[0].triggerEvent, 'PAYMENT_PROOF_REJECTED');
+  assert.equal(sentEmails[0].payload.reason, reason);
 });
 
 test('Joint Inspection List (JIL) PDF report generates valid PDF document', async () => {

@@ -17,7 +17,7 @@
 import { Outlet } from 'react-router-dom';
 import { Database, FileText, ScrollText, Mail, Activity, FolderSearch, Users } from 'lucide-react';
 import { Navbar, Sidebar } from '../components/layout';
-import { ROUTES } from '../utils/constants';
+import { REGULATORY_AGENCIES, ROUTES } from '../utils/constants';
 import useUIStore from '../store/UIStore';
 
 // =========================================
@@ -64,6 +64,10 @@ const ADMIN_NAV = [
         label: 'Document Builder',
       },
     ],
+  },
+  {
+    sectionLabel: 'Regulatory inspection',
+    items: Object.values(REGULATORY_AGENCIES).map(agency => ({ to: agency.route, icon: <FileText size={18} />, label: agency.label })),
   },
   {
     sectionLabel: 'Compliance',

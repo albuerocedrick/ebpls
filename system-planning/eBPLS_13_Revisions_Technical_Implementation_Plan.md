@@ -61,10 +61,10 @@ flowchart TD
 |---|---|---|---|---|:---:|
 | **1** | Multi-Branch, BIN & Address Architecture | Implement the permanent Business Identification Number (BIN) sequence, branch-level addresses, and property tenancy per line. Retire "Other Services". | Migrations 001–048 | Migration 049, `business_branches` table, modernized UAF Branch & Activity Builder. | **Developer 1** (100%) |
 | **2** | Regulatory Inspection Portals (MHO, BFB, AMILYAR) | Seed new regulatory roles, deploy dedicated clearance verification queues, and shift BPLO to an oversight status tracker. | Phase 1 schema | Migration 050, MHO/BFB/AMILYAR routes & portals, updated BPLO Status Tracker. | **Developer 1** (100%) |
-| **3** | Treasury Online Payment Verification Terminal | Add the dedicated Payment Verification page in Treasury, enable side-by-side GCash receipt auditing, and automate OR generation. | Phase 1 & 2 | Treasury verification queue UI & endpoint, atomic OR generation, verified badge sync. | **Developer 1** (100%) |
+| **3** | Treasury Online Payment Verification Terminal | Add the dedicated Payment Verification page in Treasury, enable side-by-side GCash receipt auditing, and automate OR generation. | Phase 1 & 2 | Migration 051, Treasury verification queue UI & endpoint, atomic OR generation, verified badge sync. | **Developer 1** (100%) |
 | **4** | Business Renewal Hub & Selective Renewal Engine | Launch "My Approved Businesses" Hub on the Applicant Dashboard and provide selective branch/line renewal with gross receipts assessment. | Phase 1, 2 & 3 | "My Approved Businesses" UI, interactive Renewal Checklist, renewal assessment engine. | **Developer 2** (100%) |
-| **5** | Business Amendment & Address Relocation Engine | Build the BIN-linked Business Amendment workflow for branch relocations within Liliw, preventing duplicate business records. | Phase 1 & 4 | Migration 051, Amendment API & UI, dynamic premises clearance routing. | **Developer 2** (100%) |
-| **6** | Permit Validity Transparency & Proactive Expiry Monitoring | Display prominent permit validity badges across all interfaces, implement automated 60/30/15-day expiry alerts, and conduct full QA hardening. | Phases 1 through 5 | Migration 052, validity badges, daily cron expiry service, end-to-end regression sign-off. | **Developer 2** (100%) |
+| **5** | Business Amendment & Address Relocation Engine | Build the BIN-linked Business Amendment workflow for branch relocations within Liliw, preventing duplicate business records. | Phase 1 & 4 | Migration 052, Amendment API & UI, dynamic premises clearance routing. | **Developer 2** (100%) |
+| **6** | Permit Validity Transparency & Proactive Expiry Monitoring | Display prominent permit validity badges across all interfaces, implement automated 60/30/15-day expiry alerts, and conduct full QA hardening. | Phases 1 through 5 | Migration 053, validity badges, daily cron expiry service, end-to-end regression sign-off. | **Developer 2** (100%) |
 
 ---
 
@@ -165,7 +165,7 @@ flowchart TD
 * **Objective:** Deploy a dedicated, prominent Online Payment Verification page in the Treasury portal, resolve the issue where GCash/Bank payments remain indefinitely in "Pending" without a verification view, and automate sequence-locked Official Receipt (OR) generation upon cashier approval. Completes Developer 1's First Half scope.
 * **Scope:**
   * **Database (DB):**
-    * Verify and tune indices on `transactions` table for `verification_status` and `tendered_type`.
+    * Migration `051_atomic_payment_verification.sql` adds the pending-proof index and payment decision functions.
     * Ensure `pg_advisory_xact_lock` sequence function exists for fiscal year OR numbers.
   * **Backend (BE):**
     * Build dedicated verification endpoint `GET /api/treasury/payments/pending-proofs` returning: application number, taxpayer name, business name, total assessed tax, payment reference number, declared payment date, and pre-signed storage URL for uploaded proof.
@@ -261,7 +261,7 @@ flowchart TD
 * **Objective:** Implement a formal Business Amendment and Address Change transaction linked to the existing Business Identification Number (BIN). When a branch relocates within Liliw, ensure the applicant submits updated premises clearances (Zoning, Tenancy, Fire Safety) without creating a duplicate business record or triggering new-business capitalization tax rates.
 * **Scope:**
   * **Database (DB):**
-    * Create Migration `051_business_amendments.sql`.
+    * Create Migration `052_business_amendments.sql`.
     * Create `public.business_amendments` table:
       * `amendment_id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
       * `business_id UUID NOT NULL REFERENCES public.businesses(business_id) ON DELETE RESTRICT`
@@ -289,7 +289,7 @@ flowchart TD
     * Relocation form: select branch being moved, enter new street address, select new Liliw barangay, and specify new tenancy arrangement.
     * Dynamic document dropzone: prompt for updated Locational/Zoning Clearance, new Lease Contract / Building Permit, and new Fire Safety Clearance for the new building.
 * **Architecture Components:**
-  * Database: Migration `051_business_amendments.sql`.
+  * Database: Migration `052_business_amendments.sql`.
   * Backend: `ebpls-server/src/controllers/application.controller.js`, `ebpls-server/src/controllers/bplo.controller.js`.
   * Frontend: `ebpls-frontend/src/screens/applicant/BusinessAmendmentForm.jsx`, `ebpls-frontend/src/screens/applicant/Dashboard.jsx`.
 * **Dependencies:** Phase 1 (Branch schema), Phase 2 (Regulatory portals), and Phase 4 (Approved businesses hub).
@@ -313,7 +313,7 @@ flowchart TD
 * **Objective:** Make permit validity dates prominently visible across all applicant and staff interfaces, implement an automated background notification service for expiring permits (60, 30, and 15 days), and execute full-system regression testing and hardening. Completes Developer 2's Second Half scope.
 * **Scope:**
   * **Database (DB):**
-    * Create Migration `052_expiry_notifications_and_audit.sql`.
+    * Create Migration `053_expiry_notifications_and_audit.sql`.
     * Add new email triggers to `constants.js` and audit logs:
       * `EMAIL_TRIGGERS.PERMIT_EXPIRY_WARNING_60`
       * `EMAIL_TRIGGERS.PERMIT_EXPIRY_WARNING_30`
@@ -343,7 +343,7 @@ flowchart TD
       7. Automated expiry notification delivery.
     * Verify zero broken routes, zero 500 exceptions, and clean console logs across all 7 user roles.
 * **Architecture Components:**
-  * Database: Migration `052_expiry_notifications_and_audit.sql`.
+  * Database: Migration `053_expiry_notifications_and_audit.sql`.
   * Backend: `ebpls-server/src/services/expiry-monitor.service.js`, `ebpls-server/src/services/notification.service.js`, `ebpls-server/src/services/email.service.js`.
   * Frontend: `ebpls-frontend/src/screens/applicant/Dashboard.jsx`, `ebpls-frontend/src/screens/applicant/StatusTracker.jsx`, `ebpls-frontend/src/screens/bplo/CompletedQueue.jsx`.
 * **Dependencies:** Phases 1 through 5.
@@ -392,7 +392,7 @@ flowchart TD
 | **2** | **View approved businesses & selective renewal** | **Phase 4** | **Dev 2** | "My Approved Businesses" Hub, `RenewalWizard.jsx` selective branch checklist. |
 | **3** | **Additional roles: MHO, BFB, AMILYAR** | **Phase 2** | **Dev 1** | Migration 050, 3 new roles, 3 dedicated queues, BPLO clearance status tracker. |
 | **4** | **Treasury verification for online payments** | **Phase 3** | **Dev 1** | Dedicated Payment Verification terminal, sequence-locked OR generation, verified badge. |
-| **5** | **Address change via amendment during renewal** | **Phase 5** | **Dev 2** | Migration 051, `business_amendments` table, new premises clearance checklist. |
+| **5** | **Address change via amendment during renewal** | **Phase 5** | **Dev 2** | Migration 052, `business_amendments` table, new premises clearance checklist. |
 | **6** | **Visible permit validity** | **Phase 6** | **Dev 2** | Prominent validity date badges and countdown pills on dashboards and trackers. |
 | **7** | **Each branch/line renewed individually** | **Phase 4** | **Dev 2** | Granular multi-branch renewal assessment based on active operational units. |
 | **8** | **Remove "Other Services" from dropdown** | **Phase 1** | **Dev 1** | Set `is_active = false` on "Other Services", filter from frontend lookups. |
@@ -427,11 +427,11 @@ SECOND HALF: DEVELOPER 2 (50% Scope — Renewal Hub, Amendment Engine & Expiry L
 │  ├─ Backend: /api/applications/my-approved-businesses, selective renewal assessment
 │  └─ Frontend: "My Approved Businesses" Hub, interactive Renewal Checklist wizard
 ├─ SPRINT 5 (Days 13–15): Phase 5 — Business Amendment & Address Relocation Engine
-│  ├─ Database: Migration 051 (business_amendments table & review audit logs)
+│  ├─ Database: Migration 052 (business_amendments table & review audit logs)
 │  ├─ Backend: /api/applications/amend-location, anti-duplicate validation, new premises routing
 │  └─ Frontend: Branch Relocation Form, new premises document dropzone (Zoning, Fire, Lease)
 └─ SPRINT 6 (Days 16–18): Phase 6 — Permit Validity Transparency & Proactive Expiry Monitoring
-   ├─ Database: Migration 052 (permit_expiry_logs, new notification email triggers)
+   ├─ Database: Migration 053 (permit_expiry_logs, new notification email triggers)
    ├─ Backend: Daily cron expiry monitor service, 60/30/15-day multi-channel notification dispatcher
    └─ Frontend: Validity badges & countdowns, BPLO/Admin expiry filters, full E2E QA sign-off
 ```

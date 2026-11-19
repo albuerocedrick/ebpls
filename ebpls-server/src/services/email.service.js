@@ -22,6 +22,8 @@
 const { supabaseAdmin } = require('../config/supabase');
 const { sendEmail }     = require('../config/mailer');
 const { EMAIL_TRIGGERS } = require('../utils/constants');
+const { issueBusinessPermit } = require('./permit.service');
+const escapePaymentEmail = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 const pdfService = require('./pdf.service');
 
 // =================================================================
@@ -187,6 +189,17 @@ const templates = {
         <hr style="border-color: #e5e7eb; margin-top: 32px;" />
         <p style="font-size: 12px; color: #6b7280;">Municipality of Liliw | eBPLS — This is an official receipt notification.</p>
       </div>`,
+  }),
+
+  [EMAIL_TRIGGERS.PAYMENT_PROOF_REJECTED]: ({ name, applicationNo, businessName, reason }) => ({
+    subject: `eBPLS — Payment proof returned (${applicationNo})`,
+    html: `<div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px">
+      <h2>Payment proof returned</h2>
+      <p>Hello ${escapePaymentEmail(name)},</p>
+      <p>Treasury returned the payment proof for ${escapePaymentEmail(businessName)} (${escapePaymentEmail(applicationNo)}).</p>
+      <p><strong>Reason</strong> ${escapePaymentEmail(reason)}</p>
+      <p>Sign in to eBPLS and submit a corrected proof from your application status page.</p>
+    </div>`,
   }),
 
   [EMAIL_TRIGGERS.PERMIT_READY]: ({ name, applicationNo, businessName }) => ({
@@ -390,7 +403,7 @@ const generatePermitAndReceiptAttachments = async (applicationNo) => {
     const { data: app, error: appErr } = await supabaseAdmin
       .from('applications')
       .select(`
-        application_no, status,
+        application_no, status, last_updated_by,
         businesses (
           business_name, trade_name, address_line1, barangay, city, province,
           taxpayers ( first_name, middle_name, last_name )
@@ -411,85 +424,8 @@ const generatePermitAndReceiptAttachments = async (applicationNo) => {
       .eq('application_no', applicationNo)
       .single();
 
-    if (!permit) {
-      // Generate sequential permit number
-      const year = new Date().getFullYear();
-      const prefix = `BP-${year}-`;
-
-      const { data: lastPermit } = await supabaseAdmin
-        .from('permits')
-        .select('permit_no')
-        .ilike('permit_no', `${prefix}%`)
-        .order('permit_no', { ascending: false })
-        .limit(1)
-        .single();
-
-      let nextSeq = 1;
-      if (lastPermit && lastPermit.permit_no) {
-        const parts = lastPermit.permit_no.split('-');
-        if (parts.length >= 3) {
-          const lastSeq = parts[2];
-          nextSeq = parseInt(lastSeq, 10) + 1;
-        }
-      }
-
-      const permitNo = `${prefix}${String(nextSeq).padStart(5, '0')}`;
-      const now = new Date();
-      const expiresAt = new Date(year, 11, 31, 23, 59, 59); // Dec 31 of current year
-
-      // Resolve a valid user ID for the issued_by non-null constraint
-      const { data: verifier } = await supabaseAdmin
-        .from('doc_verifications')
-        .select('verified_by')
-        .eq('application_no', applicationNo)
-        .not('verified_by', 'is', null)
-        .limit(1)
-        .maybeSingle();
-
-      let issuedBy = verifier?.verified_by;
-
-      if (!issuedBy) {
-        // Safe 2-step lookup to avoid relationship parsing discrepancies
-        const { data: roleData } = await supabaseAdmin
-          .from('roles')
-          .select('role_id')
-          .in('role_name', ['BPLO_Officer', 'Admin']);
-
-        const roleIds = roleData?.map((r) => r.role_id) || [];
-
-        if (roleIds.length > 0) {
-          const { data: fallbackUser } = await supabaseAdmin
-            .from('users')
-            .select('user_id')
-            .in('role_id', roleIds)
-            .limit(1)
-            .maybeSingle();
-            
-          issuedBy = fallbackUser?.user_id;
-        }
-      }
-
-      if (!issuedBy) {
-        console.error(`[email.service] Could not find any BPLO_Officer or Admin user to issue the permit for ${applicationNo}.`);
-      } else {
-        const { data: newPermit, error: insertErr } = await supabaseAdmin
-          .from('permits')
-          .insert({
-            permit_no: permitNo,
-            application_no: applicationNo,
-            issued_at: now.toISOString(),
-            expires_at: expiresAt.toISOString(),
-            issued_by: issuedBy,
-          })
-          .select()
-          .single();
-
-        if (insertErr) {
-          console.error(`[email.service] Failed to create permit:`, insertErr.message);
-        } else {
-          permit = newPermit;
-        }
-      }
+    if (!permit && app.last_updated_by) {
+      permit = await issueBusinessPermit(applicationNo, app.last_updated_by);
     }
 
     // 3. Fetch activities

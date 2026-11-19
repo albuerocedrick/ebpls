@@ -357,8 +357,16 @@ const updateUserStatus = async (req, res, next) => {
 };
 
 const updateUserRoleSchema = z.object({
-  roleId: z.coerce.number().int().min(1).max(5, { message: 'Invalid role ID.' }),
+  roleId: z.coerce.number().int().min(1),
 });
+
+const getAssignableRoles = async (_req, res, next) => {
+  try {
+    const { data, error } = await supabaseAdmin.from('roles').select('role_id,role_name').order('role_id');
+    if (error) throw createError('Unable to load roles.', 500);
+    res.json({ success: true, data });
+  } catch (error) { next(error); }
+};
 
 /**
  * PATCH /api/admin/users/:id/role
@@ -374,6 +382,9 @@ const updateUserRole = async (req, res, next) => {
     if (id === req.user.userId) {
       return next(createError('You cannot change your own administrator role.', 400));
     }
+    const { data: role, error: roleError } = await supabaseAdmin.from('roles').select('role_id').eq('role_id', roleId).maybeSingle();
+    if (roleError) throw createError('Unable to validate the role.', 500);
+    if (!role) throw createError('Invalid role ID.', 400);
 
     const { data, error } = await supabaseAdmin
       .from('users')
@@ -808,6 +819,7 @@ module.exports = {
   getAllUsers,
   updateUserStatus,
   updateUserRole,
+  getAssignableRoles,
   getMasterData,
   createMasterData,
   updateMasterData,

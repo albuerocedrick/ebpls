@@ -13,6 +13,7 @@ const { logAction, AUDIT_ACTIONS } = require('../services/audit.service');
 const assessmentService = require('../services/assessment.service');
 const { generatePresignedDownloadUrl } = require('../services/storage.service');
 const { dispatchEmail, EMAIL_TRIGGERS } = require('../services/email.service');
+const { getClearanceStatuses, clearancesComplete } = require('./regulatory.controller');
 
 // -----------------------------------------------------------------
 // SHARED HELPER: Resolve applicant contact info for email dispatch.
@@ -69,7 +70,7 @@ const verifySchema = z.object({
       ]),
       remarks: z.string().trim().optional().nullable(),
     })
-  ).min(1, 'Checklist is required.'),
+  ).default([]),
 });
 
 const returnSchema = z.object({
@@ -230,6 +231,7 @@ const saveChecklist = async (req, res, next) => {
         .eq('requirement_id', item.requirementId);
 
       if (updateError) {
+        if (updateError.code === '42501') throw createError('Agency documents are reviewed by their assigned office.', 403);
         console.error('[bplo.controller] Failed to save checklist item:', updateError.message);
         return next(createError('Failed to save checklist progress.', 500, ERROR_CODES.INTERNAL_ERROR));
       }
@@ -310,6 +312,7 @@ const getApplicationDetails = async (req, res, next) => {
           trade_name,
           org_type_id,
           organization_types ( name ),
+          bin,
           dti_sec_cda_reg_no,
           is_franchise,
           franchisor_name,
@@ -337,7 +340,8 @@ const getApplicationDetails = async (req, res, next) => {
         activity_id,
         capitalization,
         gross_sales_prev_year,
-        business_activities ( name )
+        business_activities ( name ),
+        business_branches ( branch_id, branch_name, address_line1, barangay, tenancy_type, stall_unit_numbers, is_main, location_zones ( name ) )
       `)
       .eq('application_no', applicationNo);
 
@@ -357,9 +361,11 @@ const getApplicationDetails = async (req, res, next) => {
         status,
         remarks,
         file_path,
+        application_document_files ( file_path, business_branches ( branch_name ) ),
         requirement_types (
           name,
           max_files,
+          regulatory_agency_code,
           condition_description
         )
       `)
@@ -376,6 +382,7 @@ const getApplicationDetails = async (req, res, next) => {
           requirement_types (
             name,
             max_files,
+            regulatory_agency_code,
             condition_description
           )
         `)
@@ -415,12 +422,16 @@ const getApplicationDetails = async (req, res, next) => {
       checklist.map(async (item) => {
         let signedUrl = null;
         let fileUrls = [];
-        if (item.file_path) {
+        const branchNamesByPath = new Map((item.application_document_files || []).map(file => [file.file_path, file.business_branches?.branch_name]));
+        const fileBranchNames = [];
+        const agencyCode = item.requirement_types?.regulatory_agency_code || null;
+        if (!agencyCode && item.file_path) {
           try {
             const paths = item.file_path.split(',');
             for (const p of paths) {
               const url = await generatePresignedDownloadUrl(p.trim());
               fileUrls.push(url);
+              fileBranchNames.push(branchNamesByPath.get(p.trim()) ?? null);
             }
             if (fileUrls.length > 0) signedUrl = fileUrls[0];
           } catch (err) {
@@ -433,9 +444,11 @@ const getApplicationDetails = async (req, res, next) => {
           label: item.requirement_types?.name || `Requirement ${item.requirement_id}`,
           status: item.status,
           remarks: item.remarks,
-          filePath: item.file_path || null,
+          filePath: agencyCode ? null : item.file_path || null,
+          agencyCode,
           fileUrl: signedUrl, // First URL for backward compatibility
           fileUrls: fileUrls, // All generated URLs for multi-file viewer
+          fileBranchNames,
           maxFiles: item.requirement_types?.max_files || 1,
           conditionDescription: item.requirement_types?.condition_description || null,
         };
@@ -463,6 +476,7 @@ const getApplicationDetails = async (req, res, next) => {
           name: a.business_activities?.name || `Activity ${a.activity_id}`,
           capitalization: a.capitalization,
           gross_sales_prev_year: a.gross_sales_prev_year,
+          branch: a.business_branches || null,
         })),
         checklist: formattedChecklist,
         data_reviews: dataReviews || [],
@@ -474,10 +488,19 @@ const getApplicationDetails = async (req, res, next) => {
   }
 };
 
+const getRegulatoryStatus = async (req, res, next) => {
+  try {
+    res.json(successResponse('Regulatory status loaded.', await getClearanceStatuses(req.params.app_no)));
+  } catch (error) { next(error); }
+};
+
 const verifyApplication = async (req, res, next) => {
   try {
     const { app_no: applicationNo } = req.params;
     const input = verifySchema.parse(req.body);
+    if (!clearancesComplete(await getClearanceStatuses(applicationNo))) {
+      throw createError('All inter-agency regulatory clearances must be verified or not needed before BPLO approval.', 400, ERROR_CODES.INVALID_TRANSITION);
+    }
 
     // Update checklist items first.
     for (const item of input.checklist) {
@@ -500,6 +523,7 @@ const verifyApplication = async (req, res, next) => {
         .eq('requirement_id', item.requirementId);
 
       if (checklistError) {
+        if (checklistError.code === '42501') throw createError('Agency documents are reviewed by their assigned office.', 403);
         console.error('[bplo.controller] Failed checklist update:', checklistError.message);
         return next(createError(
           'Failed to update verification checklist.',
@@ -663,10 +687,12 @@ const returnApplication = async (req, res, next) => {
         last_updated_by: req.user.userId,
       })
       .eq('application_no', applicationNo)
+      .eq('status', existing.status)
       .select('application_no, status, return_remarks, updated_at')
       .single();
 
     if (updateError) {
+      if (updateError.code === 'PGRST116') throw createError('This application changed while you were reviewing it. Refresh and try again.', 409);
       console.error('[bplo.controller] Failed to return application:', updateError.message);
       return next(createError(
         'Failed to return application.',
@@ -738,7 +764,7 @@ const getDocumentUrl = async (req, res, next) => {
 
     const { data: docRow, error: docError } = await supabaseAdmin
       .from('doc_verifications')
-      .select('file_path')
+      .select('file_path,requirement_types(regulatory_agency_code)')
       .eq('application_no', applicationNo)
       .eq('requirement_id', parseInt(requirementId, 10))
       .single();
@@ -761,6 +787,9 @@ const getDocumentUrl = async (req, res, next) => {
       );
     }
 
+    if (docRow?.requirement_types?.regulatory_agency_code) {
+      throw createError('Use the assigned agency portal to view this document.', 403);
+    }
     if (!docRow || !docRow.file_path) {
       return res.status(200).json(
         successResponse('No document uploaded for this requirement.', { fileUrl: null })
@@ -915,6 +944,7 @@ module.exports = {
   startReview,
   saveChecklist,
   getApplicationDetails,
+  getRegulatoryStatus,
   getDocumentUrl,
   reviewApplication,
   verifyApplication,

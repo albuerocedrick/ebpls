@@ -1,246 +1,46 @@
-// src/screens/applicant/uaf-steps/Step5_Review.jsx
-
 import useApplicationStore from '../../../store/applicationStore';
-import { CheckSquare, AlertTriangle, FileText, Building2, MapPin, Store, CheckCircle2, Upload, Loader2, AlertCircle } from 'lucide-react';
-import useApplicableRequirements from '../../../hooks/useApplicableRequirements';
+import { documentFiles, getFormBranches, requirementKey } from '../../../utils/uafForm';
 
-const Step5_Review = () => {
-  const formData = useApplicationStore((state) => state.formData);
-  const setFormField = useApplicationStore((state) => state.setFormField);
+const applicationTypes = { 1: 'New', 2: 'Renewal', 3: 'Additional Line of Business' };
+const currency = value => Number(value || 0).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' });
 
-  const { step1, step2, step3, step4, step5 } = formData;
-
-  const { requirements, loading: reqLoading } = useApplicableRequirements();
-
-  // Helper to get uploaded files for a specific requirement_id
-  const getUploadedFiles = (reqId) => {
-    const doc = step4.documents?.find((d) => d.requirement_id === reqId);
-    if (!doc) return [];
-    if (doc.files && Array.isArray(doc.files)) return doc.files;
-    return [doc];
-  };
-
-  const handleAttestation = (e) => {
-    setFormField('step5', 'attestation_agreed', e.target.checked);
-  };
-
-  const getApplicationTypeName = (id) => {
-    const types = { 1: 'New', 2: 'Renewal', 3: 'Additional Line of Business' };
-    return types[id] || 'Not Specified';
-  };
-
-  const getOrgTypeName = (id) => {
-    const types = { 1: 'Sole Proprietorship', 2: 'Partnership', 3: 'Corporation', 4: 'Cooperative' };
-    return types[id] || 'Not Specified';
-  };
-
-  return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      
-      {/* Warning Banner */}
-      <div className="flex items-start gap-3 rounded-md border border-zinc-300 bg-zinc-50 p-4">
-        <AlertTriangle size={17} className="mt-0.5 shrink-0 text-zinc-600" />
-        <div>
-          <h4 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
-            Final review before submission
-          </h4>
-          <p className="mt-2 text-xs leading-relaxed text-zinc-600">
-            Review your application details carefully. Once submitted, the application is locked for
-            BPLO review. False or misleading information may result in rejection or revocation of your
-            permit.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        {/* Basic Info Summary */}
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
-          <div className="flex items-center gap-2 border-b border-zinc-200 bg-zinc-50 px-4 py-3">
-            <Building2 size={14} className="text-zinc-500" />
-            <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">Business identity</h3>
-          </div>
-          <div className="space-y-3 p-4">
-            <div>
-              <p className="font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">Business name</p>
-              <p className="mt-0.5 text-sm font-medium text-zinc-900">{step1.business_name || '—'}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <p className="font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">Application type</p>
-                <p className="mt-0.5 text-sm font-medium text-zinc-900">{getApplicationTypeName(step1.type_id)}</p>
-              </div>
-              <div>
-                <p className="font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">Org type</p>
-                <p className="mt-0.5 text-sm font-medium text-zinc-900">{getOrgTypeName(step1.org_type_id)}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Location Summary */}
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
-          <div className="flex items-center gap-2 border-b border-zinc-200 bg-zinc-50 px-4 py-3">
-            <MapPin size={14} className="text-zinc-500" />
-            <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">Physical address</h3>
-          </div>
-          <div className="space-y-3 p-4">
-            <div>
-              <p className="font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">Address line 1</p>
-              <p className="mt-0.5 text-sm font-medium text-zinc-900">{step2.address_line1 || '—'}</p>
-            </div>
-            <div>
-              <p className="font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">Barangay / city</p>
-              <p className="mt-0.5 text-sm font-medium text-zinc-900">
-                {step2.barangay ? `${step2.barangay}, ` : ''}{step2.city}, {step2.province}
-              </p>
-            </div>
-            <div className="border-t border-zinc-200 pt-3">
-              <p className="font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase">Ownership status</p>
-              <p className="mt-0.5 flex items-center gap-1.5 text-sm font-medium text-zinc-900">
-                {step2.tenancy_type}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-zinc-200 bg-white p-4 md:col-span-2">
-          <h3 className="text-sm font-medium text-zinc-900">Covered units / stalls</h3>
-          <p className="mt-2 text-sm text-zinc-700">{step3.stall_unit_numbers?.length ? step3.stall_unit_numbers.join(', ') : 'No separate unit / stall numbers declared'}</p>
-        </div>
-
-        {/* Lines of Business Summary (Uses step3) */}
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white md:col-span-2">
-          <div className="flex items-center justify-between gap-2 border-b border-zinc-200 bg-zinc-50 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Store size={14} className="text-zinc-500" />
-              <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">Declared business activities</h3>
-            </div>
-            <span className="rounded-md border border-zinc-200 bg-white px-2 py-0.5 font-mono text-[10px] text-zinc-700 tabular-nums">
-              {step3.lineOfBusinesses?.length || 0} activities
-            </span>
-          </div>
-          <div className="p-4">
-            {step3.lineOfBusinesses?.length > 0 && step3.lineOfBusinesses[0].name !== '' ? (
-              <ul className="list-inside list-disc space-y-1 text-sm text-zinc-900">
-                {step3.lineOfBusinesses.map((lob, i) => (
-                  <li key={i}>
-                    <span className="font-medium">{lob.name || 'Unnamed activity'}</span>
-                    <span className="font-mono text-zinc-500 tabular-nums">
-                      {' '}— cap. inv. ₱{parseFloat(lob.capital_investment || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}
-                      {' '}· previous year gross sales ₱{Number(lob.gross_sales_prev_year || 0).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-zinc-700">No business activities declared. Go back to step 3.</p>
-            )}
-          </div>
-        </div>
-
-      </div>
-
-      {/* Attachments Summary */}
-      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
-        <div className="flex items-center justify-between gap-2 border-b border-zinc-200 bg-zinc-50 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <FileText size={14} className="text-zinc-500" />
-            <h3 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">Uploaded documents</h3>
-          </div>
-          <span className="rounded-md border border-zinc-200 bg-white px-2 py-0.5 font-mono text-[10px] text-zinc-700 tabular-nums">
-            {requirements.reduce((count, requirement) => count + getUploadedFiles(requirement.id).filter(file => file.file_path).length, 0)} files
-          </span>
-        </div>
-        <div className="space-y-3 p-4">
-
-          {/* Other uploaded documents */}
-          {reqLoading ? (
-             <div className="flex items-center gap-2 py-2 text-sm text-zinc-500">
-               <Loader2 size={14} className="animate-spin" /> Loading requirements…
-             </div>
-          ) : requirements.length > 0 ? (
-            <ul className="space-y-3">
-              {requirements
-                .map((req, i) => {
-                  const files = getUploadedFiles(req.id);
-                  const isUploaded = files.length > 0;
-
-                  return (
-                    <li key={i} className="flex items-start gap-3 py-1">
-                      <div className={`mt-0.5 shrink-0 rounded-md border p-1.5 ${isUploaded ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-200 bg-white text-zinc-400'}`}>
-                        {isUploaded ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-zinc-900">
-                          {req.name}
-                        </p>
-                        {req.is_conditional && req.condition_description && (
-                          <p className="mt-0.5 font-mono text-[10px] tracking-[0.08em] text-zinc-500 uppercase">
-                            {req.condition_description}
-                          </p>
-                        )}
-                        <div className="mt-1.5">
-                          {isUploaded ? (
-                            req.max_files > 1 ? (
-                              <span className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-700 tabular-nums">
-                                {files.length} file{files.length !== 1 ? 's' : ''} uploaded
-                              </span>
-                            ) : (
-                              <span className="inline-flex max-w-full items-center gap-1 truncate rounded-md border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-700">
-                                <Upload size={10} className="shrink-0" />
-                                <span className="truncate">{files[0].file_name}</span>
-                              </span>
-                            )
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2 py-0.5 font-mono text-[10px] tracking-[0.08em] text-zinc-500 uppercase">
-                              Not uploaded
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-            </ul>
-          ) : (
-            <p className="text-sm text-zinc-700">No other requirements found.</p>
-          )}
-        </div>
-      </div>
-
-      {/* Attestation Checkbox */}
-      <div className={`rounded-lg border p-5 transition-colors duration-200 motion-reduce:transition-none ${
-        step5.attestation_agreed
-          ? 'border-zinc-900 bg-zinc-50'
-          : 'border-zinc-200 bg-zinc-50'
-      }`}>
-        <label className="flex cursor-pointer items-start gap-3">
-          <div className="mt-0.5">
-            <input 
-              type="checkbox" 
-              checked={step5.attestation_agreed} 
-              onChange={handleAttestation} 
-              className="h-4 w-4 cursor-pointer rounded border-zinc-300 accent-zinc-900 focus:ring-2 focus:ring-zinc-900" 
-            />
-          </div>
-          <div>
-            <h4 className="flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
-              Applicant attestation
-              {step5.attestation_agreed && <CheckSquare size={13} className="text-zinc-900" />}
-            </h4>
-            <p className="mt-2 text-xs leading-relaxed text-zinc-600">
-              I declare under penalty of perjury that all information provided in this application is
-              true, correct, and complete to the best of my knowledge. I authorize the Municipality of
-              Liliw to verify these details, and understand that any misrepresentation may cause the
-              revocation of my permit.
-            </p>
-          </div>
-        </label>
-      </div>
-
-    </div>
-  );
-};
-
-export default Step5_Review;
+export default function Step5_Review({ requirements, loading }) {
+  const form = useApplicationStore(state => state.formData);
+  const update = useApplicationStore(state => state.setFormField);
+  const branches = getFormBranches(form);
+  return <div className="space-y-4">
+    <section className="rounded-lg border border-zinc-200 p-4">
+      <h3 className="text-sm font-semibold">Business identity</h3>
+      <p className="mt-1 text-sm">{form.step1.business_name} · {applicationTypes[form.step1.type_id]}</p>
+    </section>
+    {branches.map(branch => <section key={branch.branch_key} className="space-y-2 rounded-lg border border-zinc-200 p-4">
+      <h3 className="text-sm font-semibold">{branch.branch_name}</h3>
+      <p className="text-sm">{branch.address_line1}, {branch.barangay}, Liliw, Laguna</p>
+      <p className="text-sm text-zinc-600">{branch.tenancy_type}</p>
+      {!!branch.stall_unit_numbers?.length && <p className="text-sm text-zinc-600">Covered units / stalls {branch.stall_unit_numbers.join(', ')}</p>}
+      <ul className="space-y-1 text-sm">
+        {(branch.lineOfBusinesses || []).map(activity => <li key={activity.name}>
+          {activity.name} · Capital {currency(activity.capital_investment)} · Previous year gross sales {currency(activity.gross_sales_prev_year)}
+        </li>)}
+      </ul>
+    </section>)}
+    <section className="space-y-2 rounded-lg border border-zinc-200 p-4">
+      <h3 className="text-sm font-semibold">Uploaded documents</h3>
+      {loading ? <p className="text-sm">Loading requirements…</p> : <ul className="space-y-1 text-sm">
+        {requirements.map(requirement => {
+          const branch = branches.find(item => item.branch_key === requirement.branch_key);
+          const files = documentFiles(form.step4.documents, requirement);
+          return <li key={requirementKey(requirement)}>
+            {requirement.name}{branch ? ` · ${branch.branch_name}` : ''} <span className="text-zinc-600">· {files.length ? files.map(file => file.file_name || 'Uploaded').join(', ') : 'Missing'}</span>
+          </li>;
+        })}
+      </ul>}
+    </section>
+    <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 text-sm">
+      <input type="checkbox" className="mt-1" checked={form.step5.attestation_agreed} onChange={e => update('step5', 'attestation_agreed', e.target.checked)} />
+      <span><strong className="block">Applicant attestation</strong>
+        I declare under penalty of perjury that all information provided in this application is true, correct, and complete to the best of my knowledge. I authorize the Municipality of Liliw to verify these details, and understand that any misrepresentation may cause the revocation of my permit.
+      </span>
+    </label>
+  </div>;
+}

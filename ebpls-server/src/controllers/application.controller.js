@@ -200,11 +200,13 @@ const getStatus = async (req, res, next) => {
         return_remarks,
         businesses!inner (
           taxpayer_id,
-          business_name
+          business_name,
+          bin
         ),
         assessments (
           id,
-          total_amount
+          total_amount,
+          transactions (verification_status, or_number, rejection_reason, tendered_type)
         )
       `)
       .eq('application_no', app_no)
@@ -223,7 +225,8 @@ const getStatus = async (req, res, next) => {
         last_updated: data.updated_at,
         return_remarks: data.return_remarks,
         businesses: {
-          business_name: data.businesses.business_name
+          business_name: data.businesses.business_name,
+          bin: data.businesses.bin
         },
         assessments: data.assessments
       },
@@ -292,6 +295,7 @@ const getApplicationForEdit = async (req, res, next) => {
         return_remarks,
         businesses!inner (
           taxpayer_id,
+          bin,
           business_name,
           trade_name,
           org_type_id,
@@ -306,7 +310,8 @@ const getApplicationForEdit = async (req, res, next) => {
           longitude,
           is_renting,
           tenancy_type,
-          stall_unit_numbers
+          stall_unit_numbers,
+          business_branches ( branch_id, branch_key, branch_name, address_line1, barangay, tenancy_type, stall_unit_numbers, is_main )
         )
       `)
       .eq('application_no', app_no)
@@ -329,6 +334,7 @@ const getApplicationForEdit = async (req, res, next) => {
         capitalization,
         gross_sales_prev_year,
         metric_count,
+        branch_id,
         business_activities ( name )
       `)
       .eq('application_no', app_no);
@@ -344,23 +350,38 @@ const getApplicationForEdit = async (req, res, next) => {
       .eq('application_no', app_no);
 
     // 4. Fetch doc verification remarks AND existing file paths
-    const { data: docRows } = await supabaseAdmin
+    const { data: docRows, error: docsError } = await supabaseAdmin
       .from('doc_verifications')
       .select(`
         requirement_id,
         status,
         remarks,
         file_path,
+        application_document_files ( file_path, position, business_branches ( branch_key ) ),
         requirement_types ( name )
       `)
       .eq('application_no', app_no);
 
+    if (docsError) throw createError('Unable to load the saved documents. Please try again.', 500);
+
     const biz = app.businesses;
+    const toActivity = (a) => ({
+      name: a.business_activities?.name || '',
+      capital_investment: String(a.capitalization || 0),
+      gross_sales_prev_year: String(a.gross_sales_prev_year ?? 0),
+      units: 1,
+      metric_count: a.metric_count ? String(a.metric_count) : '',
+    });
+    const branchIds = new Set((activities || []).map(a => a.branch_id).filter(Boolean));
+    const branches = (biz.business_branches || []).filter(b => branchIds.has(b.branch_id))
+      .sort((a, b) => Number(b.is_main) - Number(a.is_main) || a.branch_name.localeCompare(b.branch_name))
+      .map(branch => ({ ...branch, lineOfBusinesses: activities.filter(a => a.branch_id === branch.branch_id).map(toActivity) }));
 
     return res.status(200).json({
       success: true,
       data: {
         application_no: app.application_no,
+        bin: biz.bin,
         return_remarks: app.return_remarks,
         // Pre-fill data for the wizard
         step1: {
@@ -382,25 +403,23 @@ const getApplicationForEdit = async (req, res, next) => {
           longitude: biz.longitude,
           is_renting: biz.is_renting,
           tenancy_type: biz.tenancy_type,
+          ...(branches.length ? { branches } : {}),
         },
         step3: {
           stall_unit_numbers: biz.stall_unit_numbers || [],
-          lineOfBusinesses: (activities || []).map((a) => ({
-            name: a.business_activities?.name || '',
-            capital_investment: String(a.capitalization || 0),
-            gross_sales_prev_year: String(a.gross_sales_prev_year ?? 0),
-            units: 1,
-            metric_count: a.metric_count ? String(a.metric_count) : '',
-          })),
+          lineOfBusinesses: (activities || []).map(toActivity),
         },
         step4: {
           request_barangay_clearance: false,
           documents: (docRows || [])
             .filter(d => d.file_path)
-            .flatMap(d => d.file_path.split(',').map(path => ({
+            .flatMap(d => (d.application_document_files?.length
+              ? d.application_document_files.sort((a, b) => a.position - b.position)
+              : d.file_path.split(',').map(file_path => ({ file_path }))).map(file => ({
               requirement_id: d.requirement_id,
-              file_path: path,
-              file_name: path.split('/').pop() // approximation
+              ...(d.application_document_files?.length ? { branch_key: file.business_branches?.branch_key ?? null } : {}),
+              file_path: file.file_path,
+              file_name: file.file_path.split('/').pop(),
             })))
         },
         // BPLO feedback — so applicant knows what to fix
@@ -488,7 +507,7 @@ const getUafLookups = async (req, res, next) => {
       success: true,
       data: {
         barangays: barangays?.map(b => b.name) || [],
-        business_activities: activities?.map(a => a.name) || [],
+        business_activities: activities?.map(a => a.name).filter(name => name.trim().toLowerCase() !== 'other services') || [],
         organization_types: orgTypes || [],
         business_activity_metrics: metricsMap,
       }
@@ -519,6 +538,15 @@ const getApplicableRequirements = async (req, res, next) => {
       success: true,
       data: requirements,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getBranchRequirements = async (req, res, next) => {
+  try {
+    const payload = validators.BranchRequirementsSchema.parse(req.body);
+    res.status(200).json({ success: true, data: await requirementService.resolveBranchRequirements(payload) });
   } catch (error) {
     next(error);
   }
@@ -682,5 +710,6 @@ module.exports = {
   getActiveBarangays,
   getUafLookups,
   getApplicableRequirements,
+  getBranchRequirements,
   getAssessmentForApplicant,
 };

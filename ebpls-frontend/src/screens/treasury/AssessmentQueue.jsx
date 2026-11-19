@@ -1,46 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ArrowRight, Loader2, RefreshCw, Filter, X, ClipboardList } from 'lucide-react';
+import { Search, ArrowRight, Loader2, RefreshCw, X, ClipboardList } from 'lucide-react';
 import apiClient from '../../utils/apiClient';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import { STATUSES } from '../../utils/constants';
+import { ROUTES, STATUSES } from '../../utils/constants';
 
 const AssessmentQueue = () => {
   const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
-  const [filteredApps, setFilteredApps] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refresh, setRefresh] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  useEffect(() => { fetchQueue(); }, []);
+  useEffect(() => {
+    let active = true;
+    apiClient.get('/api/treasury/queue').then(res => {
+      if (active && res.success) setApplications(res.data);
+    }).catch(console.error).finally(() => {
+      if (active) setIsLoading(false);
+    });
+    return () => { active = false; };
+  }, [refresh]);
 
-  useEffect(() => { applyFilters(); }, [searchTerm, statusFilter, applications]);
-
-  const fetchQueue = async () => {
-    try {
-      setIsLoading(true);
-      const res = await apiClient.get('/api/treasury/queue');
-      if (res.success) setApplications(res.data);
-    } catch (err) { console.error(err); }
-    finally { setIsLoading(false); }
-  };
-
-  const applyFilters = () => {
-    let result = [...applications];
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(app =>
-        app.application_no.toLowerCase().includes(term) ||
-        app.businesses?.business_name?.toLowerCase().includes(term)
-      );
-    }
-    if (statusFilter !== 'ALL') {
-      result = result.filter(app => app.status === statusFilter);
-    }
-    setFilteredApps(result);
-  };
+  const term = searchTerm.toLowerCase();
+  const filteredApps = applications.filter(app =>
+    (statusFilter === 'ALL' || app.status === statusFilter) &&
+    (app.application_no.toLowerCase().includes(term) || app.businesses?.business_name?.toLowerCase().includes(term))
+  );
 
   const filterOptions = [
     { label: 'All', value: 'ALL' },
@@ -48,6 +36,7 @@ const AssessmentQueue = () => {
     { label: 'For Assessment', value: STATUSES.FOR_ASSESSMENT },
     { label: 'Assessed', value: STATUSES.ASSESSED },
     { label: 'For Payment', value: STATUSES.FOR_PAYMENT },
+    { label: 'Payment Verification Pending', value: STATUSES.PAYMENT_VERIFICATION_PENDING },
     { label: 'Processing', value: STATUSES.PAYMENT_PROCESSING },
   ];
 
@@ -68,7 +57,10 @@ const AssessmentQueue = () => {
             {applications.length} application{applications.length !== 1 ? 's' : ''} pending
           </p>
         </div>
-        <Button variant="secondary" leftIcon={<RefreshCw size={16} />} onClick={fetchQueue}>
+        <Button variant="secondary" leftIcon={<RefreshCw size={16} />} onClick={() => {
+          setIsLoading(true);
+          setRefresh(value => value + 1);
+        }}>
           Refresh
         </Button>
       </div>
@@ -126,12 +118,13 @@ const AssessmentQueue = () => {
               <div key={app.application_no} className="grid grid-cols-4 px-6 py-4 items-center hover:bg-gray-50/50 transition-colors group">
                 <span className="font-mono text-sm font-semibold text-gray-900">{app.application_no}</span>
                 <span className="text-sm text-gray-600 truncate font-medium">{app.businesses?.business_name}</span>
-                <div><Badge status={app.status} size="sm" /></div>
+                <div><Badge status={app.status} label={app.status === STATUSES.PAYMENT_VERIFICATION_PENDING ? 'Verification Pending' : undefined} size="sm" /></div>
                 <div className="text-right">
                   <Button
                     size="sm"
                     variant="primary"
-                    onClick={() => navigate(`/treasury/assess/${app.application_no}`)}
+                    onClick={() => navigate(app.status === STATUSES.PAYMENT_VERIFICATION_PENDING
+                      ? `${ROUTES.TREASURY_VERIFY_PAYMENTS}?app=${encodeURIComponent(app.application_no)}` : `/treasury/assess/${app.application_no}`)}
                     rightIcon={<ArrowRight size={14} />}
                   >
                     Process

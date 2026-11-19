@@ -1,239 +1,92 @@
-// src/screens/applicant/uaf-steps/Step3_Activities.jsx
-
 import { useEffect, useState } from 'react';
-import useApplicationStore from '../../../store/applicationStore';
-import { Plus, Trash2, Info, PhilippinePeso } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import apiClient from '../../../utils/apiClient';
 import { API_ENDPOINTS } from '../../../utils/constants';
-import Select from '../../../components/ui/Select';
+import useApplicationStore from '../../../store/applicationStore';
+import { getFormBranches } from '../../../utils/uafForm';
 
-// Fallback constant
-const FALLBACK_ACTIVITIES = [
-  'General Merchandise / Retail Trade',
-  'Food and Beverage Service (Restaurant / Eatery / Carinderia)',
-  'Food Manufacturing and Processing',
-  'Wholesale Trade',
-  'Personal Services (Salon, Spa, Laundry, etc.)'
-];
+const control = 'mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm';
+const emptyActivity = () => ({ name: '', capital_investment: '', gross_sales_prev_year: '', units: 1, metric_count: '' });
 
-const Step3_Activities = () => {
-  const data = useApplicationStore((state) => state.formData.step3);
-  const setFormField = useApplicationStore((state) => state.setFormField);
-  const activityMetrics = useApplicationStore((state) => state.activityMetrics);
-  const setActivityMetrics = useApplicationStore((state) => state.setActivityMetrics);
+export default function Step3_Activities() {
+  const form = useApplicationStore(state => state.formData);
+  const update = useApplicationStore(state => state.setFormField);
   const barangays = useApplicationStore(state => state.barangays);
-  const barangayName = useApplicationStore(state => state.formData.step2.barangay);
-  const zone = barangays.find(b => b.name === barangayName)?.zone;
-  const stalls = data.stall_unit_numbers || [];
+  const metrics = useApplicationStore(state => state.activityMetrics);
+  const setMetrics = useApplicationStore(state => state.setActivityMetrics);
+  const [catalog, setCatalog] = useState([]);
+  const [error, setError] = useState('');
+  const branches = getFormBranches(form);
 
-  const [businessActivities, setBusinessActivities] = useState(FALLBACK_ACTIVITIES);
-
-  // Ensure there is at least one empty LOB entry on mount
   useEffect(() => {
-    if (!data.lineOfBusinesses || data.lineOfBusinesses.length === 0) {
-      setFormField('step3', 'lineOfBusinesses', [{ name: '', capital_investment: '', units: 1 }]);
-    }
-    
-    // Fetch dynamic lookups
-    const fetchLookups = async () => {
-      try {
-        const res = await apiClient.get(API_ENDPOINTS.APPLICATIONS_LOOKUPS);
-        if (res.success && res.data?.business_activities?.length > 0) {
-          setBusinessActivities(res.data.business_activities);
-          setActivityMetrics(res.data.business_activity_metrics || {});
-        }
-      } catch {
-        console.warn('Failed to fetch dynamic lookups, using fallback.');
+    let cancelled = false;
+    apiClient.get(API_ENDPOINTS.APPLICATIONS_LOOKUPS).then(response => {
+      if (!cancelled) {
+        setCatalog((response.data?.business_activities || []).filter(name => name.trim().toLowerCase() !== 'other services'));
+        setMetrics(response.data?.business_activity_metrics || {});
       }
-    };
-    fetchLookups();
-  }, [data.lineOfBusinesses, setFormField, setActivityMetrics]);
+    }).catch(() => {
+      if (!cancelled) setError('Unable to load the business activity catalog. Reload the form to try again.');
+    });
+    return () => { cancelled = true; };
+  }, [setMetrics]);
 
-  const lobs = data.lineOfBusinesses || [];
+  function changeBranch(key, patch) {
+    update('step2', 'branches', branches.map(branch => branch.branch_key === key ? { ...branch, ...patch } : branch));
+  }
 
-  const handleAddLOB = () => {
-    setFormField('step3', 'lineOfBusinesses', [
-      ...lobs, 
-      { name: '', capital_investment: '', units: 1, metric_count: '' }
-    ]);
-  };
-
-  const handleRemoveLOB = (indexToRemove) => {
-    const updatedLOBs = lobs.filter((_, index) => index !== indexToRemove);
-    setFormField('step3', 'lineOfBusinesses', updatedLOBs);
-  };
-
-  const handleChange = (index, field, value) => {
-    const updatedLOBs = [...lobs];
-    updatedLOBs[index] = { ...updatedLOBs[index], [field]: value };
-    
-    if (field === 'name' && !activityMetrics[value]) {
-      updatedLOBs[index].metric_count = '';
-    }
-
-    setFormField('step3', 'lineOfBusinesses', updatedLOBs);
-  };
-
-  // Shared field tokens — mirrors components/ui/Input (rounded-md, hairline
-  // border, focus by darkening the border rather than a wide ring).
-  const inputClasses = "w-full rounded-md border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 transition-colors duration-200 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none motion-reduce:transition-none";
-  const labelClasses = "mb-2 block font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase";
-
-  return (
-    <div className="flex flex-col gap-6 duration-300 animate-in fade-in slide-in-from-bottom-2">
-
-      {/* Information Banner */}
-      <div className="flex items-start gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
-        <Info size={17} className="mt-0.5 shrink-0 text-zinc-500" />
-        <div>
-          <h4 className="font-mono text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
-            Declare all business activities
-          </h4>
-          <p className="mt-2 text-xs leading-relaxed text-zinc-600">
-            A single establishment may have multiple lines of business (e.g., a retail store that also
-            operates a small eatery). Add all applicable activities — your Mayor&apos;s Permit Fee is
-            assessed from these declarations.
-          </p>
-        </div>
-      </div>
-
-      {zone && <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
-        <p className="font-medium">{zone.name} · {zone.foot_traffic_level} foot traffic</p>
-        <p className="mt-1">Recommended minimum capital: {Number(zone.min_capital_floor).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}.</p>
-      </div>}
-
-      <section className="rounded-lg border border-zinc-200 bg-white p-5">
-        <h3 className="text-sm font-medium text-zinc-900">Covered units / stalls</h3>
-        <p className="mt-1 text-xs text-zinc-500">Declare each unit covered by this application. Leave this section empty if no unit / stall numbers apply.</p>
-        <div className="mt-3 space-y-3">
+  return <div className="space-y-4">
+    {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+    {branches.map(branch => {
+      const { branch_key, branch_name } = branch;
+      const activities = branch.lineOfBusinesses?.length ? branch.lineOfBusinesses : [emptyActivity()];
+      const stalls = branch.stall_unit_numbers || [];
+      const zone = barangays.find(b => b.name === branch.barangay)?.zone;
+      return <fieldset key={branch_key} className="space-y-4 rounded-lg border border-zinc-200 p-4">
+        <legend className="px-2 text-sm font-semibold">{branch_name || 'Branch'}</legend>
+        {zone && <p className="text-sm text-zinc-600">{branch.barangay} · {zone.name} · Recommended minimum capital ₱{Number(zone.min_capital_floor).toLocaleString('en-PH')}</p>}
+        {activities.map((activity, index) => {
+          const change = patch => changeBranch(branch_key, { lineOfBusinesses: activities.map((item, i) => i === index ? { ...item, ...patch } : item) });
+          const metric = metrics[activity.name];
+          return <div key={index} className="grid gap-3 rounded-md bg-zinc-50 p-3 sm:grid-cols-2">
+            <label className="text-sm sm:col-span-2">Business activity {index + 1}
+              <select className={control} value={activity.name} disabled={!catalog.length} onChange={e => change({ name: e.target.value, metric_count: '' })}>
+                <option value="">Select a business activity</option>
+                {activity.name && !catalog.includes(activity.name) && <option value={activity.name} disabled>{activity.name} (select a replacement)</option>}
+                {catalog.map(name => <option key={name}>{name}</option>)}
+              </select>
+            </label>
+            <label className="text-sm">Capital investment (₱)
+              <input type="number" min="0.01" step="0.01" className={control} value={activity.capital_investment ?? ''} onChange={e => change({ capital_investment: e.target.value })} />
+            </label>
+            <label className="text-sm">Previous year gross sales (₱)
+              <input type="number" min="0" step="0.01" className={control} value={activity.gross_sales_prev_year ?? ''} onChange={e => change({ gross_sales_prev_year: e.target.value })} />
+            </label>
+            <label className="text-sm">Units
+              <input type="number" min="1" step="1" className={control} value={activity.units ?? 1} onChange={e => change({ units: e.target.value })} />
+            </label>
+            {metric && <label className="text-sm">{metric.metric}
+              <input type="number" step="1" min={metric.min} className={control} value={activity.metric_count ?? ''} onChange={e => change({ metric_count: e.target.value })} />
+            </label>}
+            {activities.length > 1 && <button type="button" className="inline-flex items-center gap-1 text-sm text-red-700" onClick={() => changeBranch(branch_key, { lineOfBusinesses: activities.filter((_, i) => i !== index) })}>
+              <Trash2 size={14} /> Remove activity {index + 1}
+            </button>}
+          </div>;
+        })}
+        <button type="button" disabled={activities.length >= 50} className="inline-flex items-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm disabled:opacity-50" onClick={() => changeBranch(branch_key, { lineOfBusinesses: [...activities, emptyActivity()] })}>
+          <Plus size={15} /> Add line of business
+        </button>
+        <div className="space-y-2 border-t border-zinc-200 pt-3">
+          <p className="text-sm font-medium">Covered units / stalls</p>
           {stalls.map((stall, index) => <div key={index} className="flex items-center gap-2">
-            <input aria-label={`Unit / stall number ${index + 1}`} maxLength={64} value={stall} className={inputClasses} onChange={e => setFormField('step3', 'stall_unit_numbers', stalls.map((s, i) => i === index ? e.target.value : s))} />
-            <button type="button" aria-label={`Remove unit / stall ${index + 1}`} onClick={() => setFormField('step3', 'stall_unit_numbers', stalls.filter((_, i) => i !== index))} className="rounded-md border border-zinc-200 p-2"><Trash2 size={16} /></button>
+            <input aria-label={`Unit / stall number ${index + 1}`} className={control} maxLength={64} value={stall} onChange={e => changeBranch(branch_key, { stall_unit_numbers: stalls.map((value, i) => i === index ? e.target.value : value) })} />
+            <button type="button" aria-label={`Remove unit / stall ${index + 1}`} className="p-2" onClick={() => changeBranch(branch_key, { stall_unit_numbers: stalls.filter((_, i) => i !== index) })}><Trash2 size={15} /></button>
           </div>)}
+          <button type="button" disabled={stalls.length >= 50} className="inline-flex items-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm disabled:opacity-50" onClick={() => changeBranch(branch_key, { stall_unit_numbers: [...stalls, ''] })}>
+            <Plus size={15} /> Add unit / stall number
+          </button>
         </div>
-        <button type="button" disabled={stalls.length >= 50} onClick={() => setFormField('step3', 'stall_unit_numbers', [...stalls, ''])} className="mt-3 flex items-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm disabled:opacity-50"><Plus size={15} />Add Unit / Stall Number</button>
-      </section>
-
-      {/* Dynamic LOB List */}
-      <div className="flex flex-col gap-4">
-        {lobs.map((lob, index) => (
-          <div 
-            key={index} 
-            className="relative rounded-lg border border-zinc-200 bg-zinc-50 p-5"
-          >
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-
-              <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-12">
-                {/* LOB Type */}
-                <div className="md:col-span-6">
-                  <Select
-                    label="Line of Business"
-                    required
-                    value={lob.name}
-                    onChange={(e) => handleChange(index, 'name', e.target.value)}
-                  >
-                    <option value="" disabled>Select business activity</option>
-                    {businessActivities.map((activity, i) => (
-                      <option key={i} value={activity}>{activity}</option>
-                    ))}
-                  </Select>
-                </div>
-
-                {/* Capital Investment */}
-                <div className="md:col-span-4">
-                  <label className={labelClasses}>Capital investment (₱) <span className="text-zinc-900">*</span></label>
-                  <div className="relative">
-                    <div className="absolute top-1/2 left-3 -translate-y-1/2 text-zinc-400">
-                      <PhilippinePeso size={14} />
-                    </div>
-                    <input 
-                      type="number" 
-                      min="0"
-                      step="0.01"
-                      value={lob.capital_investment} 
-                      onChange={(e) => handleChange(index, 'capital_investment', e.target.value)} 
-                      placeholder="0.00" 
-                      className={`${inputClasses} pl-8 tabular-nums`} 
-                    />
-                  </div>
-                </div>
-
-                {/* Number of Units */}
-                <div className="md:col-span-2">
-                  <label className={labelClasses}>Units</label>
-                  <input 
-                    type="number" 
-                    min="1"
-                    value={lob.units} 
-                    onChange={(e) => handleChange(index, 'units', e.target.value)} 
-                    className={`${inputClasses} tabular-nums`} 
-                  />
-                </div>
-
-                <div className="md:col-span-6">
-                  <label htmlFor={`lob-gross-sales-${index}`} className={labelClasses}>Previous year gross sales (₱)</label>
-                  <input
-                    id={`lob-gross-sales-${index}`}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={lob.gross_sales_prev_year ?? ''}
-                    onChange={(e) => handleChange(index, 'gross_sales_prev_year', e.target.value)}
-                    placeholder="0.00"
-                    className={`${inputClasses} tabular-nums`}
-                  />
-                  <p className="mt-1 text-xs text-zinc-500">Enter the previous year's gross sales for this activity. Use zero if there were none.</p>
-                </div>
-
-                {/* Conditional Metric Count */}
-                {activityMetrics[lob.name] && (
-                  <div className="mt-2 md:col-span-12 md:w-1/3">
-                    <label htmlFor={`lob-metric-${index}`} className={labelClasses}>
-                      {activityMetrics[lob.name].metric} <span className="text-zinc-900">*</span>
-                    </label>
-                    <input
-                      id={`lob-metric-${index}`}
-                      type="number"
-                      min={activityMetrics[lob.name].min}
-                      value={lob.metric_count || ''}
-                      onChange={(e) => handleChange(index, 'metric_count', e.target.value)}
-                      placeholder="0"
-                      className={`${inputClasses} tabular-nums`}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Remove Button (Hide if only 1 item exists) */}
-              {lobs.length > 1 && (
-                <button 
-                  type="button"
-                  onClick={() => handleRemoveLOB(index)}
-                  className="mt-6 shrink-0 self-end rounded-md border border-zinc-200 bg-white p-2 text-zinc-500 transition-colors duration-200 hover:border-zinc-300 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none md:self-auto"
-                  title="Remove line of business"
-                  aria-label="Remove line of business"
-                >
-                  <Trash2 size={16} />
-                </button>
-              )}
-              
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Add LOB Action */}
-      <button 
-        type="button"
-        onClick={handleAddLOB}
-        className="flex items-center gap-2 self-start rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition-colors duration-200 hover:border-zinc-900 hover:bg-zinc-900 hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
-      >
-        <Plus size={15} />
-        Add another line of business
-      </button>
-
-    </div>
-  );
-};
-
-export default Step3_Activities;
+      </fieldset>;
+    })}
+  </div>;
+}

@@ -89,3 +89,34 @@ test('requirement query preserves activity names with commas and rejects malform
   assert.throws(()=>ApplicantRequirementsQuerySchema.parse({type_id:'1invalid'}));
   assert.throws(()=>ApplicantRequirementsQuerySchema.parse({type_id:'1',tenancy_type:'Other'}));
 });
+
+test('multi-branch submission requires separate premises documents and allows the same activity at both sites', async () => {
+  const rented = payload('Rented');
+  const owned = payload('Owned Commercial');
+  const otherBranch = '44444444-4444-4444-8444-444444444444';
+  const { UAFSubmissionPayloadSchema } = require('../src/utils/validators');
+  const input = UAFSubmissionPayloadSchema.parse({ ...rented, attestation_agreed: true,
+    branches: [
+      { ...rented, branch_key: 'main', branch_name: 'Town branch' },
+      { ...owned, branch_key: otherBranch, branch_name: 'Bayate branch' },
+    ],
+    documents: [
+      ...rented.documents.map(doc => ({ ...doc, branch_key: 'main' })),
+      ...owned.documents.map(doc => ({ ...doc, branch_key: otherBranch, file_path: doc.file_path.replace('/','/second-') })),
+    ],
+  });
+  for (const documents of [
+    input.documents.filter(doc => !(doc.requirement_id === 1 && doc.branch_key === otherBranch)),
+    input.documents.map(doc => doc.requirement_id === 3 ? { ...doc, branch_key: 'main' } : doc),
+  ]) {
+    await assert.rejects(submitApplicantApplication(owner, { ...input, documents }), { statusCode: 400 });
+  }
+  assert.equal(rpcCalls.length, 0);
+  await submitApplicantApplication(owner, input);
+  const saved = rpcCalls[0].payload.p_payload;
+  assert.deepEqual(saved.branches.map(branch => branch.activities[0].activity_id), [1,1]);
+  assert.deepEqual(saved.documents.filter(doc => doc.requirement_id === 1).map(doc => doc.branch_key), ['main', otherBranch]);
+  input.branches[1].activities[0].name = 'Other Services';
+  await assert.rejects(submitApplicantApplication(owner, input), { statusCode: 400 });
+  assert.equal(rpcCalls.length, 1);
+});

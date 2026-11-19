@@ -27,6 +27,9 @@ export const ROLES = Object.freeze({
   TREASURY_OFFICER:  'Treasury_Officer', // Canonical key matching backend
   TREASURY:          'Treasury_Officer', // Alias for frontend compatibility
   BARANGAY_OFFICER:  'Barangay_Officer',
+  MHO_OFFICER:       'MHO_Officer',
+  BFB_OFFICER:       'BFB_Officer',
+  AMILYAR_OFFICER:   'Amilyar_Officer',
   ADMIN:             'Admin',
 });
 
@@ -126,9 +129,13 @@ export const ROUTES = Object.freeze({
   TREASURY_ASSESSMENT: '/treasury/assess',
   TREASURY_CASHIER: '/treasury/cashier',
   TREASURY_QUEUE: '/treasury/queue',
+  TREASURY_VERIFY_PAYMENTS: '/treasury/verify-payments',
   TREASURY_FEE_SCHEDULE: '/treasury/fee-schedule',
   // Barangay
   BARANGAY_QUEUE: '/barangay/queue',
+  MHO_QUEUE: '/mho/queue',
+  BFB_QUEUE: '/bfb/queue',
+  AMILYAR_QUEUE: '/amilyar/queue',
   // Admin
   ADMIN_DASHBOARD: '/admin/dashboard',
   ADMIN_APPLICATIONS: '/admin/applications',
@@ -139,6 +146,12 @@ export const ROUTES = Object.freeze({
   ADMIN_EMAIL_LOGS: '/admin/email-logs',
 });
 
+export const REGULATORY_AGENCIES = Object.freeze({
+  MHO: { label: 'Municipal Health Office', role: ROLES.MHO_OFFICER, route: ROUTES.MHO_QUEUE },
+  BFB: { label: 'Bureau of Fire Protection', role: ROLES.BFB_OFFICER, route: ROUTES.BFB_QUEUE },
+  AMILYAR: { label: 'Real Property Tax (Amilyar)', role: ROLES.AMILYAR_OFFICER, route: ROUTES.AMILYAR_QUEUE },
+});
+
 // =========================================
 // Role → Dashboard Route Map
 // =========================================
@@ -147,6 +160,9 @@ export const ROLE_DASHBOARDS = Object.freeze({
   [ROLES.BPLO_OFFICER]:     ROUTES.BPLO_DASHBOARD,
   [ROLES.TREASURY_OFFICER]: ROUTES.TREASURY_QUEUE,
   [ROLES.TREASURY]:         ROUTES.TREASURY_QUEUE,
+  [ROLES.MHO_OFFICER]:      ROUTES.MHO_QUEUE,
+  [ROLES.BFB_OFFICER]:      ROUTES.BFB_QUEUE,
+  [ROLES.AMILYAR_OFFICER]:  ROUTES.AMILYAR_QUEUE,
   [ROLES.ADMIN]:            ROUTES.ADMIN_DASHBOARD,
 });
 

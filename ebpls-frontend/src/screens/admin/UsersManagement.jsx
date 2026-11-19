@@ -4,18 +4,12 @@ import Select from '../../components/ui/Select';
 import apiClient from '../../utils/apiClient';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
-
-const ROLE_OPTIONS = [
-  { id: 1, name: 'Applicant' },
-  { id: 2, name: 'BPLO_Officer' },
-  { id: 3, name: 'Treasury_Officer' },
-  { id: 4, name: 'Barangay_Officer' },
-  { id: 5, name: 'Admin' }
-];
+import { ROLES } from '../../utils/constants';
 
 const UsersManagement = () => {
   const currentUser = useAuthStore((s) => s.user);
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -53,6 +47,14 @@ const UsersManagement = () => {
   useEffect(() => {
     fetchUsers();
   }, [page, roleFilter]);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiClient.get('/api/admin/roles').then(result => {
+      if (!cancelled) setRoles(result.data.map(role => ({ id: role.role_id, name: role.role_name })));
+    }).catch(() => { if (!cancelled) toast.error('Failed to load roles'); });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -143,7 +145,7 @@ const UsersManagement = () => {
               className="min-w-[180px]"
             >
               <option value="">All Roles</option>
-              {ROLE_OPTIONS.map((opt) => (
+              {roles.map((opt) => (
                 <option key={opt.id} value={opt.id}>{opt.name.replace('_', ' ')}</option>
               ))}
             </Select>
@@ -179,7 +181,7 @@ const UsersManagement = () => {
               ) : (
                 users.map((user) => {
                   const isProcessing = updatingId === user.user_id;
-                  const isAdmin = user.role_id === 5;
+                  const isAdmin = user.role_name === ROLES.ADMIN;
                   const isMe = user.user_id === currentUser?.userId;
                   
                   return (
@@ -220,7 +222,7 @@ const UsersManagement = () => {
                           size="sm"
                           className="min-w-[140px]"
                         >
-                          {ROLE_OPTIONS.map((opt) => (
+                          {roles.map((opt) => (
                             <option key={opt.id} value={opt.id}>{opt.name.replace('_', ' ')}</option>
                           ))}
                         </Select>

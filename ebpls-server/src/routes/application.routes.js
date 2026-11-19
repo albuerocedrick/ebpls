@@ -69,6 +69,7 @@ router.get(
   authenticate,
   applicationController.getApplicableRequirements
 );
+router.post('/requirements/branches', authenticate, authorize(ROLES.APPLICANT), applicationController.getBranchRequirements);
 
 router.post(
   '/upload',

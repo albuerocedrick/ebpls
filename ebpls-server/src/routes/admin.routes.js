@@ -57,6 +57,7 @@ router.get('/applications', adminController.getAllApplications);
  * @access  Admin
  */
 router.get('/users', adminController.getAllUsers);
+router.get('/roles', adminController.getAssignableRoles);
 
 /**
  * @route   PATCH /api/admin/users/:id/status

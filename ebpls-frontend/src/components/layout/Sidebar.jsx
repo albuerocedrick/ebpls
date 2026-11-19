@@ -17,7 +17,7 @@ import logo from '../../assets/logo.png';
 // Nav Item
 // =========================================
 
-const NavItem = ({ to, icon, label, end = false, isActive: customIsActive, onNavigate }) => (
+const NavItem = ({ to, icon, label, badge, end = false, isActive: customIsActive, onNavigate }) => (
   <NavLink
     to={to}
     end={end}
@@ -41,6 +41,7 @@ const NavItem = ({ to, icon, label, end = false, isActive: customIsActive, onNav
   >
     <span className="shrink-0">{icon}</span>
     <span className="truncate">{label}</span>
+    {badge != null && <span aria-label={`${badge} pending`} className="ml-auto shrink-0 rounded-full bg-zinc-700 px-2 py-0.5 text-xs text-white tabular-nums">{badge}</span>}
   </NavLink>
 );
 
@@ -123,6 +124,7 @@ const Sidebar = ({ navItems = [], footer, panelClassName = '' }) => {
                   to={item.to}
                   icon={item.icon}
                   label={item.label}
+                  badge={item.badge}
                   end={item.end}
                   isActive={item.isActive}
                   onNavigate={() => {

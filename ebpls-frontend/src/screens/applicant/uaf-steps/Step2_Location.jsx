@@ -1,61 +1,69 @@
+import { Plus, Trash2 } from 'lucide-react';
 import useApplicationStore from '../../../store/applicationStore';
-import { Building2, MapPin, Home, CheckCircle2 } from 'lucide-react';
-import Select from '../../../components/ui/Select';
-import { TENANCY_TYPES } from '../../../utils/uafForm';
+import { getFormBranches, MAX_BRANCHES, TENANCY_TYPES } from '../../../utils/uafForm';
 
-const TENANCY_HELP = {
-  Rented: 'Upload a Contract of Lease for the premises.',
-  'Owned Commercial': 'Upload the Building Permit for your commercial premises.',
-  'Owned Residential': 'Upload Zoning Clearance for business use of your residential property.',
-};
+const control = 'mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm';
 
 export default function Step2_Location() {
-  const data = useApplicationStore(s => s.formData.step2);
-  const barangays = useApplicationStore(s => s.barangays);
-  const loading = useApplicationStore(s => s.barangaysLoading);
-  const error = useApplicationStore(s => s.barangaysError);
-  const setFormField = useApplicationStore(s => s.setFormField);
-  const setLocation = useApplicationStore(s => s.setLocation);
-  const selected = barangays.find(b => b.name === data.barangay);
-  const label = 'mb-2 block font-mono text-[10px] tracking-[0.12em] text-zinc-500 uppercase';
-  const input = 'w-full rounded-md border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none';
-  return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-5">
-        <h3 className="mb-4 flex items-center gap-2 text-sm font-medium text-zinc-800"><Building2 size={16} />Business address</h3>
-        <label htmlFor="business-address" className={label}>Building no. / street / address line 1 *</label>
-        <input id="business-address" className={input} value={data.address_line1} onChange={e => setFormField('step2', 'address_line1', e.target.value)} placeholder="e.g., 123 Gat Tayaw Street" />
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <Select label="Barangay" required value={data.barangay} disabled={loading || !!error} onChange={e => {
-            const barangay = barangays.find(b => b.name === e.target.value);
-            if (barangay) setLocation(barangay);
-          }}>
-            <option value="" disabled>{loading ? 'Loading barangays…' : 'Select barangay'}</option>
-            {barangays.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
-          </Select>
-          <div><label htmlFor="business-city" className={label}>City / municipality</label><input id="business-city" value="Liliw" readOnly className={`${input} bg-zinc-100 text-zinc-500`} /></div>
-          <div><label htmlFor="business-province" className={label}>Province</label><input id="business-province" value="Laguna" readOnly className={`${input} bg-zinc-100 text-zinc-500`} /></div>
+  const form = useApplicationStore(state => state.formData);
+  const update = useApplicationStore(state => state.setFormField);
+  const barangays = useApplicationStore(state => state.barangays);
+  const loading = useApplicationStore(state => state.barangaysLoading);
+  const error = useApplicationStore(state => state.barangaysError);
+  const branches = getFormBranches(form);
+
+  function changeBranch(key, patch) {
+    update('step2', 'branches', branches.map(branch => branch.branch_key === key ? { ...branch, ...patch } : branch));
+  }
+
+  function removeBranch(key) {
+    update('step2', 'branches', branches.filter(branch => branch.branch_key !== key));
+    update('step4', 'documents', form.step4.documents.filter(document => document.branch_key !== key));
+  }
+
+  function addBranch() {
+    update('step2', 'branches', [...branches, {
+      branch_key: crypto.randomUUID(), branch_name: '', address_line1: '', barangay: '',
+      tenancy_type: 'Owned Commercial', lineOfBusinesses: [], stall_unit_numbers: [],
+    }]);
+  }
+
+  return <div className="space-y-4">
+    <p className="text-sm text-zinc-600">Enter each business location in Liliw, Laguna. You’ll assign activities to each location in the next step.</p>
+    {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+    {branches.map((branch, index) => {
+      const { branch_key } = branch;
+      const location = barangays.find(barangay => barangay.name === branch.barangay);
+      return <fieldset key={branch_key} className="space-y-4 rounded-lg border border-zinc-200 p-4">
+        <legend className="px-2 text-sm font-semibold">{index ? `Branch ${index + 1}` : 'Main branch'}</legend>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="text-sm">Branch name
+            <input className={control} maxLength={100} value={branch.branch_name} onChange={e => changeBranch(branch_key, { branch_name: e.target.value })} />
+          </label>
+          <label className="text-sm">Building no. / street
+            <input className={control} maxLength={255} value={branch.address_line1 || ''} onChange={e => changeBranch(branch_key, { address_line1: e.target.value })} />
+          </label>
+          <label className="text-sm">Barangay
+            <select className={control} disabled={loading} value={branch.barangay || ''} onChange={e => changeBranch(branch_key, { barangay: e.target.value })}>
+              <option value="">{loading ? 'Loading barangays…' : 'Select barangay'}</option>
+              {branch.barangay && !location && <option value={branch.barangay} disabled>{branch.barangay} (unavailable)</option>}
+              {barangays.map(b => <option key={b.id} value={b.name} disabled={!b.zone?.is_active}>{b.name}</option>)}
+            </select>
+          </label>
+          <label className="text-sm">Property tenancy
+            <select className={control} value={branch.tenancy_type} onChange={e => changeBranch(branch_key, { tenancy_type: e.target.value })}>
+              {TENANCY_TYPES.map(tenancy => <option key={tenancy}>{tenancy}</option>)}
+            </select>
+          </label>
         </div>
-        {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
-      </section>
-      <section className="rounded-lg border border-zinc-200 bg-white p-5">
-        <h3 className="flex items-center gap-2 text-sm font-medium text-zinc-800"><MapPin size={16} />Barangay reference location</h3>
-        <p className="mt-2 text-sm leading-relaxed text-zinc-600">Your location is assigned automatically from the selected barangay. No map pin is needed.</p>
-        {selected ? <p className="mt-3 flex items-center gap-2 text-sm text-zinc-800"><CheckCircle2 size={16} />{selected.name} reference location assigned.</p>
-          : <p className="mt-3 text-sm text-zinc-500">Select a barangay to assign its reference location.</p>}
-      </section>
-      <section className="rounded-lg border border-zinc-200 bg-white p-5">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-zinc-800"><Home size={16} />Property tenancy</h3>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {TENANCY_TYPES.map(type => <button key={type} type="button" aria-pressed={data.tenancy_type === type} onClick={() => {
-            setFormField('step2', 'tenancy_type', type);
-            setFormField('step2', 'is_renting', type === 'Rented');
-          }} className={`rounded-md border p-4 text-left focus-visible:ring-2 focus-visible:ring-zinc-900 ${data.tenancy_type === type ? 'border-zinc-900 bg-zinc-50' : 'border-zinc-200 bg-white'}`}>
-            <span className="text-sm font-semibold text-zinc-900">{type}</span>
-            <span className="mt-2 block text-xs leading-relaxed text-zinc-600">{TENANCY_HELP[type]}</span>
-          </button>)}
-        </div>
-      </section>
-    </div>
-  );
+        {location && <p className="text-sm text-zinc-600">{location.zone?.name || 'No zone assigned'} · Barangay reference coordinates {location.latitude}, {location.longitude}</p>}
+        {index > 0 && <button type="button" className="inline-flex items-center gap-2 text-sm text-red-700" onClick={() => removeBranch(branch_key)}>
+          <Trash2 size={15} /> Remove branch
+        </button>}
+      </fieldset>;
+    })}
+    <button type="button" disabled={branches.length >= MAX_BRANCHES} className="inline-flex items-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm disabled:opacity-50" onClick={addBranch}>
+      <Plus size={16} /> Add another branch / location
+    </button>
+  </div>;
 }

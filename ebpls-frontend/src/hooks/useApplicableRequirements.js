@@ -1,27 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import apiClient from '../utils/apiClient';
 import useApplicationStore from '../store/applicationStore';
+import { getFormBranches } from '../utils/uafForm';
 
-const useApplicableRequirements = () => {
-  const step1 = useApplicationStore(s => s.formData.step1);
-  const tenancy = useApplicationStore(s => s.formData.step2.tenancy_type);
-  const activities = useApplicationStore(s => s.formData.step3.lineOfBusinesses);
-  const ready = Boolean(step1.type_id && step1.org_type_id);
-  const params = new URLSearchParams({ type_id: step1.type_id, org_type_id: step1.org_type_id, tenancy_type: tenancy });
-  params.set('activity_names', JSON.stringify((activities || []).map(activity => activity.name).filter(Boolean)));
-  const query = params.toString();
-  const [state, setState] = useState({ key: '', requirements: [], loading: false, error: null });
+export default function useApplicableRequirements() {
+  const form = useApplicationStore(state => state.formData);
+  const { type_id, org_type_id } = form.step1;
+  const ready = Boolean(type_id && org_type_id);
+  const key = JSON.stringify({
+    type_id, org_type_id,
+    branches: getFormBranches(form).map(branch => ({
+      branch_key: branch.branch_key,
+      tenancy_type: branch.tenancy_type,
+      activity_names: (branch.lineOfBusinesses || []).map(activity => activity.name).filter(Boolean),
+    })),
+  });
+  const [state, setState] = useState({ key: '', requirements: [], error: null });
   useEffect(() => {
-    let cancelled = false;
     if (!ready) return;
-    apiClient.get(`/api/applications/requirements?${query}`).then(res => {
-      if (!cancelled) setState({ key: query, requirements: res.data || [], loading: false, error: res.success ? null : 'Failed to load requirements.' });
+    let cancelled = false;
+    apiClient.post('/api/applications/requirements/branches', JSON.parse(key)).then(res => {
+      if (!cancelled) setState({ key, requirements: res.data || [], error: res.success ? null : 'Failed to load requirements.' });
     }).catch(() => {
-      if (!cancelled) setState({ key: query, requirements: [], loading: false, error: 'Unable to load document requirements. Please refresh and try again.' });
+      if (!cancelled) setState({ key, requirements: [], error: 'Unable to load document requirements. Please refresh and try again.' });
     });
     return () => { cancelled = true; };
-  }, [query, ready]);
+  }, [key, ready]);
   if (!ready) return { requirements: [], loading: false, error: null };
-  return state.key === query ? state : { requirements: [], loading: true, error: null };
-};
-export default useApplicableRequirements;
+  return state.key === key ? { ...state, loading: false } : { requirements: [], loading: true, error: null };
+}

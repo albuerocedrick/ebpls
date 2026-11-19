@@ -16,6 +16,9 @@ const ROLES = Object.freeze({
   BPLO_OFFICER:      'BPLO_Officer',
   TREASURY_OFFICER:  'Treasury_Officer',
   BARANGAY_OFFICER:  'Barangay_Officer',
+  MHO_OFFICER:       'MHO_Officer',
+  BFB_OFFICER:       'BFB_Officer',
+  AMILYAR_OFFICER:   'Amilyar_Officer',
   ADMIN:             'Admin',
 });
 
@@ -172,6 +175,7 @@ const EMAIL_TRIGGERS = Object.freeze({
   TOP_GENERATED:              'TOP_GENERATED',
   PAYMENT_RECORDED:           'PAYMENT_RECORDED',
   PERMIT_READY:               'PERMIT_READY',
+  PAYMENT_PROOF_REJECTED:     'PAYMENT_PROOF_REJECTED',
   RETIREMENT_COMPLETE:        'RETIREMENT_COMPLETE',
   CERT_READY_NOTIFICATION:    'CERT_READY_NOTIFICATION',
   CORRECTION_APPROVED:        'CORRECTION_APPROVED',

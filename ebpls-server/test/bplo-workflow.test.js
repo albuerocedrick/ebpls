@@ -15,6 +15,9 @@ const mockDatabase = {
       select() { return this; },
       update(payload) { updating = true; updatePayload = payload; return this; },
       eq(col, val) { selectedEq[col] = val; return this; },
+      order() { return this; },
+      in() { return this; },
+      range() { return this; },
       single() { return this; },
       maybeSingle() { return this; },
       then(resolve, reject) {
@@ -35,7 +38,13 @@ const mockDatabase = {
           return Promise.resolve({ data: dbTables.activities || [], error: null }).then(resolve, reject);
         }
         if (table === 'doc_verifications') {
-          return Promise.resolve({ data: dbTables.doc_verifications || [], error: null }).then(resolve, reject);
+          const documents = (dbTables.doc_verifications || []).filter(row => !selectedEq['requirement_types.regulatory_agency_code'] ||
+            row.requirement_types?.regulatory_agency_code === selectedEq['requirement_types.regulatory_agency_code']);
+          return Promise.resolve({ data: documents, error: null }).then(resolve, reject);
+        }
+        if (table === 'regulatory_clearances') {
+          const data = selectedEq.agency_code ? dbTables.regulatory_clearances.find(row => row.agency_code === selectedEq.agency_code) : dbTables.regulatory_clearances;
+          return Promise.resolve({ data, error: null }).then(resolve, reject);
         }
         if (table === 'application_data_reviews') {
           return Promise.resolve({ data: dbTables.data_reviews || [], error: null }).then(resolve, reject);
@@ -170,7 +179,43 @@ beforeEach(() => {
       { section: 'business_activities', status: 'Verified', remarks: null },
       { section: 'financial_declaration', status: 'Verified', remarks: null },
     ],
+    regulatory_clearances: [
+      { agency_code: 'MHO', status: 'Verified' },
+      { agency_code: 'BFB', status: 'Not Needed' },
+      { agency_code: 'AMILYAR', status: 'Verified' },
+    ],
   };
+});
+
+test('BPLO approval waits for all three regulatory clearances and reports their statuses', async () => {
+  dbTables.regulatory_clearances[0].status = 'Pending';
+  const tracker = await request('/api/bplo/applications/APP-BPLO-1/regulatory-clearances');
+  assert.equal(tracker.status, 200);
+  assert.equal(tracker.body.data.find(row => row.agency_code === 'MHO').status, 'Pending');
+  const approval = await request('/api/bplo/applications/verify/APP-BPLO-1', 'PUT', { checklist: [] });
+  assert.equal(approval.status, 400);
+  assert.match(approval.body.message, /inter-agency regulatory clearances/i);
+  assert.deepEqual(rpcCalls, []);
+});
+
+test('agency viewers get only assigned documents, and Admin access is read-only', async () => {
+  dbTables.regulatory_clearances[0].status = 'Pending';
+  dbTables.doc_verifications.push(
+    { requirement_id: 4, file_path: 'owner/health.pdf', requirement_types: { name: 'Sanitary Permit', regulatory_agency_code: 'MHO' } },
+    { requirement_id: 3, file_path: 'owner/fire.pdf', requirement_types: { name: 'Fire Safety Inspection Certificate', regulatory_agency_code: 'BFB' } },
+  );
+  const path = '/api/regulatory/APP-BPLO-1/documents?agency=MHO';
+  for (const role of ['MHO_Officer', 'Admin']) {
+    const res = await request(path, 'GET', undefined, role);
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.data.map(doc => doc.name), ['Sanitary Permit']);
+    assert.equal(res.body.data[0].files[0].url, 'https://example.test/download/owner/health.pdf');
+  }
+  for (const role of ['BFB_Officer', 'BPLO_Officer', 'Applicant']) {
+    assert.equal((await request(path, 'GET', undefined, role)).status, 403);
+  }
+  assert.equal((await request('/api/regulatory/APP-BPLO-1/verify?agency=MHO', 'PUT', {}, 'Admin')).status, 403);
+  assert.deepEqual(rpcCalls, []);
 });
 
 async function request(url, method = 'GET', body, role = 'BPLO_Officer') {

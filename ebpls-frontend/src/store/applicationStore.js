@@ -49,11 +49,6 @@ const useApplicationStore = create((set) => ({
   // Actions
   setActivityMetrics: (map) => set({ activityMetrics: map }),
   setBarangayLookup: (barangays, barangaysLoading, barangaysError) => set({ barangays, barangaysLoading, barangaysError }),
-  setLocation: (barangay) => set(state => ({ formData: {
-    ...state.formData,
-    step2: { ...state.formData.step2, barangay: barangay.name, city: 'Liliw', province: 'Laguna',
-      latitude: Number(barangay.latitude), longitude: Number(barangay.longitude), location_mismatch: false }
-  } })),
   setStep: (stepNumber) => set({ current_step: stepNumber }),
 
   /**

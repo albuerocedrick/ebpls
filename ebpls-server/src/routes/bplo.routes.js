@@ -65,6 +65,7 @@ router.get('/applications/:app_no/document/:requirement_id', bploController.getD
  * @access  BPLO_Officer, Admin
  */
 router.get('/applications/:app_no', bploController.getApplicationDetails);
+router.get('/applications/:app_no/regulatory-clearances', bploController.getRegulatoryStatus);
 
 /**
  * @route   PUT /api/bplo/applications/review/:app_no

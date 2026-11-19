@@ -68,6 +68,7 @@ app.use(metricsTracker);
 app.use("/api/auth", authRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/bplo", bploRoutes);
+app.use("/api/regulatory", require('./routes/regulatory.routes'));
 
 // Phase 3: Notifications
 app.use("/api/notifications", notificationRoutes);

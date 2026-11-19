@@ -117,6 +117,25 @@ async function resolveApplicableRequirements({ application_type_id, org_type_id,
   }
 }
 
-module.exports = {
-  resolveApplicableRequirements
-};
+const sharedRequirements = new Set(['Valid Government ID', 'Previous Business Permit and Receipt']);
+
+async function resolveBranchRequirements({ type_id, org_type_id, branches }) {
+  const shared = new Map();
+  const scoped = [];
+  const resolved = await Promise.all(branches.map(branch => resolveApplicableRequirements({
+    application_type_id: type_id, org_type_id,
+    tenancy_type: branch.tenancy_type, activity_names: branch.activity_names,
+  })));
+  branches.forEach((branch, index) => {
+    for (const requirement of resolved[index]) {
+      if (requirement.condition_type === 'org_type' || sharedRequirements.has(requirement.name)) {
+        shared.set(requirement.id, { ...requirement, branch_key: null });
+      } else {
+        scoped.push({ ...requirement, branch_key: branch.branch_key });
+      }
+    }
+  });
+  return [...shared.values(), ...scoped];
+}
+
+module.exports = { resolveApplicableRequirements, resolveBranchRequirements };

@@ -108,8 +108,14 @@ export default function AssessmentGrid() {
           </div>
         </div>
         {context && <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
-          <p className="font-medium">{context.zone.name} · {Number(context.zone.fee_multiplier).toLocaleString('en-PH', { maximumFractionDigits: 4 })}× regulatory fee multiplier</p>
-          <p className="mt-1">Declared capital: {currency(context.total_capital)} · Recommended floor: {currency(context.zone.min_capital_floor)}</p>
+          {context.branches?.length ? <ul className="space-y-1">
+            {context.branches.map(branch => <li key={branch.branch_id}>
+              <strong>{branch.name}</strong> · {branch.zone.name} ({branch.zone.fee_multiplier}×) · Capital {currency(branch.total_capital)} · Recommended floor {currency(branch.zone.min_capital_floor)}
+            </li>)}
+          </ul> : <>
+            <p className="font-medium">{context.zone.name} · {Number(context.zone.fee_multiplier).toLocaleString('en-PH', { maximumFractionDigits: 4 })}× regulatory fee multiplier</p>
+            <p className="mt-1">Declared capital: {currency(context.total_capital)} · Recommended floor: {currency(context.zone.min_capital_floor)}</p>
+          </>}
           {context.warnings?.map((warning, index) => <p key={index} className="mt-2 flex gap-2 text-xs text-amber-800"><AlertCircle size={14} className="shrink-0" />{warning}</p>)}
         </section>}
         <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white">

@@ -16,11 +16,14 @@ before(async () => {
   db = new PGlite();
   await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
     CREATE TABLE users(user_id UUID PRIMARY KEY);
+    CREATE SCHEMA storage;
+    CREATE TABLE storage.buckets (id TEXT PRIMARY KEY, name TEXT, public BOOLEAN, file_size_limit INTEGER, allowed_mime_types TEXT[]);
+    CREATE TABLE storage.objects (bucket_id TEXT);
     CREATE TABLE taxpayers(taxpayer_id UUID PRIMARY KEY);
     CREATE FUNCTION public.is_admin() RETURNS boolean LANGUAGE sql AS $$ SELECT false $$;
     CREATE FUNCTION public.set_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.updated_at=now(); RETURN NEW; END $$;
     INSERT INTO taxpayers VALUES ('${owner}'), ('${other}');`);
-  for (const name of ['004_businesses.sql', '005_applications.sql', '006_verifications.sql']) await db.exec(migration(name));
+  for (const name of ['004_businesses.sql', '005_applications.sql', '006_verifications.sql', '008_treasury.sql']) await db.exec(migration(name));
   await db.exec(migration('010_permits.sql').split('CREATE TABLE IF NOT EXISTS public.permits (')[0]);
   for (const name of ['018_doc_verifications_file_path.sql', '030_barangays_lookup.sql', '034_requirements_revision.sql', '035_requirements_revision_updates.sql', '038_activity_metric_count.sql', '043_location_mismatch.sql', '044_location_zones_and_centroids.sql']) await db.exec(migration(name));
   const inserted = await db.query("INSERT INTO businesses(taxpayer_id,business_name,org_type_id,is_renting) VALUES ($1,'Legacy rented business',1,true) RETURNING business_id", [owner]);
@@ -29,6 +32,9 @@ before(async () => {
   // Reproduce Supabase's default function grants before the follow-up fix.
   await db.exec('GRANT EXECUTE ON FUNCTION public.submit_applicant_application(UUID,JSONB) TO anon,authenticated');
   await db.exec(migration('046_applicant_submission_permissions.sql'));
+  for (const name of ['032_add_fixed_amount_to_fees.sql', '036_fee_schedule.sql', '047_automatic_assessment.sql', '048_payment_proof_schema.sql', '049_multi_branch_and_bin_schema.sql']) {
+    await db.exec(migration(name));
+  }
 });
 after(async () => { await db?.close(); });
 
@@ -41,6 +47,78 @@ async function payload(tenancy = 'Rented') {
     documents: [{requirement_id: await requirement('Barangay Business Clearance'),file_path:'test/clearance.pdf'}, {requirement_id:await requirement(property),file_path:'test/property.pdf'}] };
 }
 async function submit(p, taxpayer = owner) { return (await db.query('SELECT submit_applicant_application($1,$2::jsonb) AS app_no', [taxpayer,JSON.stringify(p)])).rows[0].app_no; }
+
+const secondBranch = '44444444-4444-4444-8444-444444444444';
+async function multiBranchPayload() {
+  const rented = await payload('Rented');
+  const owned = await payload('Owned Commercial');
+  return {
+    business_name: 'Two branches', org_type_id: 1, type_id: 1,
+    branches: [
+      { ...rented, branch_key: 'main', branch_name: 'Town branch', barangay: 'Rizal (Poblacion)' },
+      { ...owned, branch_key: secondBranch, branch_name: 'Bayate branch' },
+    ],
+    documents: [
+      ...rented.documents.map(doc => ({ ...doc, branch_key: 'main' })),
+      ...owned.documents.map(doc => ({ ...doc, branch_key: secondBranch, file_path: `other/${doc.file_path}` })),
+    ],
+  };
+}
+
+test('049 backfills main branches and permanent BINs and deactivates Other Services', async () => {
+  const { rows: [row] } = await db.query(`SELECT bin, branch_name, is_main, br.tenancy_type
+    FROM businesses JOIN business_branches br USING (business_id) WHERE business_id=$1`, [legacyBusiness]);
+  assert.match(row.bin, /^BIN-\d{4}-00001$/);
+  assert.deepEqual([row.branch_name, row.is_main, row.tenancy_type], ['Main branch', true, 'Rented']);
+  await assert.rejects(db.query("UPDATE businesses SET bin='BIN-INVALID' WHERE business_id=$1", [legacyBusiness]), { code: '22023' });
+  const { rows: retired } = await db.query("SELECT is_active FROM business_activities WHERE lower(name)='other services'");
+  assert.deepEqual(retired, [{ is_active: false }]);
+});
+
+test('two branches save under one BIN with trustable centroids, repeated activity and distinct clearance files', async () => {
+  const request = await multiBranchPayload();
+  const appNo = await submit(request);
+  const { rows: branches } = await db.query(`
+    SELECT b.bin, br.branch_id, br.branch_key, br.tenancy_type, br.zone_id, br.latitude, br.longitude, aa.activity_id
+    FROM applications a JOIN businesses b USING (business_id) JOIN application_activities aa USING(application_no)
+    JOIN business_branches br USING (branch_id) WHERE a.application_no=$1 ORDER BY br.is_main DESC`, [appNo]);
+  assert.equal(branches.length, 2);
+  assert.equal(branches[0].bin, branches[1].bin);
+  assert.notEqual(branches[0].bin, (await db.query('SELECT bin FROM businesses WHERE business_id=$1',[legacyBusiness])).rows[0].bin);
+  assert.deepEqual(branches.map(branch => [branch.branch_key, branch.tenancy_type, branch.zone_id, branch.activity_id]), [
+    ['main', 'Rented', 1, 1], [secondBranch, 'Owned Commercial', 3, 1],
+  ]);
+  assert.ok(branches.every(branch => Number(branch.latitude) > 14 && Number(branch.longitude) > 121));
+  const { rows: files } = await db.query(`SELECT af.file_path, br.branch_key FROM application_document_files af
+    JOIN business_branches br USING (branch_id) WHERE af.application_no=$1 AND af.requirement_id=$2 ORDER BY af.position`,
+    [appNo, await requirement('Barangay Business Clearance')]);
+  assert.deepEqual(files.map(file => file.branch_key), ['main', secondBranch]);
+  const { rows: [{ source }] } = await db.query('SELECT get_assessment_inputs($1) AS source', [appNo]);
+  const result = require('../src/utils/assessment-engine').computeAssessment(source);
+  const mayorFee = result.lineItems.find(item => item.name === "Mayor's Permit Fee");
+  assert.ok(mayorFee.unzoned_amount > 0);
+  assert.equal(mayorFee.amount, mayorFee.unzoned_amount / 2 * (1.25 + 0.8));
+
+  await db.query("UPDATE applications SET status='Returned' WHERE application_no=$1", [appNo]);
+  await assert.rejects(submit({ ...request, application_no: appNo }, other), { code: 'P0002' });
+  request.branches[1].branch_name = 'Bayate branch updated';
+  assert.equal(await submit({ ...request, application_no: appNo }), appNo);
+  const { rows: [updated] } = await db.query(`SELECT b.bin, br.branch_id, br.branch_name FROM businesses b
+    JOIN applications a USING(business_id) JOIN business_branches br USING(business_id)
+    WHERE a.application_no=$1 AND br.branch_key=$2`, [appNo, secondBranch]);
+  assert.deepEqual(updated, { bin: branches[0].bin, branch_id: branches[1].branch_id, branch_name: 'Bayate branch updated' });
+});
+
+test('an invalid second branch rolls back the entire application and keeps the draft', async () => {
+  const request = await multiBranchPayload();
+  request.branches[1].barangay = 'Unknown municipality';
+  const count = async () => (await db.query('SELECT count(*)::integer AS count FROM businesses')).rows[0].count;
+  const before = await count();
+  await db.query("INSERT INTO application_drafts(taxpayer_id,current_step,form_data) VALUES ($1,4,'{}') ON CONFLICT(taxpayer_id) DO NOTHING", [other]);
+  await assert.rejects(submit(request, other), { code: '22023' });
+  assert.equal(await count(), before);
+  assert.equal((await db.query('SELECT 1 FROM application_drafts WHERE taxpayer_id=$1', [other])).rows.length, 1);
+});
 
 test('migration backfills existing rentals and preserves legacy flag compatibility', async () => {
   let record = (await db.query('SELECT tenancy_type,stall_unit_numbers FROM businesses WHERE business_id=$1',[legacyBusiness])).rows[0];
@@ -149,6 +227,25 @@ test('legacy drafts migrate safely and retain multi-file uploads', () => {
   assert.equal(form.step4.documents[0].files.length,2);
   assert.deepEqual(form.step3.stall_unit_numbers,[]);
   assert.equal(formUtils.normalizeDraftFormData({}).step2.tenancy_type,'Owned Commercial');
+});
+
+test('the wizard preserves legacy main-branch uploads and keeps secondary-branch slots independent', () => {
+  const form = formUtils.normalizeDraftFormData({
+    step2: { barangay: 'Bayate', is_renting: true },
+    step3: { lineOfBusinesses: [{ name: 'Retail', capital_investment: '15000' }] },
+    step4: { documents: [{ requirement_id: 2, file_path: 'original.pdf' }] },
+  });
+  const [main] = formUtils.getFormBranches(form);
+  assert.equal(main.tenancy_type, 'Rented');
+  form.step2.branches = [main, { ...main, branch_key: secondBranch, branch_name: 'Branch two' }];
+  const requirements = [
+    { id: 2, name: 'Barangay Business Clearance', branch_key: 'main', max_files: 1 },
+    { id: 2, name: 'Barangay Business Clearance', branch_key: secondBranch, max_files: 1 },
+  ];
+  assert.deepEqual(formUtils.validateWizardStep(4, form, requirements), ['Please upload Barangay Business Clearance for Branch two.']);
+  form.step4.documents.push({ requirement_id: 2, branch_key: secondBranch, file_path: 'second.pdf' });
+  const saved = formUtils.buildSubmissionPayload(formUtils.normalizeDraftFormData(form), requirements);
+  assert.deepEqual(saved.documents.map(file => [file.branch_key, file.file_path]), [['main', 'original.pdf'], [secondBranch, 'second.pdf']]);
 });
 
 test('client validation requires clearance/property uploads and rejects duplicate stalls', () => {

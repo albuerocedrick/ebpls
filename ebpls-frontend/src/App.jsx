@@ -23,7 +23,8 @@ const CorrectionQueue = lazy(() => import('./screens/bplo/CorrectionQueue'));
 import ProtectedRoute  from './components/shared/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import ToastContainer  from './components/shared/ToastContainer';
-import { ROUTES, ROLES } from './utils/constants';
+import { REGULATORY_AGENCIES, ROUTES, ROLES } from './utils/constants';
+import RegulatoryLayout from './layouts/RegulatoryLayout';
 
 // =========================================
 // Route-Level Code Splitting (React.lazy)
@@ -48,6 +49,7 @@ const StatusTracker       = lazy(() => import('./screens/applicant/StatusTracker
 const BPLODashboard         = lazy(() => import('./screens/bplo/Dashboard'));
 const SplitScreenVerifier   = lazy(() => import('./screens/bplo/SplitScreenVerifier'));
 const CompletedQueue        = lazy(() => import('./screens/bplo/CompletedQueue'));
+const RegulatoryQueue      = lazy(() => import('./screens/regulatory/RegulatoryQueue'));
 
 // Shared (Phase 1)
 const FeeSchedule     = lazy(() => import('./screens/shared/FeeSchedule'));
@@ -56,6 +58,7 @@ const FeeSchedule     = lazy(() => import('./screens/shared/FeeSchedule'));
 const AssessmentQueue = lazy(() => import('./screens/treasury/AssessmentQueue')); // Added Queue List
 const AssessmentGrid  = lazy(() => import('./screens/treasury/AssessmentGrid'));
 const CashierPOS      = lazy(() => import('./screens/treasury/CashierPOS'));
+const OnlinePaymentVerification = lazy(() => import('./screens/treasury/OnlinePaymentVerification'));
 const RetirementAssess = lazy(() => import('./screens/treasury/RetirementAssess'));
 
 // Retirement (Phase 7)
@@ -209,6 +212,14 @@ function App() {
             </Route>
           </Route>
 
+          {Object.entries(REGULATORY_AGENCIES).map(([agency, config]) => (
+            <Route key={agency} element={<ProtectedRoute allowedRoles={[config.role, ROLES.ADMIN]} />}>
+              <Route element={<RegulatoryLayout agency={agency} />}>
+                <Route path={config.route} element={<RegulatoryQueue key={agency} agency={agency} />} />
+              </Route>
+            </Route>
+          ))}
+
           {/* ── TREASURY PORTAL ─────────────────── */}
           <Route
             element={
@@ -245,6 +256,7 @@ function App() {
                 path="cashier"
                 element={<CashierPOS />}
               />
+              <Route path="verify-payments" element={<OnlinePaymentVerification />} />
               <Route
                 path="retirements"
                 element={<RetirementAssess />}
