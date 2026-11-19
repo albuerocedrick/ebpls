@@ -101,4 +101,46 @@ router.get(
   applicationController.getApplicationForEdit
 );
 
+
+// -----------------------------------------------------------------
+// 4. RENEWAL HUB ROUTES (Phase 4: Revision 2 & 7)
+// -----------------------------------------------------------------
+router.get(
+  '/my-approved-businesses',
+  authenticate,
+  authorize(ROLES.APPLICANT, ROLES.ADMIN),
+  applicationController.getMyApprovedBusinesses
+);
+
+router.get(
+  '/business/:businessId/renewal-data',
+  authenticate,
+  authorize(ROLES.APPLICANT, ROLES.ADMIN),
+  applicationController.getBusinessRenewalData
+);
+
+router.post(
+  '/renew',
+  authenticate,
+  authorize(ROLES.APPLICANT),
+  applicationController.submitRenewal
+);
+
+// -----------------------------------------------------------------
+// 5. BUSINESS AMENDMENT ROUTES (Phase 5: Revision 5 & 13)
+// -----------------------------------------------------------------
+router.get(
+  '/business/:businessId/amendment-data',
+  authenticate,
+  authorize(ROLES.APPLICANT, ROLES.ADMIN),
+  applicationController.getBusinessAmendmentData
+);
+
+router.post(
+  '/amend-location',
+  authenticate,
+  authorize(ROLES.APPLICANT),
+  applicationController.submitAddressAmendmentController
+);
+
 module.exports = router;

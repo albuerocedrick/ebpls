@@ -698,7 +698,236 @@ const getAssessmentForApplicant = async (req, res, next) => {
   }
 };
 
+
+/**
+ * GET /api/applications/my-approved-businesses
+ * Retrieves all approved businesses with their active permits, branches, and LOBs.
+ */
+const getMyApprovedBusinesses = async (req, res, next) => {
+  try {
+    const taxpayerId = req.user.taxpayerId;
+    if (!taxpayerId) throw createError('Taxpayer profile not found.', 403, ERROR_CODES.FORBIDDEN);
+    const { supabaseAdmin } = require('../config/supabase');
+
+    const { data, error } = await supabaseAdmin.rpc('get_taxpayer_approved_businesses', {
+      p_taxpayer_id: taxpayerId
+    });
+
+    if (error) {
+      console.error('[getMyApprovedBusinesses]', error.message);
+      throw createError('Unable to load approved businesses.', 500, ERROR_CODES.INTERNAL_ERROR);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: data || [],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/applications/business/:businessId/renewal-data
+ * Pre-fills renewal information for the multi-branch renewal wizard.
+ */
+const getBusinessRenewalData = async (req, res, next) => {
+  try {
+    const taxpayerId = req.user.taxpayerId;
+    const { businessId } = req.params;
+    if (!taxpayerId) throw createError('Taxpayer profile not found.', 403, ERROR_CODES.FORBIDDEN);
+    const { supabaseAdmin } = require('../config/supabase');
+
+    const { data: biz, error: bizError } = await supabaseAdmin
+      .from('businesses')
+      .select('business_id, bin, business_name, trade_name, org_type_id, is_franchise, franchisor_name, dti_sec_cda_reg_no, address_line1, barangay, city, province, tenancy_type, stall_unit_numbers, is_retired, organization_types(id, name)')
+      .eq('business_id', businessId)
+      .eq('taxpayer_id', taxpayerId)
+      .maybeSingle();
+
+    if (bizError) throw createError('Failed to load business details.', 500);
+    if (!biz) throw createError('Business not found or access denied.', 404);
+    if (biz.is_retired) throw createError('Cannot renew a retired business.', 400);
+
+    const { data: permits } = await supabaseAdmin
+      .from('permits')
+      .select('permit_no, issued_at, expires_at, application_no, applications!inner(business_id)')
+      .eq('applications.business_id', businessId)
+      .order('expires_at', { ascending: false })
+      .limit(1);
+
+    const latestPermit = permits?.[0] || null;
+
+    const { data: branches, error: branchError } = await supabaseAdmin
+      .from('business_branches')
+      .select('branch_id, branch_key, branch_name, address_line1, barangay, zone_id, tenancy_type, stall_unit_numbers, is_main, is_active')
+      .eq('business_id', businessId)
+      .order('is_main', { ascending: false });
+
+    if (branchError) throw createError('Failed to load business branches.', 500);
+
+    const latestAppNo = latestPermit?.application_no;
+    let activities = [];
+    if (latestAppNo) {
+      const { data: acts } = await supabaseAdmin
+        .from('application_activities')
+        .select('id, activity_id, branch_id, capitalization, gross_sales_prev_year, metric_count, business_activities(id, name)')
+        .eq('application_no', latestAppNo);
+      activities = acts || [];
+    }
+
+    const branchesWithActivities = (branches || []).map(b => {
+      const branchActs = activities.filter(a => a.branch_id === b.branch_id || (!a.branch_id && b.is_main));
+      return {
+        ...b,
+        activities: branchActs.map(a => ({
+          activity_id: a.activity_id,
+          name: a.business_activities?.name,
+          capitalization: a.capitalization,
+          gross_sales_prev_year: a.gross_sales_prev_year,
+          metric_count: a.metric_count,
+        })),
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        business: biz,
+        latest_permit: latestPermit,
+        branches: branchesWithActivities,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/applications/renew
+ * Submits a selective renewal application for an existing permitted business.
+ */
+const submitRenewal = async (req, res, next) => {
+  try {
+    const taxpayerId = req.user.taxpayerId;
+    if (!taxpayerId) throw createError('Taxpayer profile not found.', 403, ERROR_CODES.FORBIDDEN);
+
+    const payload = validators.RenewalSubmissionPayloadSchema.parse(req.body);
+    const { submitRenewalApplication } = require('../services/applicant-submission.service');
+
+    const appNo = await submitRenewalApplication(taxpayerId, payload);
+
+    return res.status(201).json({
+      success: true,
+      data: { application_no: appNo },
+      message: 'Renewal application submitted successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/applications/business/:businessId/amendment-data
+ * Retrieves active branches, current premises, available barangays, and premises clearance types for relocation.
+ */
+const getBusinessAmendmentData = async (req, res, next) => {
+  try {
+    const { businessId } = req.params;
+    const taxpayerId = req.user.taxpayerId;
+    if (!taxpayerId) throw createError('Taxpayer profile not found.', 403, ERROR_CODES.FORBIDDEN);
+
+    const { data: biz, error: bizError } = await supabaseAdmin
+      .from('businesses')
+      .select('business_id, bin, business_name, trade_name, org_type_id, is_retired')
+      .eq('business_id', businessId)
+      .eq('taxpayer_id', taxpayerId)
+      .maybeSingle();
+
+    if (bizError) throw createError('Failed to load business details.', 500);
+    if (!biz) throw createError('Business not found or access denied.', 404);
+    if (biz.is_retired) throw createError('Cannot amend a retired business.', 400);
+
+    const { data: branches, error: branchesError } = await supabaseAdmin
+      .from('business_branches')
+      .select('branch_id, branch_key, branch_name, address_line1, barangay, zone_id, tenancy_type, stall_unit_numbers, is_main, is_active, location_zones(name, fee_multiplier)')
+      .eq('business_id', businessId)
+      .eq('is_active', true)
+      .order('is_main', { ascending: false });
+
+    if (branchesError) throw createError('Failed to load business branches.', 500);
+
+    const { data: pendingAmendments } = await supabaseAdmin
+      .from('business_amendments')
+      .select('amendment_id, application_no, branch_id, status, submitted_at')
+      .eq('business_id', businessId)
+      .eq('status', 'Pending');
+
+    const { data: barangays } = await supabaseAdmin
+      .from('barangays')
+      .select('id, name, zone_id, latitude, longitude, location_zones(name, fee_multiplier)')
+      .eq('is_active', true)
+      .order('name');
+
+    const { data: requirements } = await supabaseAdmin
+      .from('requirement_types')
+      .select('id, name, description, condition_type, max_files, regulatory_agency_code')
+      .in('name', [
+        'Barangay Business Clearance',
+        'Contract of Lease',
+        'Building Permit',
+        'Zoning Clearance',
+        'Fire Safety Inspection Certificate',
+        'Sanitary Permit',
+        'Realty Tax (OR-Amilyar)',
+      ])
+      .eq('is_active', true);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        business: biz,
+        branches: branches || [],
+        pending_amendments: pendingAmendments || [],
+        barangays: barangays || [],
+        requirements: requirements || [],
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/applications/amend-location
+ * Submits an address relocation amendment for a branch within Liliw.
+ */
+const submitAddressAmendmentController = async (req, res, next) => {
+  try {
+    const taxpayerId = req.user.taxpayerId;
+    if (!taxpayerId) throw createError('Taxpayer profile not found.', 403, ERROR_CODES.FORBIDDEN);
+
+    const payload = validators.AddressAmendmentPayloadSchema.parse(req.body);
+    const { submitAddressAmendment } = require('../services/applicant-submission.service');
+
+    const appNo = await submitAddressAmendment(taxpayerId, payload);
+
+    return res.status(201).json({
+      success: true,
+      data: { application_no: appNo },
+      message: 'Address amendment submitted successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
+  getBusinessAmendmentData,
+  submitAddressAmendmentController,
+  getMyApprovedBusinesses,
+  getBusinessRenewalData,
+  submitRenewal,
   getDraft,
   saveDraft,
   deleteDraft,

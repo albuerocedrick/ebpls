@@ -812,6 +812,61 @@ const getJointInspectionListReport = async (req, res, next) => {
   }
 };
 
+
+/**
+ * POST /api/admin/expiry-monitor/run
+ * Manually executes or tests the permit expiry monitoring scan.
+ */
+const runExpiryMonitor = async (req, res, next) => {
+  try {
+    const { simulated_date } = req.body || {};
+    const { scanAndDispatchExpiryAlerts } = require('../services/expiry-monitor.service');
+
+    const result = await scanAndDispatchExpiryAlerts(simulated_date || null);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Permit expiry scan completed.',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/admin/expiry-monitor/logs
+ * Retrieves sent expiry warnings log.
+ */
+const getExpiryLogs = async (req, res, next) => {
+  try {
+    const { data: logs, error } = await supabaseAdmin
+      .from('permit_expiry_logs')
+      .select(`
+        id,
+        permit_no,
+        warning_tier,
+        notification_channel,
+        notified_at,
+        businesses ( business_id, bin, business_name )
+      `)
+      .order('notified_at', { ascending: false })
+      .limit(100);
+
+    if (error) {
+      console.error('[getExpiryLogs] error:', error.message);
+      return next(createError('Failed to fetch expiry notification logs.', 500));
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: logs || [],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getEmailLogs,
   getHealth,
@@ -827,5 +882,7 @@ module.exports = {
   getAuditLogs,
   uploadDocumentTemplate,
   getJointInspectionListReport,
+  runExpiryMonitor,
+  getExpiryLogs,
 };
 

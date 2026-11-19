@@ -127,4 +127,14 @@ router.put('/corrections/:id/reject', correctionController.rejectCorrectionReque
  */
 router.get('/reports/joint-inspection-list', adminController.getJointInspectionListReport);
 
+
+/**
+ * BUSINESS AMENDMENT ROUTES (Phase 5: Revision 5 & 13)
+ */
+router.get('/amendments', bploController.getPendingAmendments);
+router.get('/amendments/:app_no', bploController.getAmendmentDetails);
+router.put('/amendments/:app_no/approve', bploController.approveAmendment);
+router.put('/amendments/:app_no/reject', bploController.rejectAmendment);
+
 module.exports = router;
+

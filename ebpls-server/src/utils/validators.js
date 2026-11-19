@@ -29,7 +29,7 @@ const DraftPayloadSchema = z.object({
 const tenancySchema = z.enum(['Rented', 'Owned Commercial', 'Owned Residential']);
 const stallSchema = z.array(z.string().trim().min(1).max(64)).max(50).default([])
   .refine(values => new Set(values.map(value => value.toLowerCase())).size === values.length, 'Unit / stall numbers must be unique.');
-const branchKeySchema = z.union([z.literal('main'), z.uuid()]);
+const branchKeySchema = z.union([z.literal('main'), z.string().uuid()]);
 const activitySchema = z.object({
   name: z.string().trim().min(1).max(255),
   capitalization: z.coerce.number().positive().max(9999999999999.99),
@@ -154,6 +154,56 @@ const CorrectionRejectSchema = z.object({
   remarks: z.string().min(1, 'Remarks are required for rejection'),
 });
 
+// -----------------------------------------------------------------
+// 5. Renewal Submission Payload Schema (Phase 4)
+// -----------------------------------------------------------------
+const RenewalBranchActivitySchema = z.object({
+  activity_id: z.coerce.number().int().positive().optional(),
+  name: z.string().trim().min(1).max(255).optional(),
+  gross_sales_prev_year: z.coerce.number().min(0).max(9999999999999.99).default(0),
+  capitalization: z.coerce.number().min(0).max(9999999999999.99).default(0),
+  units: z.coerce.number().int().min(1).default(1),
+  metric_count: z.coerce.number().int().positive().max(2147483647).optional().nullable(),
+});
+
+const RenewalBranchSchema = z.object({
+  branch_id: z.string().uuid().optional(),
+  branch_key: branchKeySchema.optional(),
+  branch_name: z.string().trim().min(1).max(100),
+  address_line1: z.string().trim().min(1).max(255),
+  barangay: z.string().trim().min(1).max(100),
+  tenancy_type: tenancySchema,
+  stall_unit_numbers: stallSchema,
+  is_main: z.boolean().default(false),
+  activities: z.array(RenewalBranchActivitySchema).min(1, 'Each renewed branch must declare at least one line of business.'),
+});
+
+const RenewalSubmissionPayloadSchema = z.object({
+  business_id: z.string().uuid('A valid business UUID is required for renewal.'),
+  selected_branch_ids: z.array(z.string().uuid()).min(1, 'Select at least one branch to renew.').optional(),
+  unselected_branch_ids: z.array(z.string().uuid()).default([]),
+  branches: z.array(RenewalBranchSchema).min(1, 'At least one branch must be included in the renewal.'),
+  documents: z.array(documentSchema).default([]),
+});
+
+const AddressAmendmentPayloadSchema = z.object({
+  business_id: z.string().uuid('A valid business UUID is required for amendment.'),
+  branch_id: z.string().uuid('A valid branch UUID is required for address relocation.'),
+  new_address_line1: z.string().trim().min(1, 'New street address is required.').max(255),
+  new_barangay: z.string().trim().min(1, 'New barangay is required.').max(100),
+  new_tenancy_type: tenancySchema,
+  new_stall_unit_numbers: stallSchema.default([]),
+  documents: z.array(z.object({
+    requirement_id: z.coerce.number().int().positive('Requirement ID is required.'),
+    file_path: z.string().min(1, 'Uploaded file path is required.'),
+    file_name: z.string().min(1, 'File name is required.'),
+    file_size: z.coerce.number().int().nonnegative().optional().default(0),
+  })).min(1, 'Upload the required premises clearances for the new location.'),
+  attestation_agreed: z.literal(true, {
+    errorMap: () => ({ message: 'You must attest that all provided relocation information is true and correct.' }),
+  }),
+});
+
 module.exports = {
   DraftPayloadSchema,
   UAFSubmissionPayloadSchema,
@@ -162,4 +212,7 @@ module.exports = {
   BranchRequirementsSchema,
   CorrectionRequestSchema,
   CorrectionRejectSchema,
+  RenewalBranchSchema,
+  RenewalSubmissionPayloadSchema,
+  AddressAmendmentPayloadSchema,
 };

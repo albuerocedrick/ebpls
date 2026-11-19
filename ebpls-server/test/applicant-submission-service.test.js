@@ -21,7 +21,7 @@ const db = {
         let data = table==='requirement_types'?definitions:
           table==='organization_types'?[{id:1,name:'Sole Proprietorship'}]:
           table==='barangays'?[{id:1,name:'Bayate',latitude:14.1800768,longitude:121.4169645,is_active:true}]:
-          table==='business_activities'?[{id:1,name:'Retail',is_active:true}]:[];
+          table==='businesses'?[{business_id:'55555555-5555-4555-8555-555555555555',bin:'BIN-2026-00001',business_name:'Existing Store',is_retired:false,taxpayer_id:owner}]:table==='business_activities'?[{id:1,name:'Retail',is_active:true}]:[];
         data=data.filter(row=>Object.entries(filters).every(([key,value])=>row[key]===value));
         return Promise.resolve({data:single?(data[0]||null):structuredClone(data),error:null}).then(resolve,reject);
       },
@@ -119,4 +119,18 @@ test('multi-branch submission requires separate premises documents and allows th
   input.branches[1].activities[0].name = 'Other Services';
   await assert.rejects(submitApplicantApplication(owner, input), { statusCode: 400 });
   assert.equal(rpcCalls.length, 1);
+});
+
+test('anti-duplicate guardrail blocks New Application when business already exists', async () => {
+  const p = payload('Owned Commercial');
+  p.business_name = 'Existing Store';
+  await assert.rejects(
+    submitApplicantApplication(owner, p),
+    (err) => {
+      assert.equal(err.statusCode, 400);
+      assert.match(err.message, /Zero Duplicate BIN Policy/i);
+      assert.match(err.message, /Business Amendment/i);
+      return true;
+    }
+  );
 });

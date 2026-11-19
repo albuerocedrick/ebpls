@@ -44,6 +44,8 @@ const VerifySuccess     = lazy(() => import('./screens/auth/VerifySuccess'));
 const ApplicantDashboard  = lazy(() => import('./screens/applicant/Dashboard'));
 const UAFWizardScreen     = lazy(() => import('./screens/applicant/UAFWizardScreen'));
 const StatusTracker       = lazy(() => import('./screens/applicant/StatusTracker'));
+const RenewalWizard       = lazy(() => import('./screens/applicant/RenewalWizard'));
+const BusinessAmendmentForm = lazy(() => import('./screens/applicant/BusinessAmendmentForm'));
 
 // BPLO
 const BPLODashboard         = lazy(() => import('./screens/bplo/Dashboard'));
@@ -187,6 +189,8 @@ function App() {
               <Route path="status" element={<StatusTracker />} />
               <Route path="retire" element={<RetirementForm />} />
               <Route path="fee-schedule" element={<FeeSchedule />} />
+              <Route path="renew/:businessId" element={<RenewalWizard />} />
+              <Route path="amend/:businessId" element={<BusinessAmendmentForm />} />
             </Route>
           </Route>
 

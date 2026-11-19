@@ -939,6 +939,223 @@ const notifyApplicantReady = async (req, res, next) => {
   }
 };
 
+
+/**
+ * GET /api/bplo/amendments
+ * Retrieves all pending address amendments for BPLO review.
+ */
+const getPendingAmendments = async (req, res, next) => {
+  try {
+    const { data: amendments, error } = await supabaseAdmin
+      .from('business_amendments')
+      .select(`
+        amendment_id,
+        application_no,
+        amendment_type,
+        old_data,
+        new_data,
+        status,
+        submitted_at,
+        businesses (
+          business_id,
+          bin,
+          business_name,
+          trade_name,
+          taxpayers ( first_name, last_name, mobile_number, users ( email ) )
+        ),
+        business_branches ( branch_id, branch_name, is_main )
+      `)
+      .eq('status', 'Pending')
+      .order('submitted_at', { ascending: true });
+
+    if (error) {
+      console.error('[bplo.controller] getPendingAmendments error:', error.message);
+      return next(createError('Failed to fetch pending amendments.', 500, ERROR_CODES.INTERNAL_ERROR));
+    }
+
+    return res.status(200).json(successResponse('Pending amendments retrieved.', amendments || []));
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/bplo/amendments/:app_no
+ * Retrieves complete amendment details including clearances and uploaded premises documents.
+ */
+const getAmendmentDetails = async (req, res, next) => {
+  try {
+    const { app_no: applicationNo } = req.params;
+
+    const { data: amendment, error } = await supabaseAdmin
+      .from('business_amendments')
+      .select(`
+        amendment_id,
+        application_no,
+        amendment_type,
+        old_data,
+        new_data,
+        status,
+        review_remarks,
+        submitted_at,
+        approved_at,
+        businesses (
+          business_id,
+          bin,
+          business_name,
+          trade_name,
+          taxpayers ( first_name, last_name, mobile_number, users ( email ) )
+        ),
+        business_branches ( branch_id, branch_name, is_main )
+      `)
+      .eq('application_no', applicationNo)
+      .maybeSingle();
+
+    if (error || !amendment) {
+      return next(createError('Amendment record not found.', 404, ERROR_CODES.NOT_FOUND));
+    }
+
+    // Fetch uploaded premises documents
+    const { data: docs } = await supabaseAdmin
+      .from('doc_verifications')
+      .select(`
+        id,
+        requirement_id,
+        status,
+        file_path,
+        file_name,
+        file_size,
+        remarks,
+        requirement_types ( id, name, description, regulatory_agency_code )
+      `)
+      .eq('application_no', applicationNo);
+
+    // Generate presigned preview URLs
+    const documentsWithUrls = await Promise.all(
+      (docs || []).map(async (doc) => {
+        let previewUrl = null;
+        if (doc.file_path) {
+          try {
+            previewUrl = await generatePresignedDownloadUrl('documents', doc.file_path, 3600);
+          } catch (e) {
+            console.warn('[bplo.controller] Failed to presign URL for', doc.file_path);
+          }
+        }
+        return {
+          ...doc,
+          preview_url: previewUrl,
+        };
+      })
+    );
+
+    // Fetch regulatory clearances (MHO, BFB, AMILYAR)
+    const { data: clearances } = await supabaseAdmin
+      .from('regulatory_clearances')
+      .select('agency_code, status, remarks, verified_at')
+      .eq('application_no', applicationNo);
+
+    return res.status(200).json(successResponse('Amendment details retrieved.', {
+      ...amendment,
+      documents: documentsWithUrls,
+      clearances: clearances || [],
+    }));
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PUT /api/bplo/amendments/:app_no/approve
+ * Approves an address amendment and updates the branch's master record.
+ */
+const approveAmendment = async (req, res, next) => {
+  try {
+    const { app_no: applicationNo } = req.params;
+    const { remarks } = req.body || {};
+
+    const { data, error } = await supabaseAdmin.rpc('approve_address_amendment', {
+      p_application_no: applicationNo,
+      p_officer_id: req.user.userId,
+      p_remarks: remarks?.trim() || null,
+    });
+
+    if (error) {
+      if (error.code === 'P0002') return next(createError('Amendment record not found.', 404, ERROR_CODES.NOT_FOUND));
+      if (error.code === '22023') return next(createError(error.message, 400, ERROR_CODES.VALIDATION_ERROR));
+      console.error('[bplo.controller] approveAmendment error:', error.message);
+      return next(createError('Failed to approve address amendment.', 500, ERROR_CODES.INTERNAL_ERROR));
+    }
+
+    _resolveApplicantForEmail(applicationNo).then((applicant) => {
+      if (applicant && applicant.email) {
+        dispatchEmail({
+          triggerEvent: EMAIL_TRIGGERS.APPLICATION_APPROVED,
+          recipientEmail: applicant.email,
+          applicationNo,
+          payload: {
+            name: applicant.name,
+            applicationNo,
+            businessName: applicant.businessName,
+            remarks: 'Your address relocation amendment has been approved. The updated branch premises have been recorded in the master business registry. You may now proceed with your annual renewal.',
+          },
+        });
+      }
+    });
+
+    return res.status(200).json(successResponse('Address amendment approved and branch master record updated.', data));
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PUT /api/bplo/amendments/:app_no/reject
+ * Rejects or returns an address amendment with required remarks.
+ */
+const rejectAmendment = async (req, res, next) => {
+  try {
+    const { app_no: applicationNo } = req.params;
+    const { remarks } = req.body || {};
+
+    if (!remarks || !remarks.trim()) {
+      return next(createError('Rejection remarks are required.', 400, ERROR_CODES.VALIDATION_ERROR));
+    }
+
+    const { data, error } = await supabaseAdmin.rpc('reject_address_amendment', {
+      p_application_no: applicationNo,
+      p_officer_id: req.user.userId,
+      p_remarks: remarks.trim(),
+    });
+
+    if (error) {
+      if (error.code === 'P0002') return next(createError('Amendment record not found.', 404, ERROR_CODES.NOT_FOUND));
+      if (error.code === '22023') return next(createError(error.message, 400, ERROR_CODES.VALIDATION_ERROR));
+      console.error('[bplo.controller] rejectAmendment error:', error.message);
+      return next(createError('Failed to reject address amendment.', 500, ERROR_CODES.INTERNAL_ERROR));
+    }
+
+    _resolveApplicantForEmail(applicationNo).then((applicant) => {
+      if (applicant && applicant.email) {
+        dispatchEmail({
+          triggerEvent: EMAIL_TRIGGERS.APPLICATION_RETURNED,
+          recipientEmail: applicant.email,
+          applicationNo,
+          payload: {
+            name: applicant.name,
+            applicationNo,
+            businessName: applicant.businessName,
+            remarks: remarks.trim(),
+          },
+        });
+      }
+    });
+
+    return res.status(200).json(successResponse('Address amendment rejected.', data));
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getPendingApplications,
   startReview,
@@ -951,4 +1168,8 @@ module.exports = {
   returnApplication,
   getCompletedApplications,
   notifyApplicantReady,
+  getPendingAmendments,
+  getAmendmentDetails,
+  approveAmendment,
+  rejectAmendment,
 };

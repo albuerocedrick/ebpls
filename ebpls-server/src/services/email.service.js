@@ -45,6 +45,69 @@ const getTimestampHtml = () => {
     formattedDate = new Date().toISOString();
   }
   return `<p style="font-size: 12px; color: #6b7280; font-style: italic;">Status updated on: ${formattedDate}</p>`;
+
+  [EMAIL_TRIGGERS.PERMIT_EXPIRY_WARNING_60]: ({ name, businessName, permitNo, bin, expiryDate, actionUrl }) => ({
+    subject: `eBPLS — Annual Business Permit Renewal Advisory: ${businessName} (60 Days Remaining)`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #2563eb;">Annual Renewal Advisory (60 Days)</h2>
+        <p>Dear <strong>${name}</strong>,</p>
+        <p>This is an advance advisory from the Business Permits and Licensing Office (BPLO) of the Municipality of Liliw, Laguna.</p>
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 4px 0;"><strong>Business Name:</strong> ${businessName}</p>
+          <p style="margin: 4px 0;"><strong>BIN:</strong> ${bin || 'On Record'}</p>
+          <p style="margin: 4px 0;"><strong>Current Permit No.:</strong> ${permitNo}</p>
+          <p style="margin: 4px 0;"><strong>Expiration Date:</strong> ${expiryDate || 'December 31'}</p>
+        </div>
+        <p>Your current business permit will expire in <strong>60 days</strong>. You may begin preparing your preceding year gross sales records and updated barangay clearances to ensure a smooth, prompt renewal.</p>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${actionUrl || 'https://ebpls.liliw.gov.ph/applicant/dashboard'}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Approved Businesses</a>
+        </div>
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
+        <p style="font-size: 12px; color: #6b7280;">BPLO Office | Municipality of Liliw, Laguna</p>
+      </div>`,
+  }),
+
+  [EMAIL_TRIGGERS.PERMIT_EXPIRY_WARNING_30]: ({ name, businessName, permitNo, bin, expiryDate, actionUrl }) => ({
+    subject: `eBPLS — Business Permit Expiring in 30 Days: ${businessName} (Renewal Portal Open)`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #d97706;">Permit Expiring in 30 Days</h2>
+        <p>Dear <strong>${name}</strong>,</p>
+        <p>Your business permit for <strong>${businessName}</strong> (Permit No: ${permitNo}) is scheduled to expire on <strong>${expiryDate || 'December 31'}</strong> (30 days remaining).</p>
+        <p>The eBPLS Annual Renewal Portal is now accepting selective branch and line renewal declarations. You can review your approved branches, declare prior year gross sales, and file your renewal directly online.</p>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${actionUrl || 'https://ebpls.liliw.gov.ph/applicant/dashboard'}" style="background-color: #d97706; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Renew Permit Now</a>
+        </div>
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
+        <p style="font-size: 12px; color: #6b7280;">BPLO Office | Municipality of Liliw, Laguna</p>
+      </div>`,
+  }),
+
+  [EMAIL_TRIGGERS.PERMIT_EXPIRY_WARNING_15]: ({ name, businessName, permitNo, bin, expiryDate, actionUrl }) => ({
+    subject: `URGENT: eBPLS — 15 Days Until Permit Expiration: ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #fecaca; border-radius: 8px; background: #fffaf0;">
+        <h2 style="color: #dc2626;">URGENT: 15 Days Remaining</h2>
+        <p>Dear <strong>${name}</strong>,</p>
+        <p>This is an urgent reminder that your Business Permit for <strong>${businessName}</strong> (Permit: ${permitNo}, BIN: ${bin}) expires on <strong>${expiryDate || 'December 31'}</strong>.</p>
+        <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 12px 16px; border-radius: 4px; margin: 16px 0;">
+          <p style="color: #991b1b; font-size: 13px; margin: 0; line-height: 1.5;">
+            <strong>Statutory Deadline Notice:</strong> Under the Local Government Code and municipal tax ordinance, renewal applications and payments completed after <strong>January 20</strong> are subject to a <strong>25% statutory surcharge</strong> plus <strong>2% monthly interest</strong>.
+          </p>
+        </div>
+        <p>Please submit your renewal immediately through your eBPLS portal to avoid statutory surcharges and operational interruptions.</p>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${actionUrl || 'https://ebpls.liliw.gov.ph/applicant/dashboard'}" style="background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">File Urgent Renewal</a>
+        </div>
+        ${getTimestampHtml()}
+        <hr style="border-color: #e5e7eb; margin-top: 32px;" />
+        <p style="font-size: 12px; color: #6b7280;">BPLO Office | Municipality of Liliw, Laguna</p>
+      </div>`,
+  }),
+
 };
 
 const templates = {

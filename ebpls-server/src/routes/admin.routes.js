@@ -115,4 +115,12 @@ router.get('/audit-logs', adminController.getAuditLogs);
  */
 router.get('/reports/joint-inspection-list', adminController.getJointInspectionListReport);
 
+
+/**
+ * PERMIT EXPIRY MONITOR ROUTES (Phase 6: Revision 6 & 11)
+ */
+router.post('/expiry-monitor/run', adminController.runExpiryMonitor);
+router.get('/expiry-monitor/logs', adminController.getExpiryLogs);
+
 module.exports = router;
+
